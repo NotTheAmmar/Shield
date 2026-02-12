@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug Auth Service",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/shield-auth/src/index.js",
+            "cwd": "${workspaceFolder}/shield-auth",
+            "env": {
+                "DB_HOST": "localhost",
+                "JWT_SECRET": "dev_secret"
+            }
+        },
+        {
+            "name": "Next.js: Frontend",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npm run dev",
+            "cwd": "${workspaceFolder}/shield-frontend"
+        }
+    ]
+}

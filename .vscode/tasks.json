@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start Infrastructure (DBs)",
+            "type": "npm",
+            "script": "dev:infra",
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Start All (Docker)",
+            "type": "npm",
+            "script": "dev:full",
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}

@@ -1,0 +1,108 @@
+version: '3.8'
+
+networks:
+  shield-network:
+    driver: bridge
+
+services:
+  db-users:
+    image: postgres:15-alpine
+    container_name: db-users
+    networks:
+      - shield-network
+    environment:
+      POSTGRES_USER: shield
+      POSTGRES_PASSWORD: key
+      POSTGRES_DB: shield
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./.docker-data/postgres:/var/lib/postgresql/data
+
+  db-ledger:
+    image: codenotary/immudb:latest
+    container_name: db-ledger
+    networks:
+      - shield-network
+    ports:
+      - "3322:3322"
+      - "8080:8080"
+    volumes:
+      - ./.docker-data/immudb:/var/lib/immudb
+
+  minio-store:
+    image: minio/minio
+    container_name: minio-store
+    networks:
+      - shield-network
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: shield
+      MINIO_ROOT_PASSWORD: key
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./.docker-data/minio:/data
+
+  shield-gateway:
+    build: ./shield-gateway
+    container_name: shield-gateway
+    networks:
+      - shield-network
+    ports:
+      - "3001:3000"
+    depends_on:
+      - shield-auth
+      - shield-evidence
+
+  shield-frontend:
+    build: ./shield-frontend
+    container_name: shield-frontend
+    networks:
+      - shield-network
+    ports:
+      - "3000:3000"
+    depends_on:
+      - shield-gateway
+
+  shield-auth:
+    build: ./shield-auth
+    container_name: shield-auth
+    networks:
+      - shield-network
+    ports:
+      - "4000:4000"
+    environment:
+      DB_HOST: db-users
+      JWT_SECRET: dev_secret_key
+    depends_on:
+      - db-users
+
+  shield-evidence:
+    build: ./shield-evidence
+    container_name: shield-evidence
+    networks:
+      - shield-network
+    ports:
+      - "4001:4001"
+    environment:
+      MINIO_ENDPOINT: minio-store
+      MINIO_ACCESS_KEY: shield
+      MINIO_SECRET_KEY: key
+      MASTER_KEY: VCSLB9KER+GU4eQ8ff2yCVsIoGY7nD6QJTiGM02epCA=
+    depends_on:
+      - minio-store
+      - shield-ledger
+
+  shield-ledger:
+    build: ./shield-ledger
+    container_name: shield-ledger
+    networks:
+      - shield-network
+    ports:
+      - "4002:4002"
+    environment:
+      IMMUDB_HOST: db-ledger
+    depends_on:
+      - db-ledger

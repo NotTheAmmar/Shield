@@ -1,0 +1,14 @@
+{
+  "name": "shield-project-root",
+  "private": true,
+  "scripts": {
+    "setup": "npm install && npm run install:all",
+    "install:all": "concurrently \"npm install --prefix shield-frontend\" \"npm install --prefix shield-gateway\" \"npm install --prefix shield-auth\" \"npm install --prefix shield-evidence\" \"npm install --prefix shield-ledger\"",
+    "dev:infra": "docker-compose up -d db-users db-ledger minio-store",
+    "dev:full": "docker-compose up --build",
+    "stop": "docker-compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  }
+}

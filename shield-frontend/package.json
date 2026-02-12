@@ -1,0 +1,16 @@
+{
+    "name": "shield-frontend",
+    "version": "1.0.0",
+    "description": "Frontend UI for Shield",
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint"
+    },
+    "dependencies": {
+        "next": "latest",
+        "react": "latest",
+        "react-dom": "latest"
+    }
+}
