@@ -38,7 +38,7 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: shield
-      MINIO_ROOT_PASSWORD: key
+      MINIO_ROOT_PASSWORD: key_pass
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -48,6 +48,10 @@ services:
   shield-gateway:
     build: ./shield-gateway
     container_name: shield-gateway
+    command: npm run dev
+    volumes:
+      - ./shield-gateway:/usr/src/app
+      - /usr/src/app/node_modules
     networks:
       - shield-network
     ports:
@@ -59,6 +63,10 @@ services:
   shield-frontend:
     build: ./shield-frontend
     container_name: shield-frontend
+    command: npm run dev
+    volumes:
+      - ./shield-frontend:/usr/src/app
+      - /usr/src/app/node_modules
     networks:
       - shield-network
     ports:
@@ -69,6 +77,10 @@ services:
   shield-auth:
     build: ./shield-auth
     container_name: shield-auth
+    command: npm run dev
+    volumes:
+      - ./shield-auth:/usr/src/app
+      - /usr/src/app/node_modules
     networks:
       - shield-network
     ports:
@@ -82,6 +94,10 @@ services:
   shield-evidence:
     build: ./shield-evidence
     container_name: shield-evidence
+    command: npm run dev
+    volumes:
+      - ./shield-evidence:/usr/src/app
+      - /usr/src/app/node_modules
     networks:
       - shield-network
     ports:
@@ -89,7 +105,7 @@ services:
     environment:
       MINIO_ENDPOINT: minio-store
       MINIO_ACCESS_KEY: shield
-      MINIO_SECRET_KEY: key
+      MINIO_SECRET_KEY: key_pass
       MASTER_KEY: VCSLB9KER+GU4eQ8ff2yCVsIoGY7nD6QJTiGM02epCA=
     depends_on:
       - minio-store
@@ -98,6 +114,10 @@ services:
   shield-ledger:
     build: ./shield-ledger
     container_name: shield-ledger
+    command: npm run dev
+    volumes:
+      - ./shield-ledger:/usr/src/app
+      - /usr/src/app/node_modules
     networks:
       - shield-network
     ports:

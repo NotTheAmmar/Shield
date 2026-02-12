@@ -12,7 +12,7 @@
             "cwd": "${workspaceFolder}/shield-auth",
             "env": {
                 "DB_HOST": "localhost",
-                "JWT_SECRET": "dev_secret"
+                "JWT_SECRET": "VCSLB9KER+GU4eQ8ff2yCVsIoGY7nD6QJTiGM02epCA="
             }
         },
         {
