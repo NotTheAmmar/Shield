@@ -11,9 +11,9 @@ services:
     networks:
       - shield-network
     environment:
-      POSTGRES_USER: shield
-      POSTGRES_PASSWORD: key
-      POSTGRES_DB: shield
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
@@ -37,8 +37,8 @@ services:
       - shield-network
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: shield
-      MINIO_ROOT_PASSWORD: key_pass
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -87,7 +87,7 @@ services:
       - "4000:4000"
     environment:
       DB_HOST: db-users
-      JWT_SECRET: dev_secret_key
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - db-users
 
@@ -104,9 +104,9 @@ services:
       - "4001:4001"
     environment:
       MINIO_ENDPOINT: minio-store
-      MINIO_ACCESS_KEY: shield
-      MINIO_SECRET_KEY: key_pass
-      MASTER_KEY: VCSLB9KER+GU4eQ8ff2yCVsIoGY7nD6QJTiGM02epCA=
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MASTER_KEY: ${MASTER_KEY}
     depends_on:
       - minio-store
       - shield-ledger
