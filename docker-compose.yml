@@ -1,5 +1,3 @@
-version: '3.8'
-
 networks:
   shield-network:
     driver: bridge
@@ -24,6 +22,8 @@ services:
     container_name: db-ledger
     networks:
       - shield-network
+    environment:
+      IMMUDB_ADMIN_PASSWORD: ${IMMUDB_ADMIN_PASSWORD}
     ports:
       - "3322:3322"
       - "8080:8080"
@@ -50,8 +50,16 @@ services:
     container_name: shield-gateway
     command: npm run dev
     volumes:
-      - ./shield-gateway:/usr/src/app
       - /usr/src/app/node_modules
+    develop:
+      watch:
+        - action: sync
+          path: ./shield-gateway
+          target: /usr/src/app
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: ./shield-gateway/package.json
     networks:
       - shield-network
     ports:
@@ -65,8 +73,16 @@ services:
     container_name: shield-frontend
     command: npm run dev
     volumes:
-      - ./shield-frontend:/usr/src/app
       - /usr/src/app/node_modules
+    develop:
+      watch:
+        - action: sync
+          path: ./shield-frontend
+          target: /usr/src/app
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: ./shield-frontend/package.json
     networks:
       - shield-network
     ports:
@@ -79,8 +95,16 @@ services:
     container_name: shield-auth
     command: npm run dev
     volumes:
-      - ./shield-auth:/usr/src/app
       - /usr/src/app/node_modules
+    develop:
+      watch:
+        - action: sync
+          path: ./shield-auth
+          target: /usr/src/app
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: ./shield-auth/package.json
     networks:
       - shield-network
     ports:
@@ -96,8 +120,16 @@ services:
     container_name: shield-evidence
     command: npm run dev
     volumes:
-      - ./shield-evidence:/usr/src/app
       - /usr/src/app/node_modules
+    develop:
+      watch:
+        - action: sync
+          path: ./shield-evidence
+          target: /usr/src/app
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: ./shield-evidence/package.json
     networks:
       - shield-network
     ports:
@@ -116,13 +148,23 @@ services:
     container_name: shield-ledger
     command: npm run dev
     volumes:
-      - ./shield-ledger:/usr/src/app
       - /usr/src/app/node_modules
+    develop:
+      watch:
+        - action: sync
+          path: ./shield-ledger
+          target: /usr/src/app
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: ./shield-ledger/package.json
     networks:
       - shield-network
     ports:
       - "4002:4002"
     environment:
       IMMUDB_HOST: db-ledger
+      IMMUDB_USER: ${IMMUDB_USER}
+      IMMUDB_ADMIN_PASSWORD: ${IMMUDB_ADMIN_PASSWORD}
     depends_on:
       - db-ledger
