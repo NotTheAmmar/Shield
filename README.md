@@ -43,6 +43,8 @@ Copy the example environment file and fill in any required development secrets:
 ```bash
 cp .env.example .env
 ```
+Ensure that variables such as `IMMUDB_USER` are set (it defaults to `immudb` for the primary system admin) before proceeding.
+
 *(Note: Do not commit your `.env` file. It is ignored by Git.)*
 
 ### 3. Running the Project locally
@@ -51,13 +53,17 @@ We use Docker Compose to orchestrate the infrastructure (PostgreSQL, MinIO, Immu
 
 **To start the entire cluster in development mode:**
 ```bash
-npm run dev:full
+docker compose up -d
 ```
-This command will build the Docker images and start all services. Hot-reloading is enabled for the application services.
+After starting the Docker containers, you must run the following command to enable hot-reloading for all application services:
+```bash
+docker compose watch
+```
+This instructs Docker to use its built-in Development Watch features to instantly sync your local code modifications directly into the running containers without needing manual volume bindings.
 
 **To stop the cluster:**
 ```bash
-npm run stop
+docker compose down
 ```
 
 *(Advanced: If you only want to run the infrastructure databases via Docker and run the Node services locally via terminal, you can use `npm run dev:infra`.)*
