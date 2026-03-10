@@ -10,5 +10,23 @@
   },
   "devDependencies": {
     "concurrently": "^8.0.0"
+  },
+  "version": "1.0.0",
+  "description": "**Secure Hash-based Immutable Evidence Locker & Database**",
+  "main": "extract_metadata.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NotTheAmmar/Shield.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/NotTheAmmar/Shield/issues"
+  },
+  "homepage": "https://github.com/NotTheAmmar/Shield#readme",
+  "dependencies": {
+    "exiftool-vendored": "^35.13.1"
   }
 }
