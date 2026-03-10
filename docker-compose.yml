@@ -136,9 +136,19 @@ services:
       - "4001:4001"
     environment:
       MINIO_ENDPOINT: minio-store
+      MINIO_PUBLIC_HOST: localhost
+      MINIO_PORT: "9000"
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MOCK_LEDGER: "true"
+      LEDGER_URL: http://shield-ledger:4002
+      DB_HOST: db-users
+      DB_PORT: "5432"
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
       MASTER_KEY: ${MASTER_KEY}
+      BUCKET_NAME: evidence
     depends_on:
       - minio-store
       - shield-ledger

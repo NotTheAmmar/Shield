@@ -1,0 +1,198 @@
+{
+    "info": {
+        "_postman_id": "ebfa1234-5678-90ab-cdef-1234567890ab",
+        "name": "Shield Evidence API",
+        "description": "API collection for the shield-evidence microservice. Handles secure uploading, verification, and downloading of criminal evidence files.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "0. Create FIR",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Status code is 201\", function () {",
+                            "    pm.response.to.have.status(201);",
+                            "});",
+                            "",
+                            "var jsonData = pm.response.json();",
+                            "if (jsonData.fir_id) {",
+                            "    pm.environment.set(\"firId\", jsonData.fir_id);",
+                            "}"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{policeToken}}",
+                        "type": "text"
+                    },
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"case_category\": \"Theft\",\n    \"description\": \"Stolen laptop from cafe\",\n    \"location\": \"Downtown Cafe\"\n}"
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/api/fir/create",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "api",
+                        "fir",
+                        "create"
+                    ]
+                },
+                "description": "Registers a new FIR in the database. Returns a `fir_id` used for evidence upload."
+            },
+            "response": []
+        },
+        {
+            "name": "1. Upload Evidence",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Status code is 201\", function () {",
+                            "    pm.response.to.have.status(201);",
+                            "});",
+                            "",
+                            "var jsonData = pm.response.json();",
+                            "if (jsonData.id) {",
+                            "    pm.environment.set(\"evidenceId\", jsonData.id);",
+                            "}"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{policeToken}}",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "formdata",
+                    "formdata": [
+                        {
+                            "key": "fir_id",
+                            "value": "{{firId}}",
+                            "type": "text"
+                        },
+                        {
+                            "key": "file",
+                            "type": "file",
+                            "src": ""
+                        }
+                    ]
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/api/evidence/upload",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "api",
+                        "evidence",
+                        "upload"
+                    ]
+                },
+                "description": "Uploads a raw evidence file securely. Requires Police Officer or Super Admin role."
+            },
+            "response": []
+        },
+        {
+            "name": "2. Verify Evidence",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{judgeToken}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/api/evidence/verify/{{evidenceId}}",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "api",
+                        "evidence",
+                        "verify",
+                        "{{evidenceId}}"
+                    ]
+                },
+                "description": "Fetches the file from MinIO, computes live hash, and compares. Open to Judges."
+            },
+            "response": []
+        },
+        {
+            "name": "3. Download Evidence",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{judgeToken}}",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/api/evidence/download/{{evidenceId}}",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "api",
+                        "evidence",
+                        "download",
+                        "{{evidenceId}}"
+                    ]
+                },
+                "description": "Generates a highly secure short-lived presigned URL."
+            },
+            "response": []
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:4001"
+        },
+        {
+            "key": "policeToken",
+            "value": "<ENTER_VALID_POLICE_TOKEN>"
+        },
+        {
+            "key": "judgeToken",
+            "value": "<ENTER_VALID_JUDGE_TOKEN>"
+        },
+        {
+            "key": "firId",
+            "value": ""
+        },
+        {
+            "key": "evidenceId",
+            "value": ""
+        }
+    ]
+}
