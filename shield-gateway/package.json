@@ -1,17 +1,17 @@
 {
-    "name": "shield-gateway",
-    "version": "1.0.0",
-    "description": "API Gateway for Shield",
-    "scripts": {
-        "dev": "next dev -H 0.0.0.0 -p 3000",
-        "build": "next build",
-        "start": "next start -H 0.0.0.0 -p 3000",
-        "lint": "next lint"
-    },
-    "dependencies": {
-        "next": "latest",
-        "react": "latest",
-        "react-dom": "latest",
-        "http-proxy-middleware": "^2.0.6"
-    }
+  "name": "shield-gateway",
+  "version": "1.0.0",
+  "description": "API Gateway for Shield",
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "http-proxy-middleware": "^2.0.6"
+  }
 }

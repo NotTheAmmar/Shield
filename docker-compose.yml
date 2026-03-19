@@ -28,7 +28,7 @@ services:
       - "3322:3322"
       - "8080:8080"
     volumes:
-      - ./.docker-data/immudb:/var/lib/immudb
+      - immudb-data:/var/lib/immudb
 
   minio-store:
     image: minio/minio
@@ -49,8 +49,6 @@ services:
     build: ./shield-gateway
     container_name: shield-gateway
     command: npm run dev
-    volumes:
-      - /usr/src/app/node_modules
     develop:
       watch:
         - action: sync
@@ -63,17 +61,12 @@ services:
     networks:
       - shield-network
     ports:
-      - "3001:3000"
-    depends_on:
-      - shield-auth
-      - shield-evidence
+      - "3001:3001"
 
   shield-frontend:
     build: ./shield-frontend
     container_name: shield-frontend
     command: npm run dev
-    volumes:
-      - /usr/src/app/node_modules
     develop:
       watch:
         - action: sync
@@ -85,6 +78,8 @@ services:
           path: ./shield-frontend/package.json
     networks:
       - shield-network
+    environment:
+      VITE_GATEWAY_URL: http://shield-gateway:3001
     ports:
       - "3000:3000"
     depends_on:
@@ -94,8 +89,6 @@ services:
     build: ./shield-auth
     container_name: shield-auth
     command: npm run dev
-    volumes:
-      - /usr/src/app/node_modules
     develop:
       watch:
         - action: sync
@@ -119,8 +112,6 @@ services:
     build: ./shield-evidence
     container_name: shield-evidence
     command: npm run dev
-    volumes:
-      - /usr/src/app/node_modules
     develop:
       watch:
         - action: sync
@@ -151,8 +142,6 @@ services:
     build: ./shield-ledger
     container_name: shield-ledger
     command: npm run dev
-    volumes:
-      - /usr/src/app/node_modules
     develop:
       watch:
         - action: sync
@@ -172,3 +161,6 @@ services:
       IMMUDB_ADMIN_PASSWORD: ${IMMUDB_ADMIN_PASSWORD}
     depends_on:
       - db-ledger
+
+volumes:
+  immudb-data:
