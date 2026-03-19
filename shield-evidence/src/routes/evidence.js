@@ -12,6 +12,22 @@ const requireRoles = require('../middleware/rbac');
 const router = express.Router();
 
 // ─────────────────────────────────────────────
+// Middleware: Internal Network Perimeter Guard
+// ─────────────────────────────────────────────
+const internalNetworkGuard = (req, res, next) => {
+    const ip = req.ip || req.connection.remoteAddress || '';
+    // Allow localhost (IPv4/IPv6) or standard Docker subnets (A, B, C classes)
+    if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('::ffff:127.0.0.1') ||
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(ip) || /^::ffff:172\./.test(ip) ||
+        /^10\./.test(ip) || /^::ffff:10\./.test(ip) ||
+        /^192\.168\./.test(ip) || /^::ffff:192\.168\./.test(ip)) {
+        return next();
+    }
+    console.warn(`[SECURITY] Blocked external access attempt to internal route from IP: ${ip}`);
+    return res.status(403).json({ error: 'Forbidden: Internal Network Traffic Only' });
+};
+
+// ─────────────────────────────────────────────
 // POST /api/evidence/upload
 // ─────────────────────────────────────────────
 // POST /api/evidence/upload
@@ -225,6 +241,91 @@ router.get('/download/:id', async (req, res) => {
     } catch (err) {
         console.error('Download error:', err.message);
         res.status(500).json({ error: 'Could not generate download URL' });
+    }
+});
+
+
+// ─────────────────────────────────────────────
+// GET /api/evidence/internal/list
+// ─────────────────────────────────────────────
+// Returns paginated evidence IDs using Keyset (Cursor) Pagination for infinite scale.
+router.get('/internal/list', internalNetworkGuard, requireRoles(['Super Admin']), async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit, 10) || 1000;
+        const cursorDate = req.query.cursor_date;
+        const cursorId = req.query.cursor_id;
+
+        if (limit > 5000) return res.status(400).json({ error: 'Limit too large' });
+
+        let query, params;
+        if (cursorDate && cursorId) {
+            query = 'SELECT id, fir_id, uploaded_at FROM evidence WHERE (uploaded_at, id) > ($1, $2) ORDER BY uploaded_at ASC, id ASC LIMIT $3';
+            params = [cursorDate, cursorId, limit];
+        } else {
+            query = 'SELECT id, fir_id, uploaded_at FROM evidence ORDER BY uploaded_at ASC, id ASC LIMIT $1';
+            params = [limit];
+        }
+
+        const { rows } = await pool.query(query, params);
+        res.json({ records: rows });
+    } catch (err) {
+        console.error('List error:', err.message);
+        res.status(500).json({ error: 'Database query failed' });
+    }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/evidence/internal/verify-batch
+// ─────────────────────────────────────────────
+// Accepts an array of IDs and verifies them concurrently, preventing DDoS lockups.
+router.post('/internal/verify-batch', express.json(), internalNetworkGuard, requireRoles(['Super Admin']), async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids)) {
+            return res.status(400).json({ error: 'Expected an array of ids' });
+        }
+
+        const results = {};
+
+        await Promise.all(ids.map(async (id) => {
+            try {
+                const { rows } = await pool.query('SELECT * FROM evidence WHERE id = $1', [id]);
+                if (!rows.length) {
+                    results[id] = { status: 'NOT_FOUND' };
+                    return;
+                }
+                const record = rows[0];
+
+                const liveHash = await new Promise((resolve, reject) => {
+                    minioInternal.getObject(record.bucket_name, record.object_key, (err, stream) => {
+                        if (err) return reject(err);
+                        const hash = crypto.createHash('sha256');
+                        stream.on('data', chunk => hash.update(chunk));
+                        stream.on('end', () => resolve(hash.digest('hex')));
+                        stream.on('error', reject);
+                    });
+                });
+
+                const ledgerHash = await ledger.getHash(id);
+                const truthHash = ledgerHash || record.sha256_hash;
+                const result = (liveHash === truthHash) ? 'OK' : 'TAMPERED';
+
+                await pool.query(
+                    `INSERT INTO audit_log (evidence_id, action, result, actor_id) VALUES ($1, 'VERIFY', $2, $3)`,
+                    [id, result, req.user.id]
+                );
+
+                results[id] = { status: result };
+            } catch (err) {
+                console.error(`Verify error on ${id}:`, err.message);
+                results[id] = { status: 'ERROR', error: err.message };
+            }
+        }));
+
+        res.json({ results });
+    } catch (err) {
+        console.error('Verify-batch error:', err.message);
+        res.status(500).json({ error: 'Batch verification failed' });
     }
 });
 

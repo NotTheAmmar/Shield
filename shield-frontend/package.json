@@ -3,9 +3,9 @@
     "version": "1.0.0",
     "description": "Frontend UI for Shield",
     "scripts": {
-        "dev": "next dev",
+        "dev": "next dev -H 0.0.0.0 -p 3000",
         "build": "next build",
-        "start": "next start",
+        "start": "next start -H 0.0.0.0 -p 3000",
         "lint": "next lint"
     },
     "dependencies": {

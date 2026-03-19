@@ -107,8 +107,8 @@ services:
           path: ./shield-auth/package.json
     networks:
       - shield-network
-    ports:
-      - "4000:4000"
+    expose:
+      - "4000"
     environment:
       DB_HOST: db-users
       JWT_SECRET: ${JWT_SECRET}
@@ -132,23 +132,17 @@ services:
           path: ./shield-evidence/package.json
     networks:
       - shield-network
-    ports:
-      - "4001:4001"
+    expose:
+      - "4001"
+    env_file:
+      - ./shield-evidence/.env.docker
     environment:
-      MINIO_ENDPOINT: minio-store
-      MINIO_PUBLIC_HOST: localhost
-      MINIO_PORT: "9000"
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-      MOCK_LEDGER: "true"
-      LEDGER_URL: http://shield-ledger:4002
-      DB_HOST: db-users
-      DB_PORT: "5432"
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_NAME: ${POSTGRES_DB}
       MASTER_KEY: ${MASTER_KEY}
-      BUCKET_NAME: evidence
     depends_on:
       - minio-store
       - shield-ledger
@@ -170,8 +164,8 @@ services:
           path: ./shield-ledger/package.json
     networks:
       - shield-network
-    ports:
-      - "4002:4002"
+    expose:
+      - "4002"
     environment:
       IMMUDB_HOST: db-ledger
       IMMUDB_USER: ${IMMUDB_USER}
