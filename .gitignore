@@ -9,4 +9,4 @@ build/
 .vscode/chrome
 # Ignore local DB data
 .docker-data/
-documents/
+Documents/
