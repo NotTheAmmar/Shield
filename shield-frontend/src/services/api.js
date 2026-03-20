@@ -71,7 +71,7 @@ export const firAPI = {
 export const evidenceAPI = {
   list:   (params) => apiClient.get('/evidence', { params }),
   get:    (id) => apiClient.get(`/evidence/${id}`),
-  upload: (formData) => apiClient.post('/evidence', formData, {
+  upload: (formData) => apiClient.post('/evidence/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
   verify: (id) => apiClient.post(`/evidence/${id}/verify`),
