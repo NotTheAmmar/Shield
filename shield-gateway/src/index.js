@@ -90,8 +90,20 @@ app.get('/', (req, res) => {
 
 app.use('/api/auth', authRouter);
 app.use('/api/dashboard', dashboardRouter);
-app.use('/api/firs', firRouter);
-app.use('/api/evidence', evidenceRouter);
+const { createProxyMiddleware } = require('http-proxy-middleware');
+const evidenceProxy = createProxyMiddleware({ 
+  target: process.env.EVIDENCE_SERVICE_URL || 'http://shield-evidence:4001', 
+  changeOrigin: true 
+});
+
+app.use('/api/evidence', evidenceProxy);
+app.use('/api/fir', evidenceProxy);
+
+app.use('/api/firs', createProxyMiddleware({ 
+  target: process.env.EVIDENCE_SERVICE_URL || 'http://shield-evidence:4001', 
+  changeOrigin: true,
+  pathRewrite: { '^/api/firs': '/api/fir' }
+}));
 app.use('/api/audit', auditRouter);
 app.use('/api/admin', adminRouter);
 
