@@ -329,4 +329,71 @@ router.post('/internal/verify-batch', express.json(), internalNetworkGuard, requ
     }
 });
 
+// ─────────────────────────────────────────────
+// GET /api/evidence
+// ─────────────────────────────────────────────
+router.get('/', requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']), async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT 
+                e.id, 
+                e.filename as "fileName", 
+                f.fir_number as "firNumber", 
+                f.id as "firId",
+                e.sha256_hash as "hash", 
+                f.case_category as "category", 
+                e.uploaded_at as "uploadDate", 
+                'pending' as status 
+             FROM evidence e 
+             JOIN fir f ON e.fir_id = f.id 
+             ORDER BY e.uploaded_at DESC`
+        );
+        res.json({
+            data: rows,
+            pagination: { page: 1, limit: 1000, total: rows.length, totalPages: 1 }
+        });
+    } catch (err) {
+        console.error('List Evidence error:', err.message);
+        res.status(500).json({ error: 'Failed to fetch evidence list' });
+    }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/evidence/:id
+// ─────────────────────────────────────────────
+// MUST BE AT THE BOTTOM to prevent intercepting /upload, /verify/:id, etc.
+router.get('/:id', requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']), async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT 
+                e.id, 
+                e.filename as "fileName", 
+                f.fir_number as "firNumber", 
+                f.id as "firId",
+                e.sha256_hash as "hash", 
+                f.case_category as "category", 
+                e.uploaded_at as "uploadDate", 
+                'pending' as status,
+                e.uploaded_by as "uploaderId"
+             FROM evidence e 
+             JOIN fir f ON e.fir_id = f.id 
+             WHERE e.id = $1`, [req.params.id]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Evidence not found' });
+        
+        const auditRows = await pool.query(
+            `SELECT action, result, actor_id as "actor", checked_at as "timestamp" 
+             FROM audit_log WHERE evidence_id = $1 ORDER BY checked_at DESC`, [req.params.id]
+        );
+        
+        res.json({
+            ...rows[0],
+            history: auditRows.rows
+        });
+    } catch (err) {
+        console.error('Get Evidence error:', err.message);
+        res.status(500).json({ error: 'Failed to fetch evidence details' });
+    }
+});
+
 module.exports = router;

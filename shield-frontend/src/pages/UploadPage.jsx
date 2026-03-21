@@ -238,10 +238,10 @@ function UploadEvidenceTab({ searchParams }) {
     setError('');
     try {
       const fd = new FormData();
-      fd.append('firId', form.firId);
+      fd.append('fir_id', form.firId);
       fd.append('category', form.category);
       fd.append('description', form.description);
-      files.forEach((f) => fd.append('files', f));
+      files.forEach((f) => fd.append('file', f));
       const result = await evidenceAPI.upload(fd);
       setSuccess(result);
       setFiles([]);

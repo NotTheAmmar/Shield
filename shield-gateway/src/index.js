@@ -96,10 +96,7 @@ function proxyToEvidence(req, res) {
 
 // These routes MUST come BEFORE express.json() so the body stream is intact
 app.use('/api/fir', proxyToEvidence);
-app.use('/api/evidence/upload', proxyToEvidence);
-app.use('/api/evidence/verify', proxyToEvidence);
-app.use('/api/evidence/download', proxyToEvidence);
-app.use('/api/evidence/internal', proxyToEvidence);
+app.use('/api/evidence', proxyToEvidence);
 
 // ── Body parsers (only for local mock routes below) ───────────────────────
 
@@ -111,7 +108,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/firs', firsMockRouter);           // mock FIR list/detail
-app.use('/api/evidence', evidenceMockRouter);    // mock evidence list/detail
 app.use('/api/audit', auditRouter);
 app.use('/api/admin', adminRouter);
 
