@@ -16,6 +16,21 @@ module.exports = (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
+    // MOCK_AUTH mode: decode JWT payload without signature verification
+    // Used in development where the gateway generates unsigned mock JWTs
+    if (process.env.MOCK_AUTH === 'true') {
+        try {
+            const parts = token.split('.');
+            if (parts.length >= 2) {
+                const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+                req.user = payload;
+                return next();
+            }
+        } catch (err) {
+            return res.status(403).json({ error: 'Forbidden: Invalid mock token' });
+        }
+    }
+
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         // Payload should contain { id: "uuid", role: "Police Officer", ... }
@@ -25,3 +40,4 @@ module.exports = (req, res, next) => {
         return res.status(403).json({ error: 'Forbidden: Invalid or expired token' });
     }
 };
+

@@ -14,10 +14,9 @@
 
 const express = require('express');
 const cors = require('cors');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const authRouter = require('./routes/auth');
-const firRouter = require('./routes/firs');
-const evidenceRouter = require('./routes/evidence');
 const auditRouter = require('./routes/audit');
 const adminRouter = require('./routes/admin');
 const dashboardRouter = require('./routes/dashboard');
@@ -31,9 +30,6 @@ app.use(cors({
   origin: true, // Allow all origins in dev; lock down in production
   credentials: true,
 }));
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // ── JWT decoding middleware ───────────────────────────────────────────────
 // Decodes the Bearer token and attaches req.user.
@@ -68,16 +64,12 @@ app.get('/', (req, res) => {
       'POST   /api/auth/login',
       'POST   /api/auth/logout',
       'GET    /api/dashboard/stats',
-      'GET    /api/firs',
-      'POST   /api/firs',
-      'GET    /api/firs/:id',
-      'POST   /api/firs/:id/verify',
-      'GET    /api/firs/:id/download',
+      'POST   /api/fir/create',
       'GET    /api/evidence',
-      'POST   /api/evidence',
-      'GET    /api/evidence/:id',
-      'POST   /api/evidence/:id/verify',
-      'GET    /api/evidence/:id/download',
+      'POST   /api/evidence/upload',
+      'GET    /api/evidence/verify/:id',
+      'GET    /api/evidence/download/:id',
+      'GET    /api/firs   (mock)',
       'GET    /api/audit',
       'GET    /api/admin/users',
       'POST   /api/admin/users',
@@ -86,24 +78,44 @@ app.get('/', (req, res) => {
   });
 });
 
-// ── API Routes ────────────────────────────────────────────────────────────
+// ── PROXY ROUTES (MUST come BEFORE body parsers!) ─────────────────────────
+// http-proxy-middleware needs the raw, unparsed request body to forward.
+// If express.json() runs first, it consumes the body stream and the proxy
+// sends an empty body to the backend.
+
+const EVIDENCE_URL = process.env.EVIDENCE_SERVICE_URL || 'http://shield-evidence:4001';
+
+const evidenceProxy = createProxyMiddleware({
+  target: EVIDENCE_URL,
+  changeOrigin: true,
+  // Log proxy errors for debugging
+  on: {
+    error: (err, req, res) => {
+      console.error('[Proxy Error]', err.message);
+      if (!res.headersSent) {
+        res.status(502).json({ error: 'Evidence service unavailable', details: err.message });
+      }
+    },
+    proxyReq: (proxyReq, req) => {
+      console.log(`[Proxy] ${req.method} ${req.originalUrl} → ${EVIDENCE_URL}${req.originalUrl}`);
+    },
+  },
+});
+
+// Forward /api/fir/* and /api/evidence/* directly to shield-evidence
+app.use('/api/fir', evidenceProxy);
+app.use('/api/evidence', evidenceProxy);
+
+// Legacy /api/firs/* → rewrite to /api/fir/* on the evidence service
+const firsMockRouter = require('./routes/firs');
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use('/api/firs', firsMockRouter);
+
+// ── LOCAL MOCK API Routes (use body parsers) ──────────────────────────────
 
 app.use('/api/auth', authRouter);
 app.use('/api/dashboard', dashboardRouter);
-const { createProxyMiddleware } = require('http-proxy-middleware');
-const evidenceProxy = createProxyMiddleware({ 
-  target: process.env.EVIDENCE_SERVICE_URL || 'http://shield-evidence:4001', 
-  changeOrigin: true 
-});
-
-app.use('/api/evidence', evidenceProxy);
-app.use('/api/fir', evidenceProxy);
-
-app.use('/api/firs', createProxyMiddleware({ 
-  target: process.env.EVIDENCE_SERVICE_URL || 'http://shield-evidence:4001', 
-  changeOrigin: true,
-  pathRewrite: { '^/api/firs': '/api/fir' }
-}));
 app.use('/api/audit', auditRouter);
 app.use('/api/admin', adminRouter);
 
