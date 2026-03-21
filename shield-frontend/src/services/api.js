@@ -57,7 +57,7 @@ export const dashboardAPI = {
 // ── FIR ───────────────────────────────────────────────────────────────────
 
 export const firAPI = {
-  list:   (params) => apiClient.get('/firs', { params }),
+  list:   (params) => apiClient.get('/fir/list', { params }),
   get:    (id) => apiClient.get(`/firs/${id}`),
   upload: (formData) => apiClient.post('/fir/create', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },

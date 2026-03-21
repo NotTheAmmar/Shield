@@ -54,9 +54,9 @@ router.post('/create', requireRoles(['Police Officer', 'Super Admin']), (req, re
 
         try {
             await pool.query(
-                `INSERT INTO fir (id, case_category, description, location, reporting_officer)
-       VALUES ($1, $2, $3, $4, $5)`,
-                [firId, caseCategory, desc, loc, reportingOfficer]
+                `INSERT INTO fir (id, case_category, description, location, reporting_officer, fir_number)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+                [firId, caseCategory, desc, loc, reportingOfficer, firNumber]
             );
 
             send(201, {
@@ -77,6 +77,23 @@ router.post('/create', requireRoles(['Police Officer', 'Super Admin']), (req, re
     });
 
     req.pipe(bb);
+});
+// ─────────────────────────────────────────────
+// GET /api/fir/list
+// ─────────────────────────────────────────────
+router.get('/list', requireRoles(['Police Officer', 'Super Admin', 'Admin']), async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            'SELECT id, fir_number as "firNumber", case_category, description, location, status, registered_at as "uploadDate" FROM fir ORDER BY registered_at DESC'
+        );
+        res.json({
+            data: rows,
+            pagination: { page: 1, limit: 1000, total: rows.length, totalPages: 1 } // Fake pagination matching gateway mock format
+        });
+    } catch (err) {
+        console.error('Error fetching FIRs:', err.message);
+        res.status(500).json({ error: 'Failed to fetch FIRs' });
+    }
 });
 
 module.exports = router;

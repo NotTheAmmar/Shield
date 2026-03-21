@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS fir (
   description       TEXT         DEFAULT '',
   location          VARCHAR(255) DEFAULT '',
   reporting_officer TEXT         NOT NULL,
+  fir_number        VARCHAR(100) DEFAULT '',
   status            VARCHAR(50)  DEFAULT 'OPEN',
   registered_at     TIMESTAMPTZ  DEFAULT NOW()
 );
