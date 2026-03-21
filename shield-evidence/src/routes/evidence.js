@@ -259,10 +259,10 @@ router.get('/internal/list', internalNetworkGuard, requireRoles(['Super Admin'])
 
         let query, params;
         if (cursorDate && cursorId) {
-            query = 'SELECT id, fir_id, uploaded_at FROM evidence WHERE (uploaded_at, id) > ($1, $2) ORDER BY uploaded_at ASC, id ASC LIMIT $3';
+            query = 'SELECT id, fir_id, uploaded_at::text FROM evidence WHERE (uploaded_at, id) > ($1::timestamptz, $2::uuid) ORDER BY uploaded_at ASC, id ASC LIMIT $3';
             params = [cursorDate, cursorId, limit];
         } else {
-            query = 'SELECT id, fir_id, uploaded_at FROM evidence ORDER BY uploaded_at ASC, id ASC LIMIT $1';
+            query = 'SELECT id, fir_id, uploaded_at::text FROM evidence ORDER BY uploaded_at ASC, id ASC LIMIT $1';
             params = [limit];
         }
 

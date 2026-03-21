@@ -81,7 +81,7 @@ router.post('/create', requireRoles(['Police Officer', 'Super Admin']), (req, re
 // ─────────────────────────────────────────────
 // GET /api/fir/list
 // ─────────────────────────────────────────────
-router.get('/list', requireRoles(['Police Officer', 'Super Admin', 'Admin']), async (req, res) => {
+router.get('/list', requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']), async (req, res) => {
     try {
         const { rows } = await pool.query(
             'SELECT id, fir_number as "firNumber", case_category, description, location, status, registered_at as "uploadDate" FROM fir ORDER BY registered_at DESC'
@@ -93,6 +93,32 @@ router.get('/list', requireRoles(['Police Officer', 'Super Admin', 'Admin']), as
     } catch (err) {
         console.error('Error fetching FIRs:', err.message);
         res.status(500).json({ error: 'Failed to fetch FIRs' });
+    }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/fir/:id
+// ─────────────────────────────────────────────
+router.get('/:id', requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']), async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, fir_number as "firNumber", case_category as "category", description, location, status, registered_at as "uploadDate", reporting_officer as "uploadedBy" 
+             FROM fir WHERE id = $1`, [req.params.id]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'FIR not found' });
+        
+        const evidenceRows = await pool.query(
+            `SELECT id, filename as "fileName", bucket_name, object_key, sha256_hash as "hash", uploaded_at as "uploadDate", 'pending' as status
+             FROM evidence WHERE fir_id = $1 ORDER BY uploaded_at DESC`, [req.params.id]
+        );
+        
+        res.json({
+            ...rows[0],
+            linkedEvidence: evidenceRows.rows
+        });
+    } catch (err) {
+        console.error('Get FIR error:', err.message);
+        res.status(500).json({ error: 'Failed to fetch FIR details' });
     }
 });
 

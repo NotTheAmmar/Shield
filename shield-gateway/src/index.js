@@ -13,7 +13,7 @@ const cors = require('cors');
 const http = require('http');
 
 const authRouter = require('./routes/auth');
-const firsMockRouter = require('./routes/firs');
+
 const evidenceMockRouter = require('./routes/evidence');
 const auditRouter = require('./routes/audit');
 const adminRouter = require('./routes/admin');
@@ -107,7 +107,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/auth', authRouter);
 app.use('/api/dashboard', dashboardRouter);
-app.use('/api/firs', firsMockRouter);           // mock FIR list/detail
+
 app.use('/api/audit', auditRouter);
 app.use('/api/admin', adminRouter);
 
