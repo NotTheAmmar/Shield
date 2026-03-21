@@ -4,13 +4,28 @@ const fs = require('fs');
 
 const GATEWAY = 'http://localhost:3001/api';
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
+    return new Promise((resolve, reject) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => {
+            console.log(`[TEST DEBUG] Timeout reached for ${url}!`);
+            controller.abort();
+            reject(new Error('Request Timeout'));
+        }, timeoutMs);
+
+        fetch(url, { ...options, signal: controller.signal })
+            .then(res => { clearTimeout(id); resolve(res); })
+            .catch(err => { clearTimeout(id); reject(err); });
+    });
+}
+
 async function testSuite() {
     try {
         console.log('🛡️ Starting Full SHIELD Native Integration Test Suite...');
 
         // 1. Super Admin Login
         console.log('\n[1] Testing Authentication: Super Admin Login...');
-        const loginRes = await fetch(`${GATEWAY}/auth/login`, {
+        const loginRes = await fetchWithTimeout(`${GATEWAY}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: 'admin@police.gov', password: 'password123', role: 'Super Admin' })
@@ -25,7 +40,7 @@ async function testSuite() {
         const uniqueEmail = `detective_${Date.now()}@police.gov`;
         const uniqueId = `POL_${Date.now()}`;
         
-        const createRes = await fetch(`${GATEWAY}/admin/users`, {
+        const createRes = await fetchWithTimeout(`${GATEWAY}/admin/users`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminJwt}` },
             body: JSON.stringify({

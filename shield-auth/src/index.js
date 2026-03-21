@@ -20,8 +20,9 @@ app.get('/health', (req, res) => {
 });
 
 // Native routing
+const auth = require('./middleware/auth');
 app.use('/api/auth', authRouter);
-app.use('/api/admin', adminRouter);
+app.use('/api/admin', auth, adminRouter);
 
 // Start the server and ensure DB is ready natively
 app.listen(PORT, async () => {
