@@ -39,8 +39,33 @@ process.on('unhandledRejection', (reason, promise) => {
     process.exit(1);
 });
 
-// Start server
-app.listen(PORT, () => console.log(`Evidence Service running on port ${PORT}`));
+// Auto-migrate: create tables if they don't exist
+const fs = require('fs');
+const path = require('path');
+
+async function runMigrations() {
+    const sqlPath = path.join(__dirname, '..', 'migrations', 'init.sql');
+    if (!fs.existsSync(sqlPath)) {
+        console.log('[Migration] No init.sql found, skipping.');
+        return;
+    }
+    const sql = fs.readFileSync(sqlPath, 'utf8');
+    try {
+        await pool.query(sql);
+        console.log('[Migration] Database tables ready.');
+    } catch (err) {
+        console.error('[Migration] Failed:', err.message);
+        // Don't crash — tables may already exist with different column types
+    }
+}
+
+// Start server AFTER migrations
+runMigrations().then(() => {
+    app.listen(PORT, () => console.log(`Evidence Service running on port ${PORT}`));
+}).catch((err) => {
+    console.error('Failed to start:', err);
+    process.exit(1);
+});
 
 // Graceful shutdown — release Postgres pool
 process.on('SIGTERM', async () => {
