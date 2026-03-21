@@ -1,22 +1,20 @@
 /**
  * SHIELD API Gateway — Express Server
  *
- * Routes all /api/* requests. Currently serves mock data from mockData.js.
- * When real modules come online, replace mock handlers with proxy calls.
- *
- * Proxy targets (configured via env vars):
- *   AUTH_SERVICE_URL    → default http://shield-auth:4000
- *   EVIDENCE_SERVICE_URL → default http://shield-evidence:4001
- *   LEDGER_SERVICE_URL  → default http://shield-ledger:4002
+ * Routes all /api/* requests.
+ * - /api/fir/* and /api/evidence/* → proxied to shield-evidence via native http
+ * - All other /api/* → served locally with mock data
  */
 
 'use strict';
 
 const express = require('express');
 const cors = require('cors');
-const { createProxyMiddleware } = require('http-proxy-middleware');
+const http = require('http');
 
 const authRouter = require('./routes/auth');
+const firsMockRouter = require('./routes/firs');
+const evidenceMockRouter = require('./routes/evidence');
 const auditRouter = require('./routes/audit');
 const adminRouter = require('./routes/admin');
 const dashboardRouter = require('./routes/dashboard');
@@ -24,16 +22,17 @@ const dashboardRouter = require('./routes/dashboard');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+const EVIDENCE_HOST = process.env.EVIDENCE_HOST || 'shield-evidence';
+const EVIDENCE_PORT = process.env.EVIDENCE_PORT || 4001;
+
 // ── Middleware ────────────────────────────────────────────────────────────
 
 app.use(cors({
-  origin: true, // Allow all origins in dev; lock down in production
+  origin: true,
   credentials: true,
 }));
 
-// ── JWT decoding middleware ───────────────────────────────────────────────
-// Decodes the Bearer token and attaches req.user.
-// Does NOT verify the signature (mock JWTs). Real modules do real verification.
+// ── JWT decoding middleware (runs for ALL routes) ─────────────────────────
 
 app.use((req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -46,7 +45,7 @@ app.use((req, res, next) => {
         req.user = JSON.parse(payload);
       }
     } catch {
-      // Invalid token — leave req.user undefined; routes can guard as needed
+      // Invalid token
     }
   }
   next();
@@ -60,62 +59,59 @@ app.get('/', (req, res) => {
     status: 'running',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
-    routes: [
-      'POST   /api/auth/login',
-      'POST   /api/auth/logout',
-      'GET    /api/dashboard/stats',
-      'POST   /api/fir/create',
-      'GET    /api/evidence',
-      'POST   /api/evidence/upload',
-      'GET    /api/evidence/verify/:id',
-      'GET    /api/evidence/download/:id',
-      'GET    /api/firs   (mock)',
-      'GET    /api/audit',
-      'GET    /api/admin/users',
-      'POST   /api/admin/users',
-      'PATCH  /api/admin/users/:id',
-    ],
   });
 });
 
-// ── PROXY ROUTES (MUST come BEFORE body parsers!) ─────────────────────────
-// http-proxy-middleware needs the raw, unparsed request body to forward.
-// If express.json() runs first, it consumes the body stream and the proxy
-// sends an empty body to the backend.
+// ── Native HTTP Proxy to shield-evidence ──────────────────────────────────
+// Uses raw Node.js http.request to forward requests without any third-party
+// dependencies. This avoids the http-proxy-middleware v2/v3 API migration
+// issues that were crashing the gateway container.
 
-const EVIDENCE_URL = process.env.EVIDENCE_SERVICE_URL || 'http://shield-evidence:4001';
+function proxyToEvidence(req, res) {
+  const options = {
+    hostname: EVIDENCE_HOST,
+    port: EVIDENCE_PORT,
+    path: req.originalUrl,         // preserves full path like /api/fir/create
+    method: req.method,
+    headers: { ...req.headers, host: `${EVIDENCE_HOST}:${EVIDENCE_PORT}` },
+  };
 
-const evidenceProxy = createProxyMiddleware({
-  target: EVIDENCE_URL,
-  changeOrigin: true,
-  // Log proxy errors for debugging
-  on: {
-    error: (err, req, res) => {
-      console.error('[Proxy Error]', err.message);
-      if (!res.headersSent) {
-        res.status(502).json({ error: 'Evidence service unavailable', details: err.message });
-      }
-    },
-    proxyReq: (proxyReq, req) => {
-      console.log(`[Proxy] ${req.method} ${req.originalUrl} → ${EVIDENCE_URL}${req.originalUrl}`);
-    },
-  },
-});
+  console.log(`[Proxy] ${req.method} ${req.originalUrl} → http://${EVIDENCE_HOST}:${EVIDENCE_PORT}${req.originalUrl}`);
 
-// Forward /api/fir/* and /api/evidence/* directly to shield-evidence
-app.use('/api/fir', evidenceProxy);
-app.use('/api/evidence', evidenceProxy);
+  const proxyReq = http.request(options, (proxyRes) => {
+    res.writeHead(proxyRes.statusCode, proxyRes.headers);
+    proxyRes.pipe(res, { end: true });
+  });
 
-// Legacy /api/firs/* → rewrite to /api/fir/* on the evidence service
-const firsMockRouter = require('./routes/firs');
+  proxyReq.on('error', (err) => {
+    console.error('[Proxy Error]', err.message);
+    if (!res.headersSent) {
+      res.status(502).json({ error: 'Evidence service unavailable', details: err.message });
+    }
+  });
+
+  // Pipe the raw request body (including multipart/form-data) directly
+  req.pipe(proxyReq, { end: true });
+}
+
+// These routes MUST come BEFORE express.json() so the body stream is intact
+app.use('/api/fir', proxyToEvidence);
+app.use('/api/evidence/upload', proxyToEvidence);
+app.use('/api/evidence/verify', proxyToEvidence);
+app.use('/api/evidence/download', proxyToEvidence);
+app.use('/api/evidence/internal', proxyToEvidence);
+
+// ── Body parsers (only for local mock routes below) ───────────────────────
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/api/firs', firsMockRouter);
 
-// ── LOCAL MOCK API Routes (use body parsers) ──────────────────────────────
+// ── Local Mock API Routes ─────────────────────────────────────────────────
 
 app.use('/api/auth', authRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/firs', firsMockRouter);           // mock FIR list/detail
+app.use('/api/evidence', evidenceMockRouter);    // mock evidence list/detail
 app.use('/api/audit', auditRouter);
 app.use('/api/admin', adminRouter);
 
@@ -136,4 +132,5 @@ app.use((err, req, res, _next) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[SHIELD Gateway] Running on http://0.0.0.0:${PORT}`);
+  console.log(`[Proxy Target] Evidence service at http://${EVIDENCE_HOST}:${EVIDENCE_PORT}`);
 });
