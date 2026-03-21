@@ -12,18 +12,14 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 
-const authRouter = require('./routes/auth');
-
-const evidenceMockRouter = require('./routes/evidence');
-const auditRouter = require('./routes/audit');
-const adminRouter = require('./routes/admin');
-const dashboardRouter = require('./routes/dashboard');
-
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 const EVIDENCE_HOST = process.env.EVIDENCE_HOST || 'shield-evidence';
 const EVIDENCE_PORT = process.env.EVIDENCE_PORT || 4001;
+
+const AUTH_HOST = process.env.AUTH_HOST || 'shield-auth';
+const AUTH_PORT = process.env.AUTH_PORT || 4000;
 
 // ── Middleware ────────────────────────────────────────────────────────────
 
@@ -71,12 +67,14 @@ function proxyToEvidence(req, res) {
   const options = {
     hostname: EVIDENCE_HOST,
     port: EVIDENCE_PORT,
-    path: req.originalUrl,         // preserves full path like /api/fir/create
+    path: req.originalUrl,
     method: req.method,
-    headers: { ...req.headers, host: `${EVIDENCE_HOST}:${EVIDENCE_PORT}` },
+    headers: { 
+      ...req.headers, 
+      host: `${EVIDENCE_HOST}:${EVIDENCE_PORT}`,
+      'x-forwarded-for': req.ip || req.connection.remoteAddress
+    },
   };
-
-  console.log(`[Proxy] ${req.method} ${req.originalUrl} → http://${EVIDENCE_HOST}:${EVIDENCE_PORT}${req.originalUrl}`);
 
   const proxyReq = http.request(options, (proxyRes) => {
     res.writeHead(proxyRes.statusCode, proxyRes.headers);
@@ -84,14 +82,44 @@ function proxyToEvidence(req, res) {
   });
 
   proxyReq.on('error', (err) => {
-    console.error('[Proxy Error]', err.message);
+    console.error('[Proxy Error - Evidence]', err.message);
     if (!res.headersSent) {
       res.status(502).json({ error: 'Evidence service unavailable', details: err.message });
     }
   });
 
-  // Pipe the raw request body (including multipart/form-data) directly
-  // For GET/HEAD requests, explicitly end the proxy request to prevent hanging waiting for a stream end
+  if (['GET', 'HEAD', 'DELETE', 'OPTIONS'].includes(req.method)) {
+    proxyReq.end();
+  } else {
+    req.pipe(proxyReq, { end: true });
+  }
+}
+
+function proxyToAuth(req, res) {
+  const options = {
+    hostname: AUTH_HOST,
+    port: AUTH_PORT,
+    path: req.originalUrl,
+    method: req.method,
+    headers: { 
+      ...req.headers, 
+      host: `${AUTH_HOST}:${AUTH_PORT}`,
+      'x-forwarded-for': req.ip || req.connection.remoteAddress
+    },
+  };
+
+  const proxyReq = http.request(options, (proxyRes) => {
+    res.writeHead(proxyRes.statusCode, proxyRes.headers);
+    proxyRes.pipe(res, { end: true });
+  });
+
+  proxyReq.on('error', (err) => {
+    console.error('[Proxy Error - Auth]', err.message);
+    if (!res.headersSent) {
+      res.status(502).json({ error: 'Auth service unavailable', details: err.message });
+    }
+  });
+
   if (['GET', 'HEAD', 'DELETE', 'OPTIONS'].includes(req.method)) {
     proxyReq.end();
   } else {
@@ -102,19 +130,14 @@ function proxyToEvidence(req, res) {
 // These routes MUST come BEFORE express.json() so the body stream is intact
 app.use('/api/fir', proxyToEvidence);
 app.use('/api/evidence', proxyToEvidence);
+app.use('/api/dashboard', proxyToEvidence);
+app.use('/api/audit', proxyToEvidence);
 
-// ── Body parsers (only for local mock routes below) ───────────────────────
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use('/api/auth', proxyToAuth);
+app.use('/api/admin', proxyToAuth);
 
 // ── Local Mock API Routes ─────────────────────────────────────────────────
-
-app.use('/api/auth', authRouter);
-app.use('/api/dashboard', dashboardRouter);
-
-app.use('/api/audit', auditRouter);
-app.use('/api/admin', adminRouter);
+// ALL MOCK ROUTES HAVE BEEN DELETED. 100% NATIVE MICROSERVICE ROUTING ACTIVE.
 
 // ── 404 handler ───────────────────────────────────────────────────────────
 
