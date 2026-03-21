@@ -91,7 +91,12 @@ function proxyToEvidence(req, res) {
   });
 
   // Pipe the raw request body (including multipart/form-data) directly
-  req.pipe(proxyReq, { end: true });
+  // For GET/HEAD requests, explicitly end the proxy request to prevent hanging waiting for a stream end
+  if (['GET', 'HEAD', 'DELETE', 'OPTIONS'].includes(req.method)) {
+    proxyReq.end();
+  } else {
+    req.pipe(proxyReq, { end: true });
+  }
 }
 
 // These routes MUST come BEFORE express.json() so the body stream is intact

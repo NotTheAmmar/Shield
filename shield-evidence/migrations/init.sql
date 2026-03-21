@@ -1,8 +1,4 @@
--- Drop existing tables (dev only — ensures correct column types)
-DROP TABLE IF EXISTS api_audit_log CASCADE;
-DROP TABLE IF EXISTS audit_log CASCADE;
-DROP TABLE IF EXISTS evidence CASCADE;
-DROP TABLE IF EXISTS fir CASCADE;
+-- Initialize tables if they do not exist
 
 CREATE TABLE IF NOT EXISTS fir (
   id                UUID         PRIMARY KEY,
