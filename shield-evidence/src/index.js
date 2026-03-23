@@ -48,6 +48,10 @@ process.on('unhandledRejection', (reason, promise) => {
 const fs = require('fs');
 const path = require('path');
 
+const MAX_RETRIES = 10;
+const RETRY_DELAY_MS = 3000;
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
 async function runMigrations() {
     const sqlPath = path.join(__dirname, '..', 'migrations', 'init.sql');
     if (!fs.existsSync(sqlPath)) {
@@ -55,22 +59,56 @@ async function runMigrations() {
         return;
     }
     const sql = fs.readFileSync(sqlPath, 'utf8');
-    try {
-        await pool.query(sql);
-        console.log('[Migration] Database tables ready.');
-    } catch (err) {
-        console.error('[Migration] Failed:', err.message);
-        // Don't crash — tables may already exist with different column types
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            await pool.query('SELECT 1'); // Test connection
+            await pool.query(sql);
+            console.log('[Migration] Database tables ready.');
+            return;
+        } catch (err) {
+            if (attempt < MAX_RETRIES) {
+                console.log(`[Migration] Attempt ${attempt}/${MAX_RETRIES} failed (${err.message}). Retrying in ${RETRY_DELAY_MS / 1000}s...`);
+                await sleep(RETRY_DELAY_MS);
+            } else {
+                console.error('[Migration] Failed after all retries:', err.message);
+            }
+        }
+    }
+}
+// Ensure MinIO bucket exists
+const { minioInternal, BUCKET } = require('./config/minio');
+
+async function ensureMinioBucket() {
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            const exists = await minioInternal.bucketExists(BUCKET);
+            if (!exists) {
+                await minioInternal.makeBucket(BUCKET);
+                console.log(`[MinIO] Created bucket: ${BUCKET}`);
+            } else {
+                console.log(`[MinIO] Bucket '${BUCKET}' exists.`);
+            }
+            return;
+        } catch (err) {
+            if (attempt < MAX_RETRIES) {
+                console.log(`[MinIO] Attempt ${attempt}/${MAX_RETRIES} failed (${err.message}). Retrying in ${RETRY_DELAY_MS / 1000}s...`);
+                await sleep(RETRY_DELAY_MS);
+            } else {
+                console.error('[MinIO] Failed to ensure bucket after all retries:', err.message);
+            }
+        }
     }
 }
 
-// Start server AFTER migrations
-runMigrations().then(() => {
-    app.listen(PORT, () => console.log(`Evidence Service running on port ${PORT}`));
-}).catch((err) => {
-    console.error('Failed to start:', err);
-    process.exit(1);
-});
+// Start server AFTER migrations + bucket check
+runMigrations()
+    .then(() => ensureMinioBucket())
+    .then(() => {
+        app.listen(PORT, () => console.log(`Evidence Service running on port ${PORT}`));
+    }).catch((err) => {
+        console.error('Failed to start:', err);
+        process.exit(1);
+    });
 
 // Graceful shutdown — release Postgres pool
 process.on('SIGTERM', async () => {

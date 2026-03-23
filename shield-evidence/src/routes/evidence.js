@@ -237,7 +237,7 @@ router.get('/download/:id', async (req, res) => {
         // 30 seconds — enough to start download, too short to leak (Flaw #14)
         const url = await minioPublic.presignedGetObject(bucket_name, object_key, 30);
 
-        res.json({ url });
+        res.redirect(url);
     } catch (err) {
         console.error('Download error:', err.message);
         res.status(500).json({ error: 'Could not generate download URL' });
@@ -388,6 +388,7 @@ router.get('/:id', requireRoles(['Police Officer', 'Super Admin', 'Judicial Auth
         
         res.json({
             ...rows[0],
+            fileUrl: `/api/evidence/download/${req.params.id}`,
             history: auditRows.rows
         });
     } catch (err) {

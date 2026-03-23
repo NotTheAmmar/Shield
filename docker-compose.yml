@@ -12,8 +12,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     volumes:
       - ./.docker-data/postgres:/var/lib/postgresql/data
 
@@ -24,9 +24,9 @@ services:
       - shield-network
     environment:
       IMMUDB_ADMIN_PASSWORD: ${IMMUDB_ADMIN_PASSWORD}
-    ports:
-      - "3322:3322"
-      - "8080:8080"
+    expose:
+      - "3322"
+      - "8080"
     volumes:
       - immudb-data:/var/lib/immudb
 
@@ -41,7 +41,8 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     ports:
       - "9000:9000"
-      - "9001:9001"
+    expose:
+      - "9001"
     volumes:
       - ./.docker-data/minio:/data
 
@@ -108,6 +109,7 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_NAME: ${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
+      ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD}
     depends_on:
       - db-users
 

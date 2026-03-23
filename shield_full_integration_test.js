@@ -28,7 +28,7 @@ async function testSuite() {
         const loginRes = await fetchWithTimeout(`${GATEWAY}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: 'admin@police.gov', password: 'password123', role: 'Super Admin' })
+            body: JSON.stringify({ email: 'admin@police.gov', password: 'Sh13ld@Pr0duct10n2026!', role: 'Super Admin' })
         });
         const loginData = await loginRes.json();
         if (!loginRes.ok) throw new Error(`Super Admin Login failed: ${loginData.error}`);
@@ -54,7 +54,7 @@ async function testSuite() {
 
         // 3. Login as the newly created Police Officer
         console.log('\n[3] Testing Police Officer Login...');
-        const polLogin = await fetch(`${GATEWAY}/auth/login`, {
+        const polLogin = await fetchWithTimeout(`${GATEWAY}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: uniqueEmail, password: 'secretpassword', role: 'Police Officer' })
@@ -63,57 +63,71 @@ async function testSuite() {
         const polJwt = (await polLogin.json()).token;
         console.log('✅ Police Officer Token Granted.');
 
-        // 4. Create an FIR natively in PostgreSQL
+        // 4. Create an FIR natively in PostgreSQL (must use multipart/form-data for busboy)
         console.log('\n[4] Testing Evidence Microservice: Creating FIR...');
-        const firRes = await fetch(`${GATEWAY}/fir/create`, {
+        const firForm = new FormData();
+        firForm.append('firNumber', `TEST/AUTO/${Date.now()}`);
+        firForm.append('incidentType', 'Cybercrime');
+        firForm.append('description', 'Automated Integration Test Case');
+        firForm.append('location', 'Virtual Lab');
+        
+        const firRes = await fetchWithTimeout(`${GATEWAY}/fir/create`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${polJwt}` },
-            body: JSON.stringify({ caseCategory: 'Cybercrime', description: 'Test Case', location: 'Virtual' })
-        });
-        const firData = await firRes.json();
-        const firId = firData.id;
-        console.log(`✅ FIR Created inside db-users: ${firId}`);
+            headers: { 'Authorization': `Bearer ${polJwt}` },
+            body: firForm
+        }, 8000);
+        const firText = await firRes.text();
+        let firData;
+        try { firData = JSON.parse(firText); } catch { throw new Error(`FIR response not JSON: ${firText.substring(0, 200)}`); }
+        if (!firRes.ok) throw new Error(`FIR Create failed: ${firData.error}`);
+        const firId = firData.fir_id;
+        console.log(`✅ FIR Created in PostgreSQL: ${firId}`);
 
         // 5. Upload Evidence via MinIO streams
         console.log('\n[5] Testing Storage & Blockchain: Uploading Evidence File...');
-        const formData = new FormData();
-        formData.append('fir_id', firId);
-        formData.append('file', new Blob(['This is highly classified digital evidence from the test suite.']), 'secret.txt');
+        const evForm = new FormData();
+        evForm.append('fir_id', firId);
+        evForm.append('file', new Blob(['This is highly classified digital evidence from the test suite.']), 'secret.txt');
         
-        const evRes = await fetch(`${GATEWAY}/evidence/upload`, {
+        const evRes = await fetchWithTimeout(`${GATEWAY}/evidence/upload`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${polJwt}` },
-            body: formData
-        });
-        const evData = await evRes.json();
+            body: evForm
+        }, 10000);
+        const evText = await evRes.text();
+        let evData;
+        try { evData = JSON.parse(evText); } catch { throw new Error(`Evidence response not JSON: ${evText.substring(0, 200)}`); }
         if (!evRes.ok) throw new Error(`Evidence Upload failed: ${evData.error}`);
         const evId = evData.id;
         console.log(`✅ Evidence Uploaded & Secured on Ledger. ID: ${evId}`);
 
         // 6. Verify Evidence via the Pipeline
         console.log('\n[6] Testing Live Cryptographic Verification...');
-        const verifyRes = await fetch(`${GATEWAY}/evidence/verify/${evId}`, {
+        const verifyRes = await fetchWithTimeout(`${GATEWAY}/evidence/verify/${evId}`, {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${adminJwt}` }
-        });
+        }, 8000);
         const verifyData = await verifyRes.json();
+        if (!verifyRes.ok) throw new Error(`Verification failed: ${JSON.stringify(verifyData)}`);
         console.log(`✅ Hash Validation Status: ${verifyData.status}`);
 
-        // 7. Verify Dashboard & Audit Service (The newly built routes)
+        // 7. Verify Dashboard & Audit Service
         console.log('\n[7] Testing Dashboard & Centralized Logging APIs...');
-        const statRes = await fetch(`${GATEWAY}/dashboard/stats`, {
+        const statRes = await fetchWithTimeout(`${GATEWAY}/dashboard/stats`, {
             headers: { 'Authorization': `Bearer ${adminJwt}` }
         });
         const statData = await statRes.json();
+        if (!statRes.ok) throw new Error(`Dashboard failed: ${JSON.stringify(statData)}`);
         console.log(`✅ Live System Stats: ${JSON.stringify(statData)}`);
 
-        const auditRes = await fetch(`${GATEWAY}/audit`, {
+        const auditRes = await fetchWithTimeout(`${GATEWAY}/audit`, {
             headers: { 'Authorization': `Bearer ${adminJwt}` }
         });
         const auditData = await auditRes.json();
+        if (!auditRes.ok) throw new Error(`Audit failed: ${JSON.stringify(auditData)}`);
         console.log(`✅ Total Audit Log Entries: ${auditData.auditLog.length}`);
 
-        console.log('\n🎉 ALL ROUTES FULLY INTEGRATED WITH 100% NATIVE DB/NATIVE MICROSERVICES. ZERO MOCKS.');
+        console.log('\n🎉 ALL 7 STEPS PASSED — 100% NATIVE MICROSERVICE INTEGRATION VERIFIED. ZERO MOCKS.');
 
     } catch (err) {
         console.error(`\n❌ TEST FAILED: ${err.message}`);

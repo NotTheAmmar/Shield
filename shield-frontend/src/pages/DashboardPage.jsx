@@ -30,15 +30,7 @@ const ACTION_LABELS = {
   USER_REACTIVATED: 'Reactivated User',
 };
 
-const MOCK_POLICE_STATS = { firsUploaded: 24, evidenceFiles: 87, verified: 79, pendingVerification: 8 };
-const MOCK_JUDICIAL_STATS = { totalFirs: 142, totalEvidence: 890, verifiedIntegrity: 880, tamperAlerts: 2 };
-const MOCK_ADMIN_STATS = { totalUsers: 38, activeUsers: 35, deactivatedUsers: 3, recentLogins: 12 };
-const MOCK_RECENT_ACTIVITY = [
-  { id: 'a1', timestamp: new Date(Date.now() - 3600000).toISOString(), action: 'UPLOADED_EVIDENCE', targetLabel: 'crime_scene_photo.jpg' },
-  { id: 'a2', timestamp: new Date(Date.now() - 7200000).toISOString(), action: 'UPLOADED_FIR', targetLabel: 'FIR/2025/MH/0042' },
-  { id: 'a3', timestamp: new Date(Date.now() - 86400000).toISOString(), action: 'VERIFIED_FIR', targetLabel: 'FIR/2025/MH/0041' },
-  { id: 'a4', timestamp: new Date(Date.now() - 172800000).toISOString(), action: 'LOGIN', targetLabel: null },
-];
+
 
 function ActivityItem({ item }) {
   return (
@@ -67,13 +59,8 @@ export default function DashboardPage() {
       if (data) {
         setStats(data.stats);
         setActivity(data.recentActivity || []);
-      } else {
-        // Use mock data
-        if (role === 'police_officer') { setStats(MOCK_POLICE_STATS); setActivity(MOCK_RECENT_ACTIVITY); }
-        else if (role === 'judicial_authority') { setStats(MOCK_JUDICIAL_STATS); setActivity(MOCK_RECENT_ACTIVITY); }
-        else if (role === 'admin') { setStats(MOCK_ADMIN_STATS); setActivity(MOCK_RECENT_ACTIVITY); }
       }
-    });
+    }).catch(err => console.error("Failed to load dashboard stats", err));
   }, [role]);
 
   const greeting = `Welcome back, ${user?.name?.split(' ')[0] || 'Officer'}`;
@@ -86,7 +73,7 @@ export default function DashboardPage() {
       />
 
       <div className="stat-cards-grid">
-        {role === 'police_officer' && stats && (
+        {(role === 'Police Officer' || role === 'Super Admin') && stats && (
           <>
             <StatCard label="FIRs Uploaded" value={stats.firsUploaded} icon={FileText} accent="var(--navy-700)" />
             <StatCard label="Evidence Files" value={stats.evidenceFiles} icon={Archive} accent="var(--navy-700)" />
@@ -94,7 +81,7 @@ export default function DashboardPage() {
             <StatCard label="Pending Verification" value={stats.pendingVerification} icon={Clock} accent="var(--amber)" />
           </>
         )}
-        {role === 'judicial_authority' && stats && (
+        {role === 'Judicial Authority' && stats && (
           <>
             <StatCard label="Total FIRs in System" value={stats.totalFirs} icon={FileText} accent="var(--navy-700)" />
             <StatCard label="Total Evidence Files" value={stats.totalEvidence} icon={Archive} accent="var(--navy-700)" />
@@ -102,7 +89,7 @@ export default function DashboardPage() {
             <StatCard label="Tamper Alerts" value={stats.tamperAlerts} icon={AlertTriangle} accent="var(--crimson)" />
           </>
         )}
-        {role === 'admin' && stats && (
+        {role === 'Admin' && stats && (
           <>
             <StatCard label="Total Users" value={stats.totalUsers} icon={Users} accent="var(--navy-700)" />
             <StatCard label="Active Users" value={stats.activeUsers} icon={UserCheck} accent="var(--emerald)" />
@@ -136,7 +123,7 @@ export default function DashboardPage() {
           </div>
           <div className="card-body">
             <div className="quick-action-bar" style={{ flexDirection: 'column' }}>
-              {role === 'police_officer' && (
+              {(role === 'Police Officer' || role === 'Super Admin') && (
                 <>
                   <Link to="/upload" className="btn btn-primary btn-full">
                     <Upload size={14} /> Upload FIR / Evidence
@@ -149,7 +136,7 @@ export default function DashboardPage() {
                   </Link>
                 </>
               )}
-              {role === 'judicial_authority' && (
+              {role === 'Judicial Authority' && (
                 <>
                   <Link to="/fir" className="btn btn-primary btn-full">
                     <FileText size={14} /> Browse FIR Registry
@@ -162,7 +149,7 @@ export default function DashboardPage() {
                   </Link>
                 </>
               )}
-              {role === 'admin' && (
+              {role === 'Admin' && (
                 <>
                   <Link to="/admin/users" className="btn btn-primary btn-full">
                     <Settings size={14} /> Manage Users

@@ -20,11 +20,22 @@ router.get('/stats', requireRoles(['Police Officer', 'Super Admin', 'Judicial Au
             "SELECT COUNT(DISTINCT evidence_id) FROM audit_log WHERE result = 'TAMPERED'"
         );
 
+        const recentActivity = await pool.query(
+            `SELECT a.id, a.action, a.checked_at as timestamp, COALESCE(e.filename, 'System') as "targetLabel" 
+             FROM audit_log a 
+             LEFT JOIN evidence e ON a.evidence_id = e.id 
+             ORDER BY a.checked_at DESC 
+             LIMIT 5`
+        );
+
         res.json({
-            totalFirs: parseInt(firsCount.rows[0].count, 10),
-            totalEvidence: parseInt(evidenceCount.rows[0].count, 10),
-            verifiedCount: parseInt(verifiedCount.rows[0].count, 10),
-            tamperedCount: parseInt(tamperedCount.rows[0].count, 10)
+            stats: {
+                totalFirs: parseInt(firsCount.rows[0].count, 10),
+                totalEvidence: parseInt(evidenceCount.rows[0].count, 10),
+                verifiedCount: parseInt(verifiedCount.rows[0].count, 10),
+                tamperedCount: parseInt(tamperedCount.rows[0].count, 10)
+            },
+            recentActivity: recentActivity.rows
         });
     } catch (err) {
         console.error('[DASHBOARD STATS]', err.message);

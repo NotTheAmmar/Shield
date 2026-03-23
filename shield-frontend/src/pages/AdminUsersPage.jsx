@@ -22,9 +22,9 @@ function generatePassword() {
 
 function CreateUserModal({ onClose, onCreated }) {
   const [form, setForm] = useState({
-    name: '', email: '', role: 'police_officer',
-    designation: '', station: '',
-    temporaryPassword: generatePassword(),
+    name: '', email: '', role: 'Police Officer',
+    employeeId: '',
+    plainPassword: generatePassword(),
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -34,7 +34,7 @@ function CreateUserModal({ onClose, onCreated }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.role) { setError('Name, email, and role are required.'); return; }
+    if (!form.name || !form.email || !form.role || !form.employeeId || !form.plainPassword) { setError('All fields are required.'); return; }
     setLoading(true);
     setError('');
     try {
@@ -45,12 +45,6 @@ function CreateUserModal({ onClose, onCreated }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const copyPassword = () => {
-    navigator.clipboard.writeText(form.temporaryPassword);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -77,10 +71,15 @@ function CreateUserModal({ onClose, onCreated }) {
             <div className="form-group">
               <label className="form-label" htmlFor="u-role">Role *</label>
               <select id="u-role" name="role" className="form-select" value={form.role} onChange={handleChange}>
-                <option value="police_officer">Police Officer</option>
-                <option value="judicial_authority">Judicial Authority</option>
-                <option value="admin">Administrator</option>
+                <option value="Police Officer">Police Officer</option>
+                <option value="Judicial Authority">Judicial Authority</option>
+                <option value="Admin">Administrator</option>
               </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="u-employeeId">Employee ID *</label>
+              <input id="u-employeeId" name="employeeId" className="form-input" value={form.employeeId} onChange={handleChange} placeholder="EMP12345" required />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -94,17 +93,20 @@ function CreateUserModal({ onClose, onCreated }) {
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Temporary Password</label>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
-                Auto-generated. Share securely. User must change on first login.
-              </p>
-              <div className="temp-password-box" style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>{form.temporaryPassword}</span>
-                <button type="button" onClick={copyPassword} className="btn btn-ghost btn-icon" title="Copy password">
-                  {copied ? <CheckCircle size={14} color="var(--emerald)" /> : <Copy size={14} />}
+            <div className="form-group" style={{ position: 'relative' }}>
+              <label className="form-label" htmlFor="u-password">Temporary Password *</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input id="u-password" name="plainPassword" className="form-input" style={{ flex: 1, fontFamily: 'monospace' }} value={form.plainPassword} readOnly required />
+                <button
+                  type="button" className="btn btn-secondary"
+                  onClick={() => { navigator.clipboard.writeText(form.plainPassword); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                >
+                  {copied ? 'Copied' : 'Copy'}
                 </button>
               </div>
+              <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 4 }}>
+                Copy this password and share it securely with the user. They must change it upon first login.
+              </p>
             </div>
           </div>
           <div className="modal-footer">
@@ -139,9 +141,9 @@ export default function AdminUsersPage() {
     setLoading(true);
     try {
       const res = await adminAPI.listUsers({ page, limit: 25, search, role: filterRole, status: filterStatus });
-      setData(res.data);
-      setTotalPages(res.pagination.totalPages);
-      setTotal(res.pagination.total);
+      setData(res.users || []);
+      setTotalPages(1);
+      setTotal((res.users || []).length);
     } catch {
       setData([]);
     } finally {
@@ -259,9 +261,9 @@ export default function AdminUsersPage() {
           id="user-role-filter"
         >
           <option value="">All Roles</option>
-          <option value="police_officer">Police Officer</option>
-          <option value="judicial_authority">Judicial Authority</option>
-          <option value="admin">Admin</option>
+          <option value="Police Officer">Police Officer</option>
+          <option value="Judicial Authority">Judicial Authority</option>
+          <option value="Admin">Admin</option>
         </select>
         <select
           className="form-select"
