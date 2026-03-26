@@ -8,7 +8,15 @@ import { useAuth } from '../hooks/useAuth';
  * Wrong role → / (dashboard)
  */
 export default function ProtectedRoute({ children, roles }) {
-  const { isAuthenticated, hasRole } = useAuth();
+  const { isAuthenticated, hasRole, isInitializing } = useAuth();
+
+  if (isInitializing) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center' }}>
+        <div className="spinner"></div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

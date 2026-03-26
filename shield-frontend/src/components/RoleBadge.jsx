@@ -2,9 +2,10 @@ import React from 'react';
 import { Shield, Scale, Settings } from 'lucide-react';
 
 const CONFIG = {
-  police_officer:    { className: 'badge-police',   Icon: Shield, label: 'Police Officer'    },
-  judicial_authority:{ className: 'badge-judicial', Icon: Scale,  label: 'Judicial Authority' },
-  admin:             { className: 'badge-admin',    Icon: Settings,label: 'Admin'              },
+  'Police Officer':    { className: 'badge-police',   Icon: Shield, label: 'Police Officer'    },
+  'Judicial Authority':{ className: 'badge-judicial', Icon: Scale,  label: 'Judicial Authority' },
+  'Super Admin':       { className: 'badge-admin',    Icon: Settings,label: 'Super Admin'       },
+  'Admin':             { className: 'badge-admin',    Icon: Settings,label: 'Admin'              },
 };
 
 export default function RoleBadge({ role }) {

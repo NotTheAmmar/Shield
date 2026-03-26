@@ -78,9 +78,9 @@ export default function AuditLogPage() {
         action: filterAction || undefined,
         targetId: targetId || undefined,
       });
-      setData(res.data);
-      setTotalPages(res.pagination.totalPages);
-      setTotal(res.pagination.total);
+      setData(res.auditLog || []);
+      setTotalPages(1);
+      setTotal((res.auditLog || []).length);
     } catch {
       setData([]);
     } finally {

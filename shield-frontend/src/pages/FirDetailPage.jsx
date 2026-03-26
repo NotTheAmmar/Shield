@@ -174,7 +174,7 @@ export default function FirDetailPage() {
         <div className="card">
           <div className="card-header">
             <h2>Linked Evidence ({fir.linkedEvidence?.length || 0} files)</h2>
-            {role === 'police_officer' && (
+            {(role === 'Police Officer' || role === 'Super Admin') && (
               <Link to={`/upload?tab=evidence&firId=${fir.id}`} className="btn btn-primary btn-sm">
                 <Plus size={13} /> Attach More Evidence
               </Link>

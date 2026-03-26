@@ -237,7 +237,7 @@ router.get('/download/:id', async (req, res) => {
         // 30 seconds — enough to start download, too short to leak (Flaw #14)
         const url = await minioPublic.presignedGetObject(bucket_name, object_key, 30);
 
-        res.json({ url });
+        res.redirect(url);
     } catch (err) {
         console.error('Download error:', err.message);
         res.status(500).json({ error: 'Could not generate download URL' });
@@ -259,10 +259,10 @@ router.get('/internal/list', internalNetworkGuard, requireRoles(['Super Admin'])
 
         let query, params;
         if (cursorDate && cursorId) {
-            query = 'SELECT id, fir_id, uploaded_at FROM evidence WHERE (uploaded_at, id) > ($1, $2) ORDER BY uploaded_at ASC, id ASC LIMIT $3';
+            query = 'SELECT id, fir_id, uploaded_at::text FROM evidence WHERE (uploaded_at, id) > ($1::timestamptz, $2::uuid) ORDER BY uploaded_at ASC, id ASC LIMIT $3';
             params = [cursorDate, cursorId, limit];
         } else {
-            query = 'SELECT id, fir_id, uploaded_at FROM evidence ORDER BY uploaded_at ASC, id ASC LIMIT $1';
+            query = 'SELECT id, fir_id, uploaded_at::text FROM evidence ORDER BY uploaded_at ASC, id ASC LIMIT $1';
             params = [limit];
         }
 
@@ -326,6 +326,74 @@ router.post('/internal/verify-batch', express.json(), internalNetworkGuard, requ
     } catch (err) {
         console.error('Verify-batch error:', err.message);
         res.status(500).json({ error: 'Batch verification failed' });
+    }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/evidence
+// ─────────────────────────────────────────────
+router.get('/', requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']), async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT 
+                e.id, 
+                e.filename as "fileName", 
+                f.fir_number as "firNumber", 
+                f.id as "firId",
+                e.sha256_hash as "hash", 
+                f.case_category as "category", 
+                e.uploaded_at as "uploadDate", 
+                'pending' as status 
+             FROM evidence e 
+             JOIN fir f ON e.fir_id = f.id 
+             ORDER BY e.uploaded_at DESC`
+        );
+        res.json({
+            data: rows,
+            pagination: { page: 1, limit: 1000, total: rows.length, totalPages: 1 }
+        });
+    } catch (err) {
+        console.error('List Evidence error:', err.message);
+        res.status(500).json({ error: 'Failed to fetch evidence list' });
+    }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/evidence/:id
+// ─────────────────────────────────────────────
+// MUST BE AT THE BOTTOM to prevent intercepting /upload, /verify/:id, etc.
+router.get('/:id', requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']), async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT 
+                e.id, 
+                e.filename as "fileName", 
+                f.fir_number as "firNumber", 
+                f.id as "firId",
+                e.sha256_hash as "hash", 
+                f.case_category as "category", 
+                e.uploaded_at as "uploadDate", 
+                'pending' as status,
+                e.uploaded_by as "uploaderId"
+             FROM evidence e 
+             JOIN fir f ON e.fir_id = f.id 
+             WHERE e.id = $1`, [req.params.id]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Evidence not found' });
+        
+        const auditRows = await pool.query(
+            `SELECT action, result, actor_id as "actor", checked_at as "timestamp" 
+             FROM audit_log WHERE evidence_id = $1 ORDER BY checked_at DESC`, [req.params.id]
+        );
+        
+        res.json({
+            ...rows[0],
+            fileUrl: `/api/evidence/download/${req.params.id}`,
+            history: auditRows.rows
+        });
+    } catch (err) {
+        console.error('Get Evidence error:', err.message);
+        res.status(500).json({ error: 'Failed to fetch evidence details' });
     }
 });
 

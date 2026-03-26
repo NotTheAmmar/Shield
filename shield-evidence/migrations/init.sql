@@ -1,9 +1,12 @@
+-- Initialize tables if they do not exist
+
 CREATE TABLE IF NOT EXISTS fir (
   id                UUID         PRIMARY KEY,
-  case_category     VARCHAR(100) NOT NULL,
-  description       TEXT         NOT NULL,
-  location          VARCHAR(255) NOT NULL,
-  reporting_officer UUID         NOT NULL,
+  case_category     VARCHAR(100) DEFAULT '',
+  description       TEXT         DEFAULT '',
+  location          VARCHAR(255) DEFAULT '',
+  reporting_officer TEXT         NOT NULL,
+  fir_number        VARCHAR(100) DEFAULT '',
   status            VARCHAR(50)  DEFAULT 'OPEN',
   registered_at     TIMESTAMPTZ  DEFAULT NOW()
 );
@@ -15,7 +18,7 @@ CREATE TABLE IF NOT EXISTS evidence (
   bucket_name  VARCHAR(100) NOT NULL,
   object_key   VARCHAR(500) NOT NULL,
   sha256_hash  VARCHAR(64)  NOT NULL,
-  uploaded_by  UUID,
+  uploaded_by  TEXT,
   uploaded_at  TIMESTAMPTZ  DEFAULT NOW()
 );
 
@@ -24,13 +27,13 @@ CREATE TABLE IF NOT EXISTS audit_log (
   evidence_id  UUID         REFERENCES evidence(id),
   action       VARCHAR(50),
   result       VARCHAR(20),
-  actor_id     UUID,
+  actor_id     TEXT,
   checked_at   TIMESTAMPTZ  DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS api_audit_log (
   id           SERIAL PRIMARY KEY,
-  user_id      UUID,
+  user_id      TEXT,
   method       VARCHAR(10) NOT NULL,
   endpoint     VARCHAR(255) NOT NULL,
   ip_address   VARCHAR(45) NOT NULL,

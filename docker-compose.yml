@@ -3,6 +3,20 @@ networks:
     driver: bridge
 
 services:
+  nginx:
+    image: nginx:alpine
+    container_name: shield-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - shield-network
+    depends_on:
+      - shield-gateway
+      - shield-frontend
+
   db-users:
     image: postgres:15-alpine
     container_name: db-users
@@ -12,8 +26,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     volumes:
       - ./.docker-data/postgres:/var/lib/postgresql/data
 
@@ -25,8 +39,9 @@ services:
     environment:
       IMMUDB_ADMIN_PASSWORD: ${IMMUDB_ADMIN_PASSWORD}
     ports:
-      - "3322:3322"
       - "8080:8080"
+    expose:
+      - "3322"
     volumes:
       - immudb-data:/var/lib/immudb
 
@@ -104,7 +119,11 @@ services:
       - "4000"
     environment:
       DB_HOST: db-users
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
+      ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD}
     depends_on:
       - db-users
 
@@ -134,6 +153,7 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_NAME: ${POSTGRES_DB}
       MASTER_KEY: ${MASTER_KEY}
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - minio-store
       - shield-ledger
