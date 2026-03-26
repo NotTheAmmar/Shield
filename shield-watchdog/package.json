@@ -1,0 +1,5 @@
+{
+  "name": "shield-watchdog",
+  "version": "1.0.0",
+  "description": "SHIELD Integrity Watchdog — Automated scheduled verification"
+}

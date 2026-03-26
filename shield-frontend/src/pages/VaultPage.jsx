@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import DataTable from '../components/DataTable';
@@ -22,7 +22,8 @@ export default function VaultPage() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [rawSearch, setRawSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [searchParams] = useSearchParams();
+  const [filterStatus, setFilterStatus] = useState(searchParams.get('status') || '');
   const [filterCategory, setFilterCategory] = useState('');
   const [sortBy, setSortBy] = useState('uploadDate');
   const [sortOrder, setSortOrder] = useState('desc');
