@@ -27,8 +27,8 @@ export default function EvidenceDetailPage() {
   const [ev, setEv] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [verifying, setVerifying] = useState(false);
-  const [verifyResult, setVerifyResult] = useState(null);
+  const [verifyState, setVerifyState] = useState('IDLE'); // IDLE, LOADING, VERIFIED, TAMPERED, ERROR
+  const [verifyError, setVerifyError] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -39,16 +39,19 @@ export default function EvidenceDetailPage() {
   }, [id]);
 
   const handleVerify = async () => {
-    setVerifying(true);
-    setVerifyResult(null);
+    setVerifyState('LOADING');
     try {
       const res = await evidenceAPI.verify(id);
-      setVerifyResult(res);
-      setEv((e) => e ? { ...e, status: res.status } : e);
-    } catch {
-      setVerifyResult({ error: 'Verification failed.' });
-    } finally {
-      setVerifying(false);
+      if (res.status === 'OK') {
+        setVerifyState('VERIFIED');
+        setEv((e) => e ? { ...e, status: 'verified' } : e);
+      } else {
+        setVerifyState('TAMPERED');
+        setEv((e) => e ? { ...e, status: 'tampered' } : e);
+      }
+    } catch (err) {
+      setVerifyError(err?.response?.data?.error || err.message || 'Database unreachable.');
+      setVerifyState('ERROR');
     }
   };
 
@@ -131,19 +134,31 @@ export default function EvidenceDetailPage() {
                 <span className="detail-row-value">{fmtDate(ev.ledgerTimestamp)}</span>
               </div>
 
-              {verifyResult && (
-                <div className={`alert ${verifyResult.error ? 'alert-error' : verifyResult.match ? 'alert-success' : 'alert-error'}`}>
-                  {verifyResult.error
-                    ? verifyResult.error
-                    : verifyResult.match
-                    ? `✓ Integrity verified at ${fmtDate(verifyResult.verifiedAt)}`
-                    : `⚠ TAMPER DETECTED — Hash mismatch found at ${fmtDate(verifyResult.verifiedAt)}`}
+              {verifyState === 'LOADING' && (
+                <div className="alert alert-info">
+                  <span className="spinner" style={{ width: 14, height: 14, marginRight: 8 }} />
+                  Verifying cryptographic footprint with ImmuDB ledger...
+                </div>
+              )}
+              {verifyState === 'VERIFIED' && (
+                <div className="alert alert-success">
+                  ✓ INTEGRITY VERIFIED: SHA-256 match confirmed.
+                </div>
+              )}
+              {verifyState === 'TAMPERED' && (
+                <div className="alert alert-error">
+                  🚨 TAMPER DETECTED: File hash dramatically differs from ledger.
+                </div>
+              )}
+              {verifyState === 'ERROR' && (
+                <div className="alert" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
+                  ⚠ NETWORK ERROR: Could not reach verification database ({verifyError}). This is a connectivity failure, not a cryptographic tamper.
                 </div>
               )}
 
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button className="btn btn-secondary btn-sm" onClick={handleVerify} disabled={verifying}>
-                  {verifying ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Verifying…</> : <><RefreshCw size={13} /> Re-Verify Now</>}
+                <button className="btn btn-secondary btn-sm" onClick={handleVerify} disabled={verifyState === 'LOADING'}>
+                  {verifyState === 'LOADING' ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Verifying…</> : <><RefreshCw size={13} /> Re-Verify Now</>}
                 </button>
                 <a
                   href={evidenceAPI.downloadUrl(ev.id)}

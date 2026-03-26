@@ -3,70 +3,39 @@ import { authAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
-/**
- * Decode the JWT payload (base64 middle segment).
- * Works for both real JWTs and our mock tokens.
- */
-function decodeToken(token) {
-  try {
-    const parts = token.split('.');
-    if (parts.length < 2) return null;
-    // Convert base64url → standard base64, then pad
-    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = b64 + '=='.slice(0, (4 - (b64.length % 4)) % 4);
-    return JSON.parse(atob(padded));
-  } catch {
-    return null;
-  }
-}
-
-function isTokenExpired(decoded) {
-  if (!decoded?.exp) return false;
-  return decoded.exp < Date.now() / 1000;
-}
-
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem('shield_token'));
-  const [user, setUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem('shield_user');
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  // Validate token on mount
+  // Validate identity implicitly by having the backend inspect the HttpOnly cookie
   useEffect(() => {
-    if (token) {
-      const decoded = decodeToken(token);
-      if (!decoded || isTokenExpired(decoded)) {
-        localStorage.removeItem('shield_token');
-        localStorage.removeItem('shield_user');
-        setToken(null);
-        setUser(null);
+    let mounted = true;
+    const hydrateIdentity = async () => {
+      try {
+        const { user: serverUser } = await authAPI.getMe();
+        if (mounted) setUser(serverUser);
+      } catch (err) {
+        if (mounted) setUser(null);
+      } finally {
+        if (mounted) setIsInitializing(false);
       }
-    }
+    };
+    hydrateIdentity();
+    return () => { mounted = false; };
   }, []);
 
   const login = useCallback(async ({ email, password, role }) => {
     const data = await authAPI.login({ email, password, role });
-    localStorage.setItem('shield_token', data.token);
-    localStorage.setItem('shield_user', JSON.stringify(data.user));
-    setToken(data.token);
-    setUser(data.user);
+    setUser(data.user); // The HttpOnly dual-cookies are automatically set by the browser
     return data;
   }, []);
 
   const logout = useCallback(async () => {
-    await authAPI.logout();
-    localStorage.removeItem('shield_token');
-    localStorage.removeItem('shield_user');
-    setToken(null);
+    await authAPI.logout(); // Explicitly tells backend to destroy the cookies
     setUser(null);
   }, []);
 
-  const isAuthenticated = Boolean(token && user);
+  const isAuthenticated = Boolean(user);
   const role = user?.role || null;
 
   const hasRole = useCallback((roles) => {
@@ -76,7 +45,7 @@ export function AuthProvider({ children }) {
   }, [role]);
 
   return (
-    <AuthContext.Provider value={{ user, token, role, isAuthenticated, login, logout, hasRole }}>
+    <AuthContext.Provider value={{ user, role, isAuthenticated, isInitializing, login, logout, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

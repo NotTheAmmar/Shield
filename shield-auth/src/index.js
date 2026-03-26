@@ -12,8 +12,10 @@ const PORT = process.env.PORT || 4000;
 // Trust the gateway proxy so req.ip resolves accurately (IP Masking Fix)
 app.set('trust proxy', 1);
 
-app.use(cors());
+const cookieParser = require('cookie-parser');
+app.use(cors({ origin: true, credentials: true })); // Locally allow Gateway proxy
 app.use(express.json());
+app.use(cookieParser());
 
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date() });

@@ -1,10 +1,9 @@
 /**
- * SHIELD API Service Layer
- *
- * Thin wrapper around Axios. All calls go through shield-gateway.
- * Mock data lives in shield-gateway/src/mockData.js — not here.
- *
- * See /FRONTEND_API_CONTRACT.md for the full API specification.
+ * SHIELD API Service Layer — PRODUCTION NGINX VERSION
+ * 
+ * Secures network transport utilizing Strict Same-Origin HttpOnly cookies.
+ * Implements advanced Axios Interceptor Silent Refresh Queue logic to prevent
+ * Token Replay invalidation due to React component race conditions.
  */
 
 import axios from 'axios';
@@ -12,32 +11,77 @@ import axios from 'axios';
 const apiClient = axios.create({
   baseURL: '/api',
   timeout: 30000,
+  withCredentials: true, // EXPLICITLY REQUIRE COOKIES CROSS-BOUNDARIES
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach JWT to every outgoing request
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('shield_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// ── Silent Refresh Concurrency Lock ───────────────────────────────────────
 
-// Unwrap successful responses; handle auth errors
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) prom.reject(error);
+    else prom.resolve(token);
+  });
+  failedQueue = [];
+};
+
+// Response Interceptor: The execution lock
 apiClient.interceptors.response.use(
-  (res) => res.data,
-  (err) => {
-    const status = err.response?.status;
-    const isLoginEndpoint = err.config?.url?.includes('/auth/login');
+  (response) => response.data,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (!originalRequest) return Promise.reject(error);
 
-    // On 401 from any endpoint OTHER than login — session expired, force re-login
-    if (status === 401 && !isLoginEndpoint) {
-      localStorage.removeItem('shield_token');
-      localStorage.removeItem('shield_user');
-      window.location.href = '/login';
+    const isAuthRoute = originalRequest.url.includes('/auth/login') ||
+                        originalRequest.url.includes('/auth/logout') ||
+                        originalRequest.url.includes('/auth/refresh');
+    const isMeRoute = originalRequest.url.includes('/auth/me');
+
+    // Only intercept 401s that are NOT explicit auth actions
+    if (error.response?.status === 401 && !isAuthRoute && !originalRequest._retry) {
+      
+      if (isRefreshing) {
+        // Suspend this request into the failedQueue array
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        })
+        .then(() => apiClient(originalRequest))
+        .catch(err => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        // SILENT PING: Request a new short-lived cookie using the 7-day refresh cookie
+        await axios.post('/api/auth/refresh', {}, { withCredentials: true, baseURL: '' });
+        
+        // Refresh Success!
+        processQueue(null, true);
+        isRefreshing = false;
+        
+        // Retry the original request that triggered the 401
+        return apiClient(originalRequest);
+        
+      } catch (refreshErr) {
+        // The refresh token is dead or invalid. Game over.
+        processQueue(refreshErr, null);
+        isRefreshing = false;
+        
+        // If this wasn't just a background hydration check, flush the user.
+        if (!isMeRoute && window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+        
+        return Promise.reject(refreshErr);
+      }
     }
 
-    // Propagate the error so callers can display the message
-    return Promise.reject(err);
+    return Promise.reject(error);
   }
 );
 
@@ -46,6 +90,7 @@ apiClient.interceptors.response.use(
 export const authAPI = {
   login: (credentials) => apiClient.post('/auth/login', credentials),
   logout: () => apiClient.post('/auth/logout').catch(() => {}),
+  getMe: () => apiClient.get('/auth/me').catch(() => { throw new Error('Unauthenticated'); }),
 };
 
 // ── Dashboard ─────────────────────────────────────────────────────────────

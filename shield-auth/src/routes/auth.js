@@ -42,38 +42,76 @@ router.post('/login', async (req, res) => {
             [user.id, ip]
         ).catch(() => {}); // ignore if table doesn't exist yet
 
-        // Generate the real JWT matching the frontend expectation
-        const token = jwt.sign(
-            {
-                id: user.id,
-                email: user.email,
-                role: user.role,
-                name: user.name,
-                employeeId: user.employee_id
-            },
-            process.env.JWT_SECRET,
-            { expiresIn: '8h' }
-        );
+        const payload = {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            name: user.name,
+            employeeId: user.employee_id
+        };
 
-        return res.json({
-            token,
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                employeeId: user.employee_id,
-                role: user.role,
-                status: user.status
-            }
-        });
+        const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });
+        const refreshToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+        const isProd = process.env.NODE_ENV === 'production';
+        const baseCookieOps = { httpOnly: true, secure: isProd, sameSite: 'Strict' };
+
+        res.cookie('shield_access_token', accessToken, { ...baseCookieOps, maxAge: 15 * 60 * 1000 });
+        res.cookie('shield_refresh_token', refreshToken, { ...baseCookieOps, maxAge: 7 * 24 * 60 * 60 * 1000, path: '/api/auth/refresh' });
+
+        return res.json({ user: payload });
     } catch (err) {
         console.error('[AUTH LOGIN]', err.message);
         return res.status(500).json({ error: 'Internal server error during login' });
     }
 });
 
+router.get('/me', (req, res) => {
+    const token = req.cookies?.shield_access_token;
+    if (!token) return res.status(401).json({ error: 'Not authenticated' });
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        return res.json({ user: decoded });
+    } catch {
+        return res.status(401).json({ error: 'Token expired' });
+    }
+});
+
+router.post('/refresh', async (req, res) => {
+    const refreshToken = req.cookies?.shield_refresh_token;
+    if (!refreshToken) return res.status(401).json({ error: 'No refresh token' });
+    
+    try {
+        const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+        
+        // Ensure user is still active to prevent revoked users from lingering
+        const { rows } = await pool.query('SELECT status FROM users WHERE id = $1', [decoded.id]);
+        if (!rows.length || rows[0].status !== 'active') throw new Error('User inactive');
+        
+        const payload = {
+            id: decoded.id,
+            email: decoded.email,
+            role: decoded.role,
+            name: decoded.name,
+            employeeId: decoded.employeeId
+        };
+        
+        const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });
+        const isProd = process.env.NODE_ENV === 'production';
+        
+        res.cookie('shield_access_token', accessToken, { httpOnly: true, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
+        return res.json({ message: 'Token successfully refreshed' });
+    } catch (err) {
+        return res.status(401).json({ error: 'Invalid or expired refresh token' });
+    }
+});
+
 router.post('/logout', (req, res) => {
-    // JWTs are stateless; clearing from frontend finishes the logout flow.
+    const isProd = process.env.NODE_ENV === 'production';
+    const baseCookieOps = { httpOnly: true, secure: isProd, sameSite: 'Strict' };
+    
+    res.clearCookie('shield_access_token', baseCookieOps);
+    res.clearCookie('shield_refresh_token', { ...baseCookieOps, path: '/api/auth/refresh' });
     res.json({ message: 'Logged out successfully.' });
 });
 

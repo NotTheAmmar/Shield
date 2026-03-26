@@ -9,7 +9,6 @@
 'use strict';
 
 const express = require('express');
-const cors = require('cors');
 const http = require('http');
 
 const app = express();
@@ -23,15 +22,25 @@ const AUTH_PORT = process.env.AUTH_PORT || 4000;
 
 // ── Middleware ────────────────────────────────────────────────────────────
 
-app.use(cors({
-  origin: true,
-  credentials: true,
-}));
+// CORS removed — Nginx enforces Same-Origin architecture on port 80
 
-// ── JWT decoding middleware (runs for ALL routes) ─────────────────────────
+// ── JWT decoding & Cookie Translation middleware (runs for ALL routes) ─────────
 
 app.use((req, res, next) => {
-  const authHeader = req.headers.authorization;
+  let authHeader = req.headers.authorization;
+  
+  // NGINX SECURITY UPGRADE: If HttpOnly cookie exists, convert it to a Bearer token
+  // allowing native browser downloads and internal microservices to process it natively
+  if (!authHeader && req.headers.cookie) {
+    const cookies = req.headers.cookie.split(';').map(c => c.trim());
+    const accessCookie = cookies.find(c => c.startsWith('shield_access_token='));
+    if (accessCookie) {
+      const token = accessCookie.split('=')[1];
+      req.headers['authorization'] = `Bearer ${token}`; // Inject for downstream proxies
+      authHeader = req.headers['authorization'];
+    }
+  }
+
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
     try {

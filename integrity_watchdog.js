@@ -1,8 +1,8 @@
-require('./shield-evidence/node_modules/dotenv').config({ path: './shield-evidence/.env' });
+require('./shield-evidence/node_modules/dotenv').config({ path: './.env' });
 
 // Configuration from environment variables
-const API_BASE_URL = 'http://localhost:4001/api/evidence/internal';
-const INTERNAL_SERVICE_KEY = process.env.INTERNAL_SERVICE_KEY || 'shield_worker_key_2026';
+const API_BASE_URL = 'http://127.0.0.1:3001/api/evidence/internal';
+const INTERNAL_SERVICE_KEY = process.env.MASTER_KEY;
 
 // Helper function to chunk array
 const chunkArray = (array, size) => {
