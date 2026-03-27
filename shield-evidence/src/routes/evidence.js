@@ -334,23 +334,90 @@ router.post('/internal/verify-batch', express.json(), internalNetworkGuard, requ
 // ─────────────────────────────────────────────
 router.get('/', requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']), async (req, res) => {
     try {
-        const { rows } = await pool.query(
-            `SELECT 
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 25));
+        const offset = (page - 1) * limit;
+        const search = req.query.search || '';
+        const status = req.query.status || '';
+        const category = req.query.category || '';
+        const sortBy = req.query.sortBy || 'uploadDate';
+        const sortOrder = (req.query.sortOrder || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+        // Map frontend sort keys to SQL columns
+        const sortMap = {
+            'uploadDate': 'e.uploaded_at',
+            'fileName': 'e.filename',
+            'status': 'e.filename', // no real status column, fallback
+        };
+        const orderCol = sortMap[sortBy] || 'e.uploaded_at';
+
+        // Build WHERE clauses
+        const conditions = [];
+        const params = [];
+        let paramIdx = 1;
+
+        if (search) {
+            conditions.push(`(e.filename ILIKE $${paramIdx} OR f.fir_number ILIKE $${paramIdx})`);
+            params.push(`%${search}%`);
+            paramIdx++;
+        }
+
+        if (category) {
+            conditions.push(`f.case_category = $${paramIdx}`);
+            params.push(category);
+            paramIdx++;
+        }
+
+        // Status filtering based on audit_log results
+        let statusJoin = '';
+        if (status === 'verified') {
+            statusJoin = `JOIN audit_log al ON al.evidence_id = e.id AND al.result = 'OK'`;
+        } else if (status === 'tampered') {
+            statusJoin = `JOIN audit_log al ON al.evidence_id = e.id AND al.result = 'TAMPERED'`;
+        }
+
+        const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+
+        // Count query
+        const countSQL = `SELECT COUNT(DISTINCT e.id) FROM evidence e JOIN fir f ON e.fir_id = f.id ${statusJoin} ${whereClause}`;
+        const countResult = await pool.query(countSQL, params);
+        const total = parseInt(countResult.rows[0].count, 10);
+        const totalPages = Math.ceil(total / limit) || 1;
+
+        // Data query
+        const dataSQL = `
+            SELECT DISTINCT ON (e.id)
                 e.id, 
                 e.filename as "fileName", 
                 f.fir_number as "firNumber", 
                 f.id as "firId",
                 e.sha256_hash as "hash", 
                 f.case_category as "category", 
-                e.uploaded_at as "uploadDate", 
-                'pending' as status 
-             FROM evidence e 
-             JOIN fir f ON e.fir_id = f.id 
-             ORDER BY e.uploaded_at DESC`
-        );
+                e.uploaded_at as "uploadDate",
+                COALESCE(
+                    (SELECT CASE WHEN al2.result = 'TAMPERED' THEN 'tampered' WHEN al2.result = 'OK' THEN 'verified' END
+                     FROM audit_log al2 WHERE al2.evidence_id = e.id ORDER BY al2.checked_at DESC LIMIT 1),
+                    'pending'
+                ) as status
+            FROM evidence e 
+            JOIN fir f ON e.fir_id = f.id 
+            ${statusJoin}
+            ${whereClause}
+            ORDER BY e.id, ${orderCol} ${sortOrder}
+            LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
+
+        const dataResult = await pool.query(dataSQL, [...params, limit, offset]);
+
+        // Re-sort since DISTINCT ON requires ORDER BY e.id first
+        const rows = dataResult.rows.sort((a, b) => {
+            const key = sortBy === 'fileName' ? 'fileName' : 'uploadDate';
+            if (sortOrder === 'DESC') return a[key] > b[key] ? -1 : 1;
+            return a[key] < b[key] ? -1 : 1;
+        });
+
         res.json({
             data: rows,
-            pagination: { page: 1, limit: 1000, total: rows.length, totalPages: 1 }
+            pagination: { page, limit, total, totalPages }
         });
     } catch (err) {
         console.error('List Evidence error:', err.message);

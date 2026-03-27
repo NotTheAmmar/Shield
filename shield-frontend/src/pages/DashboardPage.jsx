@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FileText, Archive, CheckCircle, Clock, AlertTriangle, Users, UserCheck, UserX, Activity, Upload, BookOpen, Settings } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import PageHeader from '../components/PageHeader';
@@ -51,6 +51,7 @@ function ActivityItem({ item }) {
 
 export default function DashboardPage() {
   const { role, user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [activity, setActivity] = useState([]);
 
@@ -75,26 +76,26 @@ export default function DashboardPage() {
       <div className="stat-cards-grid">
         {(role === 'Police Officer' || role === 'Super Admin') && stats && (
           <>
-            <StatCard label="FIRs Uploaded" value={stats.firsUploaded} icon={FileText} accent="var(--navy-700)" />
-            <StatCard label="Evidence Files" value={stats.evidenceFiles} icon={Archive} accent="var(--navy-700)" />
-            <StatCard label="Verified" value={stats.verified} icon={CheckCircle} accent="var(--emerald)" />
-            <StatCard label="Pending Verification" value={stats.pendingVerification} icon={Clock} accent="var(--amber)" />
+            <StatCard label="Total FIRs in System" value={stats.totalFirs} icon={FileText} accent="var(--navy-700)" />
+            <StatCard label="Total Evidence Files" value={stats.totalEvidence} icon={Archive} accent="var(--navy-700)" />
+            <StatCard label="Verified Integrity" value={stats.verifiedCount} icon={CheckCircle} accent="var(--emerald)" />
+            <StatCard label="Tamper Alerts" value={stats.tamperedCount} icon={AlertTriangle} accent="var(--crimson)" onClick={() => navigate('/vault?status=tampered')} />
           </>
         )}
         {role === 'Judicial Authority' && stats && (
           <>
             <StatCard label="Total FIRs in System" value={stats.totalFirs} icon={FileText} accent="var(--navy-700)" />
             <StatCard label="Total Evidence Files" value={stats.totalEvidence} icon={Archive} accent="var(--navy-700)" />
-            <StatCard label="Verified Integrity" value={stats.verifiedIntegrity} icon={CheckCircle} accent="var(--emerald)" />
-            <StatCard label="Tamper Alerts" value={stats.tamperAlerts} icon={AlertTriangle} accent="var(--crimson)" />
+            <StatCard label="Verified Integrity" value={stats.verifiedCount} icon={CheckCircle} accent="var(--emerald)" />
+            <StatCard label="Tamper Alerts" value={stats.tamperedCount} icon={AlertTriangle} accent="var(--crimson)" onClick={() => navigate('/vault?status=tampered')} />
           </>
         )}
         {role === 'Admin' && stats && (
           <>
-            <StatCard label="Total Users" value={stats.totalUsers} icon={Users} accent="var(--navy-700)" />
-            <StatCard label="Active Users" value={stats.activeUsers} icon={UserCheck} accent="var(--emerald)" />
-            <StatCard label="Deactivated Users" value={stats.deactivatedUsers} icon={UserX} accent="var(--slate-500)" />
-            <StatCard label="Logins (24h)" value={stats.recentLogins} icon={Activity} accent="var(--navy-700)" />
+            <StatCard label="Total FIRs in System" value={stats.totalFirs} icon={FileText} accent="var(--navy-700)" />
+            <StatCard label="Total Evidence Files" value={stats.totalEvidence} icon={Archive} accent="var(--navy-700)" />
+            <StatCard label="Verified Integrity" value={stats.verifiedCount} icon={CheckCircle} accent="var(--emerald)" />
+            <StatCard label="Tamper Alerts" value={stats.tamperedCount} icon={AlertTriangle} accent="var(--crimson)" onClick={() => navigate('/vault?status=tampered')} />
           </>
         )}
       </div>

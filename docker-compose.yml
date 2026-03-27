@@ -182,5 +182,18 @@ services:
     depends_on:
       - db-ledger
 
+  shield-watchdog:
+    build: ./shield-watchdog
+    container_name: shield-watchdog
+    restart: unless-stopped
+    networks:
+      - shield-network
+    environment:
+      MASTER_KEY: ${MASTER_KEY}
+      WATCHDOG_INTERVAL: 30
+    depends_on:
+      - shield-evidence
+      - shield-ledger
+
 volumes:
   immudb-data:
