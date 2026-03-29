@@ -11,7 +11,7 @@ const fs = require('fs');
 const GATEWAY = 'http://localhost:3001';
 const ADMIN_EMAIL = 'admin@police.gov';
 const ADMIN_PASSWORD = 'Sh13ld@Pr0duct10n2026!';
-const ADMIN_ROLE = 'Super Admin';
+const ADMIN_ROLE = 'Admin';
 
 let passCount = 0;
 let failCount = 0;
@@ -158,14 +158,14 @@ async function main() {
         log('T5: Login with wrong role → 401', false, e.message);
     }
 
-    // T6: Successful Super Admin login → 200 + JWT
+    // T6: Successful Admin login → 200 + JWT
     let adminToken = null;
     try {
         const r = await http('POST', '/api/auth/login', {
             body: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD, role: ADMIN_ROLE }
         });
         adminToken = r.data?.token;
-        log('T6: Super Admin login → 200 + JWT', r.status === 200 && !!adminToken && !!r.data?.user,
+        log('T6: Admin login → 200 + JWT', r.status === 200 && !!adminToken && !!r.data?.user,
             `Status: ${r.status}, user: ${r.data?.user?.name}, hasToken: ${!!adminToken}`);
     } catch (e) {
         log('T6: Super Admin login → 200 + JWT', false, e.message);
@@ -415,21 +415,23 @@ async function main() {
     }
 
     // T23: List FIRs → 200
-    try {
-        const tok = officerToken || adminToken;
-        const r = await http('GET', '/api/fir/list', { token: tok });
-        const hasFirs = r.data?.data && Array.isArray(r.data.data);
-        log('T23: List FIRs → 200', r.status === 200 && hasFirs,
-            `Status: ${r.status}, count: ${r.data?.data?.length}`);
-    } catch (e) {
-        log('T23: List FIRs → 200', false, e.message);
+    if (officerToken) {
+        try {
+            const r = await http('GET', '/api/fir/list', { token: officerToken });
+            const hasFirs = r.data?.data && Array.isArray(r.data.data);
+            log('T23: List FIRs → 200', r.status === 200 && hasFirs,
+                `Status: ${r.status}, count: ${r.data?.data?.length}`);
+        } catch (e) {
+            log('T23: List FIRs → 200', false, e.message);
+        }
+    } else {
+        log('T23: List FIRs → 200', false, 'Skipped: no officer token', true);
     }
 
     // T24: Get FIR by ID → 200
-    if (firId) {
+    if (firId && officerToken) {
         try {
-            const tok = officerToken || adminToken;
-            const r = await http('GET', `/api/fir/${firId}`, { token: tok });
+            const r = await http('GET', `/api/fir/${firId}`, { token: officerToken });
             log('T24: Get FIR by ID → 200', r.status === 200 && r.data?.firNumber === firNumber,
                 `Status: ${r.status}, firNumber: ${r.data?.firNumber}`);
         } catch (e) {
@@ -439,10 +441,21 @@ async function main() {
         log('T24: Get FIR by ID → 200', false, 'Skipped: no FIR created', true);
     }
 
+    // T24b: Get FIR with Admin Token -> 403 (Zero-Trust)
+    if (adminToken && firId) {
+        try {
+            const r = await http('GET', `/api/fir/${firId}`, { token: adminToken });
+            log('T24b: Admin blocked from FIR read → 403', r.status === 403,
+                `Status: ${r.status}`);
+        } catch (e) {
+            log('T24b: Admin blocked from FIR read → 403', false, e.message);
+        }
+    }
+
+
     // T25: Get non-existent FIR → 404
     try {
-        const tok = officerToken || adminToken;
-        const r = await http('GET', `/api/fir/${crypto.randomUUID()}`, { token: tok });
+        const r = await http('GET', `/api/fir/${crypto.randomUUID()}`, { token: officerToken || judgeToken });
         log('T25: Get non-existent FIR → 404', r.status === 404,
             `Status: ${r.status}`);
     } catch (e) {
@@ -469,10 +482,10 @@ async function main() {
     }
 
     // T27: Upload evidence without fir_id → 400
-    if (officerToken || adminToken) {
+    if (officerToken) {
         try {
             const r = await http('POST', '/api/evidence/upload', {
-                token: officerToken || adminToken,
+                token: officerToken,
                 multipart: {
                     file: { _file: true, filename: 'test.txt', contentType: 'text/plain', data: 'no fir_id data' }
                 }
@@ -485,10 +498,10 @@ async function main() {
     }
 
     // T28: Upload evidence without file → 400
-    if (firId && (officerToken || adminToken)) {
+    if (firId && officerToken) {
         try {
             const r = await http('POST', '/api/evidence/upload', {
-                token: officerToken || adminToken,
+                token: officerToken,
                 multipart: { fir_id: firId }
             });
             log('T28: Upload evidence without file → 400', r.status === 400,
@@ -520,12 +533,11 @@ async function main() {
     // T30: Upload evidence successfully → 201
     let evidenceId = null;
     let uploadHash = null;
-    if (firId && (officerToken || adminToken)) {
+    if (firId && officerToken) {
         try {
             const testContent = `SHIELD evidence test payload ${Date.now()} - ${crypto.randomBytes(16).toString('hex')}`;
-            const tok = officerToken || adminToken;
             const r = await http('POST', '/api/evidence/upload', {
-                token: tok,
+                token: officerToken,
                 timeout: 15000,
                 multipart: {
                     fir_id: firId,
@@ -545,11 +557,10 @@ async function main() {
 
     // T31: Upload a second evidence file to same FIR
     let evidence2Id = null;
-    if (firId && (officerToken || adminToken)) {
+    if (firId && officerToken) {
         try {
-            const tok = officerToken || adminToken;
             const r = await http('POST', '/api/evidence/upload', {
-                token: tok,
+                token: officerToken,
                 timeout: 15000,
                 multipart: {
                     fir_id: firId,
@@ -572,21 +583,21 @@ async function main() {
     console.log('\n━━ PHASE 7: Evidence Verification & Retrieval ━━━━━━━');
 
     // T32: List all evidence → 200
-    try {
-        const tok = officerToken || adminToken;
-        const r = await http('GET', '/api/evidence', { token: tok });
-        const hasData = r.data?.data && Array.isArray(r.data.data);
-        log('T32: List all evidence → 200', r.status === 200 && hasData,
-            `Status: ${r.status}, count: ${r.data?.data?.length}`);
-    } catch (e) {
-        log('T32: List all evidence → 200', false, e.message);
+    if (officerToken) {
+        try {
+            const r = await http('GET', '/api/evidence', { token: officerToken });
+            const hasData = r.data?.data && Array.isArray(r.data.data);
+            log('T32: List all evidence → 200', r.status === 200 && hasData,
+                `Status: ${r.status}, count: ${r.data?.data?.length}`);
+        } catch (e) {
+            log('T32: List all evidence → 200', false, e.message);
+        }
     }
 
     // T33: Get evidence by ID → 200
-    if (evidenceId) {
+    if (evidenceId && officerToken) {
         try {
-            const tok = officerToken || adminToken;
-            const r = await http('GET', `/api/evidence/${evidenceId}`, { token: tok });
+            const r = await http('GET', `/api/evidence/${evidenceId}`, { token: officerToken });
             log('T33: Get evidence by ID → 200', r.status === 200 && r.data?.hash,
                 `Status: ${r.status}, fileName: ${r.data?.fileName}, hash: ${r.data?.hash?.substring(0, 16)}...`);
         } catch (e) {
@@ -598,8 +609,7 @@ async function main() {
 
     // T34: Get non-existent evidence → 404
     try {
-        const tok = officerToken || adminToken;
-        const r = await http('GET', `/api/evidence/${crypto.randomUUID()}`, { token: tok });
+        const r = await http('GET', `/api/evidence/${crypto.randomUUID()}`, { token: officerToken || judgeToken });
         log('T34: Get non-existent evidence → 404', r.status === 404,
             `Status: ${r.status}`);
     } catch (e) {
@@ -607,10 +617,9 @@ async function main() {
     }
 
     // T35: Verify evidence integrity → OK
-    if (evidenceId) {
+    if (evidenceId && officerToken) {
         try {
-            const tok = officerToken || adminToken;
-            const r = await http('GET', `/api/evidence/verify/${evidenceId}`, { token: tok, timeout: 10000 });
+            const r = await http('GET', `/api/evidence/verify/${evidenceId}`, { token: officerToken, timeout: 10000 });
             log('T35: Verify evidence integrity → OK', r.status === 200 && r.data?.status === 'OK',
                 `Status: ${r.status}, result: ${r.data?.status}`);
         } catch (e) {
@@ -622,8 +631,7 @@ async function main() {
 
     // T36: Verify non-existent evidence → 404
     try {
-        const tok = officerToken || adminToken;
-        const r = await http('GET', `/api/evidence/verify/${crypto.randomUUID()}`, { token: tok });
+        const r = await http('GET', `/api/evidence/verify/${crypto.randomUUID()}`, { token: officerToken || judgeToken });
         log('T36: Verify non-existent evidence → 404', r.status === 404,
             `Status: ${r.status}`);
     } catch (e) {
@@ -631,13 +639,12 @@ async function main() {
     }
 
     // T37: Download evidence (presigned URL) → redirect
-    if (evidenceId) {
+    if (evidenceId && officerToken) {
         try {
-            const tok = officerToken || adminToken;
             const url = `${GATEWAY}/api/evidence/download/${evidenceId}`;
             const res = await fetch(url, {
                 method: 'GET',
-                headers: { 'Authorization': `Bearer ${tok}` },
+                headers: { 'Authorization': `Bearer ${officerToken}` },
                 redirect: 'manual',  // Don't follow redirect
             });
             // Should be 302 redirect to MinIO presigned URL
@@ -655,8 +662,7 @@ async function main() {
 
     // T38: Download non-existent evidence → 404
     try {
-        const tok = officerToken || adminToken;
-        const r = await http('GET', `/api/evidence/download/${crypto.randomUUID()}`, { token: tok });
+        const r = await http('GET', `/api/evidence/download/${crypto.randomUUID()}`, { token: officerToken || judgeToken });
         log('T38: Download non-existent evidence → 404', r.status === 404,
             `Status: ${r.status}`);
     } catch (e) {
@@ -669,10 +675,9 @@ async function main() {
     console.log('\n━━ PHASE 8: FIR ↔ Evidence Linkage ━━━━━━━━━━━━━━━━━');
 
     // T39: Get FIR by ID and verify linked evidence
-    if (firId) {
+    if (firId && officerToken) {
         try {
-            const tok = officerToken || adminToken;
-            const r = await http('GET', `/api/fir/${firId}`, { token: tok });
+            const r = await http('GET', `/api/fir/${firId}`, { token: officerToken });
             const linkedCount = r.data?.linkedEvidence?.length || 0;
             log('T39: FIR has linked evidence', r.status === 200 && linkedCount >= 2,
                 `Status: ${r.status}, linkedEvidence count: ${linkedCount}`);
@@ -697,14 +702,13 @@ async function main() {
         log('T40: Dashboard without auth → 401', false, e.message);
     }
 
-    // T41: Dashboard stats with admin → 200
+    // T41: Dashboard stats with admin → 403 (Zero-Trust Restriction)
     try {
         const r = await http('GET', '/api/dashboard/stats', { token: adminToken });
-        const hasStats = r.data?.stats && typeof r.data.stats.totalFirs === 'number';
-        log('T41: Dashboard stats → 200', r.status === 200 && hasStats,
-            `Status: ${r.status}, totalFirs: ${r.data?.stats?.totalFirs}, totalEvidence: ${r.data?.stats?.totalEvidence}`);
+        log('T41: Dashboard stats (admin blocked) → 403', r.status === 403,
+            `Status: ${r.status}`);
     } catch (e) {
-        log('T41: Dashboard stats → 200', false, e.message);
+        log('T41: Dashboard stats (admin blocked) → 403', false, e.message);
     }
 
     // T42: Dashboard stats with officer token → 200
@@ -727,14 +731,13 @@ async function main() {
         log('T43: Audit log without auth → 401', false, e.message);
     }
 
-    // T44: Audit log with admin → 200
+    // T44: Audit log with admin → 403 (Zero-Trust Restriction)
     try {
         const r = await http('GET', '/api/audit', { token: adminToken });
-        const hasLog = r.data?.auditLog && Array.isArray(r.data.auditLog);
-        log('T44: Audit log (admin) → 200', r.status === 200 && hasLog,
-            `Status: ${r.status}, entries: ${r.data?.auditLog?.length}`);
+        log('T44: Audit log (admin blocked) → 403', r.status === 403,
+            `Status: ${r.status}`);
     } catch (e) {
-        log('T44: Audit log (admin) → 200', false, e.message);
+        log('T44: Audit log (admin blocked) → 403', false, e.message);
     }
 
     // T45: Audit log with judge → 200 (judicial has access)

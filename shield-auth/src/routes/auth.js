@@ -59,7 +59,7 @@ router.post('/login', async (req, res) => {
         res.cookie('shield_access_token', accessToken, { ...baseCookieOps, maxAge: 15 * 60 * 1000 });
         res.cookie('shield_refresh_token', refreshToken, { ...baseCookieOps, maxAge: 7 * 24 * 60 * 60 * 1000, path: '/api/auth/refresh' });
 
-        return res.json({ user: payload });
+        return res.json({ user: payload, token: accessToken });
     } catch (err) {
         console.error('[AUTH LOGIN]', err.message);
         return res.status(500).json({ error: 'Internal server error during login' });

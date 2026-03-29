@@ -4,7 +4,7 @@
  */
 
 const crypto = require('crypto');
-const jwt = require('/home/vishvambar/Shield/shield-evidence/node_modules/jsonwebtoken');
+const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 
@@ -20,7 +20,7 @@ function mintToken(role, id) {
 
 const POLICE_TOKEN = mintToken('Police Officer');
 const JUDGE_TOKEN = mintToken('Judge');
-const ADMIN_TOKEN = mintToken('Super Admin');
+const ADMIN_TOKEN = mintToken('Admin');
 
 let passCount = 0;
 let failCount = 0;
@@ -133,7 +133,7 @@ async function main() {
     if (firId) {
         try {
             // Create a temporary test file
-            const testFilePath = '/home/vishvambar/Shield/shield_test_evidence.txt';
+            const testFilePath = '/tmp/shield_test_evidence.txt';
             const testContent = 'Sprint 1 evidence test file content - ' + Date.now();
             fs.writeFileSync(testFilePath, testContent);
 

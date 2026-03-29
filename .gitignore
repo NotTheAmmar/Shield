@@ -10,3 +10,4 @@ build/
 # Ignore local DB data
 .docker-data/
 Documents/
+documents/

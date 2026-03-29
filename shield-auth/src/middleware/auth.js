@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 module.exports = (req, res, next) => {
     // Internal services bypass
     if (process.env.MASTER_KEY && req.headers['x-internal-service-key'] === process.env.MASTER_KEY) {
-        req.user = { id: 'INTERNAL_SERVICE', role: 'Super Admin' };
+        req.user = { id: 'INTERNAL_SERVICE', role: 'Admin' };
         return next();
     }
 

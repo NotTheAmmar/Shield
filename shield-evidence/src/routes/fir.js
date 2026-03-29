@@ -11,7 +11,7 @@ const router = express.Router();
 // ─────────────────────────────────────────────
 // Accepts multipart/form-data with fields:
 //   firNumber (required), incidentType, dateTime, location, description, file
-router.post('/create', requireRoles(['Police Officer', 'Super Admin']), (req, res) => {
+router.post('/create', requireRoles(['Police Officer']), (req, res) => {
     // Use userId or id — gateway mock puts userId, real JWT may put id
     const reportingOfficer = req.user.userId || req.user.id || 'unknown';
 
@@ -81,7 +81,7 @@ router.post('/create', requireRoles(['Police Officer', 'Super Admin']), (req, re
 // ─────────────────────────────────────────────
 // GET /api/fir/list
 // ─────────────────────────────────────────────
-router.get('/list', requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']), async (req, res) => {
+router.get('/list', requireRoles(['Police Officer', 'Judicial Authority']), async (req, res) => {
     try {
         const { rows } = await pool.query(
             'SELECT id, fir_number as "firNumber", case_category, description, location, status, registered_at as "uploadDate" FROM fir ORDER BY registered_at DESC'
@@ -99,7 +99,7 @@ router.get('/list', requireRoles(['Police Officer', 'Super Admin', 'Judicial Aut
 // ─────────────────────────────────────────────
 // GET /api/fir/:id
 // ─────────────────────────────────────────────
-router.get('/:id', requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']), async (req, res) => {
+router.get('/:id', requireRoles(['Police Officer', 'Judicial Authority']), async (req, res) => {
     try {
         const { rows } = await pool.query(
             `SELECT id, fir_number as "firNumber", case_category as "category", description, location, status, registered_at as "uploadDate", reporting_officer as "uploadedBy" 

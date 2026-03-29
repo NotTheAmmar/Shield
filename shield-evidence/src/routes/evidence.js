@@ -32,7 +32,7 @@ const internalNetworkGuard = (req, res, next) => {
 // ─────────────────────────────────────────────
 // POST /api/evidence/upload
 // ─────────────────────────────────────────────
-router.post('/upload', requireRoles(['Police Officer', 'Super Admin']), (req, res) => {
+router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
 
     // ── Idempotent response lock (Flaw #25) ───────────────────────────
     let responseSent = false;
@@ -249,7 +249,7 @@ router.get('/download/:id', async (req, res) => {
 // GET /api/evidence/internal/list
 // ─────────────────────────────────────────────
 // Returns paginated evidence IDs using Keyset (Cursor) Pagination for infinite scale.
-router.get('/internal/list', internalNetworkGuard, requireRoles(['Super Admin']), async (req, res) => {
+router.get('/internal/list', internalNetworkGuard, requireRoles(['Admin']), async (req, res) => {
     try {
         const limit = parseInt(req.query.limit, 10) || 1000;
         const cursorDate = req.query.cursor_date;
@@ -278,7 +278,7 @@ router.get('/internal/list', internalNetworkGuard, requireRoles(['Super Admin'])
 // POST /api/evidence/internal/verify-batch
 // ─────────────────────────────────────────────
 // Accepts an array of IDs and verifies them concurrently, preventing DDoS lockups.
-router.post('/internal/verify-batch', express.json(), internalNetworkGuard, requireRoles(['Super Admin']), async (req, res) => {
+router.post('/internal/verify-batch', express.json(), internalNetworkGuard, requireRoles(['Admin']), async (req, res) => {
     try {
         const { ids } = req.body;
         if (!ids || !Array.isArray(ids)) {
@@ -332,7 +332,7 @@ router.post('/internal/verify-batch', express.json(), internalNetworkGuard, requ
 // ─────────────────────────────────────────────
 // GET /api/evidence
 // ─────────────────────────────────────────────
-router.get('/', requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']), async (req, res) => {
+router.get('/', requireRoles(['Police Officer', 'Judicial Authority']), async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 25));
@@ -429,7 +429,7 @@ router.get('/', requireRoles(['Police Officer', 'Super Admin', 'Judicial Authori
 // GET /api/evidence/:id
 // ─────────────────────────────────────────────
 // MUST BE AT THE BOTTOM to prevent intercepting /upload, /verify/:id, etc.
-router.get('/:id', requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']), async (req, res) => {
+router.get('/:id', requireRoles(['Police Officer', 'Judicial Authority']), async (req, res) => {
     try {
         const { rows } = await pool.query(
             `SELECT 

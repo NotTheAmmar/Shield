@@ -4,7 +4,7 @@ import { FileText, Archive, CheckCircle, Clock, AlertTriangle, Users, UserCheck,
 import { useAuth } from '../hooks/useAuth';
 import PageHeader from '../components/PageHeader';
 import StatCard from '../components/StatCard';
-import { dashboardAPI } from '../services/api';
+import { dashboardAPI, adminAPI } from '../services/api';
 
 // Format ISO timestamp to IST locale
 function fmtTime(iso) {
@@ -54,14 +54,29 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [activity, setActivity] = useState([]);
+  const [adminStats, setAdminStats] = useState(null);
 
   useEffect(() => {
-    dashboardAPI.getStats().then((data) => {
-      if (data) {
-        setStats(data.stats);
-        setActivity(data.recentActivity || []);
-      }
-    }).catch(err => console.error("Failed to load dashboard stats", err));
+    if (role === 'Police Officer' || role === 'Judicial Authority') {
+      dashboardAPI.getStats().then((data) => {
+        if (data) {
+          setStats(data.stats);
+          setActivity(data.recentActivity || []);
+        }
+      }).catch(err => console.error("Failed to load dashboard stats", err));
+    } else if (role === 'Admin') {
+      adminAPI.listUsers().then(({ data }) => {
+        if (data && data.users) {
+           const activeUsers = data.users.filter(u => u.status === 'active').length;
+           const inactiveUsers = data.users.length - activeUsers;
+           setAdminStats({
+             totalUsers: data.users.length,
+             activeUsers,
+             inactiveUsers
+           });
+        }
+      }).catch(err => console.error("Failed to fetch users for admin stat", err));
+    }
   }, [role]);
 
   const greeting = `Welcome back, ${user?.name?.split(' ')[0] || 'Officer'}`;
@@ -74,7 +89,7 @@ export default function DashboardPage() {
       />
 
       <div className="stat-cards-grid">
-        {(role === 'Police Officer' || role === 'Super Admin') && stats && (
+        {(role === 'Police Officer' || role === 'Judicial Authority') && stats && (
           <>
             <StatCard label="Total FIRs in System" value={stats.totalFirs} icon={FileText} accent="var(--navy-700)" />
             <StatCard label="Total Evidence Files" value={stats.totalEvidence} icon={Archive} accent="var(--navy-700)" />
@@ -82,20 +97,11 @@ export default function DashboardPage() {
             <StatCard label="Tamper Alerts" value={stats.tamperedCount} icon={AlertTriangle} accent="var(--crimson)" onClick={() => navigate('/vault?status=tampered')} />
           </>
         )}
-        {role === 'Judicial Authority' && stats && (
+        {role === 'Admin' && adminStats && (
           <>
-            <StatCard label="Total FIRs in System" value={stats.totalFirs} icon={FileText} accent="var(--navy-700)" />
-            <StatCard label="Total Evidence Files" value={stats.totalEvidence} icon={Archive} accent="var(--navy-700)" />
-            <StatCard label="Verified Integrity" value={stats.verifiedCount} icon={CheckCircle} accent="var(--emerald)" />
-            <StatCard label="Tamper Alerts" value={stats.tamperedCount} icon={AlertTriangle} accent="var(--crimson)" onClick={() => navigate('/vault?status=tampered')} />
-          </>
-        )}
-        {role === 'Admin' && stats && (
-          <>
-            <StatCard label="Total FIRs in System" value={stats.totalFirs} icon={FileText} accent="var(--navy-700)" />
-            <StatCard label="Total Evidence Files" value={stats.totalEvidence} icon={Archive} accent="var(--navy-700)" />
-            <StatCard label="Verified Integrity" value={stats.verifiedCount} icon={CheckCircle} accent="var(--emerald)" />
-            <StatCard label="Tamper Alerts" value={stats.tamperedCount} icon={AlertTriangle} accent="var(--crimson)" onClick={() => navigate('/vault?status=tampered')} />
+            <StatCard label="Total System Users" value={adminStats.totalUsers} icon={Users} accent="var(--navy-700)" />
+            <StatCard label="Active Users" value={adminStats.activeUsers} icon={UserCheck} accent="var(--emerald)" />
+            <StatCard label="Inactive / Suspended" value={adminStats.inactiveUsers} icon={UserX} accent="var(--crimson)" />
           </>
         )}
       </div>
@@ -124,7 +130,7 @@ export default function DashboardPage() {
           </div>
           <div className="card-body">
             <div className="quick-action-bar" style={{ flexDirection: 'column' }}>
-              {(role === 'Police Officer' || role === 'Super Admin') && (
+              {(role === 'Police Officer') && (
                 <>
                   <Link to="/upload" className="btn btn-primary btn-full">
                     <Upload size={14} /> Upload FIR / Evidence

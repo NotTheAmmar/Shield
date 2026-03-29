@@ -6,7 +6,6 @@ import { useAuth } from '../hooks/useAuth';
 const ROLES = [
   { value: 'Police Officer',      label: 'Police Officer'     },
   { value: 'Judicial Authority',  label: 'Judicial Authority' },
-  { value: 'Super Admin',         label: 'Super Admin'        },
   { value: 'Admin',               label: 'Administrator'      },
 ];
 

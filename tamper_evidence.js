@@ -1,10 +1,10 @@
 /**
  * SHIELD — Evidence Tampering Test
  */
-const crypto = require('crypto');
+const path = require('path');
 
-async function http(method, path, { token, body } = {}) {
-    const url = `http://localhost:3001${path}`;
+async function http(method, p, { token, body } = {}) {
+    const url = `http://localhost:3001${p}`;
     const opts = { method, headers: {} };
     if (token) opts.headers['Authorization'] = `Bearer ${token}`;
     if (body) {
@@ -18,65 +18,75 @@ async function http(method, path, { token, body } = {}) {
 async function main() {
     console.log('--- 🛡️ SHIELD TAMPERING SIMULATION ---');
     
-    // 1. Login
+    // 1. Login as Admin
     console.log('\n[1] Logging in as Admin...');
     const loginRes = await http('POST', '/api/auth/login', {
-        body: { email: 'admin@police.gov', password: 'Sh13ld@Pr0duct10n2026!', role: 'Super Admin' }
+        body: { email: 'admin@police.gov', password: 'Sh13ld@Pr0duct10n2026!', role: 'Admin' }
     });
-    const token = loginRes.data.token;
-    if (!token) throw new Error('Could not get admin token');
-    console.log('✅ Logged in successfully');
+    const adminToken = loginRes.data.token;
+    if (!adminToken) throw new Error('Could not get admin token');
+    console.log('✅ Logged in successfully as Admin');
 
-    // 2. Fetch Evidence
-    console.log('\n[2] Fetching evidence list...');
+    // 2. Create a test police officer to fetch evidence
+    console.log('\n[2] Provisioning temp Police Officer for zero-trust evidence access...');
+    const uniqueEmail = `officer_${Date.now()}@police.gov`;
+    const createRes = await http('POST', '/api/admin/users', {
+        token: adminToken,
+        body: { name: 'Tamper Tester', email: uniqueEmail, employeeId: `POL_${Date.now()}`, role: 'Police Officer', plainPassword: 'secretpassword' }
+    });
+
+    const polLogin = await http('POST', '/api/auth/login', {
+        body: { email: uniqueEmail, password: 'secretpassword', role: 'Police Officer' }
+    });
+    const token = polLogin.data.token;
+    if (!token) throw new Error('Could not get police token');
+
+    console.log('\n[3] Fetching evidence list...');
     const listRes = await http('GET', '/api/evidence', { token });
     if (!listRes.data || !listRes.data.data.length) {
-        throw new Error('No evidence found.');
+        throw new Error('No evidence found. Please run integration tests to seed real evidence first.');
     }
     const evidence = listRes.data.data[0];
     const evidenceId = evidence.id;
     const originalHash = evidence.hash;
+    const fileName = evidence.fileName; // Returned by the API
     console.log(`✅ Selected Evidence ID: ${evidenceId}`);
+    console.log(`   Internal Filename: ${fileName}`);
     console.log(`   Original Hash: ${originalHash.substring(0, 16)}...`);
 
-    // 3. Verify BEFORE tampering
-    console.log('\n[3] Verifying integrity BEFORE tampering...');
+    console.log('\n[4] Verifying integrity BEFORE tampering (Should be OK)...');
     const verifyBefore = await http('GET', `/api/evidence/verify/${evidenceId}`, { token });
     console.log(`   Status: ${verifyBefore.data.status} ${verifyBefore.data.status === 'OK' ? '✅' : '❌'}`);
 
-    // 4. Tamper
-    console.log('\n[4] Tampering with the evidence file in MinIO...');
+    console.log('\n[5] Tampering with the evidence file directly in MinIO...');
+    // We can deduce the object key without Postgres! (It is evidenceId + original extension)
+    const ext = path.extname(fileName) || '';
+    const objectKey = `${evidenceId}${ext}`;
+    const bucketName = 'evidence';
+    
+    console.log(`   Derived Target Object: bucket='${bucketName}', key='${objectKey}'`);
+    
+    // Connect to MinIO API directly using the host-mapped port 9000
     const Minio = require('minio');
     const minioClient = new Minio.Client({
         endPoint: 'localhost',
         port: 9000,
         useSSL: false,
         accessKey: 'shield',
-        secretKey: 'hJ7mN3xP9wQ2rK5bT8cF1vL4yD6aG0eS'
+        secretKey: 'key_pass'
     });
     
-    const { Client } = require('pg');
-    const pg = new Client('postgresql://shield:kX9mPvQ7rW2sT4bN8cF1jL6hY3dA5gE0@localhost:5432/shield');
-    await pg.connect();
-    const res = await pg.query('SELECT bucket_name, object_key FROM evidence WHERE id = $1', [evidenceId]);
-    await pg.end();
-    
-    if (res.rows.length === 0) throw new Error('Evidence not found in Postgres');
-    const { bucket_name, object_key } = res.rows[0];
-    console.log(`   Target Object: bucket='${bucket_name}', key='${object_key}'`);
-    
-    // Overwrite the file exactly where it sits
-    const tamperedData = Buffer.from(`COMPROMISED DATA PAYLOAD ${crypto.randomUUID()}`);
-    await minioClient.putObject(bucket_name, object_key, tamperedData);
-    console.log(`✅ Evidence file OVERWRITTEN with malicious payload!`);
+    // Upload malicious data payload right over the immutable file
+    const tamperedData = Buffer.from(`MALICIOUS HACKER PAYLOAD INJECTED AT ${Date.now()}`);
+    await minioClient.putObject(bucketName, objectKey, tamperedData);
+    console.log(`✅ Evidence file OVERWRITTEN with malicious payload directly in object storage!`);
 
-    // 5. Verify AFTER tampering
-    console.log('\n[5] Verifying integrity AFTER tampering...');
+    console.log('\n[6] Verifying integrity AFTER tampering (Should be TAMPERED)...');
     const verifyAfter = await http('GET', `/api/evidence/verify/${evidenceId}`, { token });
     console.log(`   Status: ${verifyAfter.data.status} ${verifyAfter.data.status === 'TAMPERED' ? '🚨✅' : '❌'}`);
     
     if (verifyAfter.data.status === 'TAMPERED') {
-        console.log('\n🎉 SUCCESS: The ImmuDB ledger successfully caught the mismatch!');
+        console.log('\n🎉 SUCCESS: The ImmuDB ledger successfully caught the covert MinIO tampering!');
     } else {
         console.log('\n❌ FAILURE: The system did not detect the tampering.');
     }
