@@ -43,27 +43,27 @@ export default function App() {
             <Route
               path="/"
               element={
-                <ProtectedRoute roles={['Police Officer', 'Judicial Authority', 'Super Admin', 'Admin']}>
+                <ProtectedRoute roles={['Police Officer', 'Judicial Authority', 'Admin']}>
                   <AppLayout><DashboardPage /></AppLayout>
                 </ProtectedRoute>
               }
             />
 
-            {/* Police + Super Admin */}
+            {/* Police */ }
             <Route
               path="/upload"
               element={
-                <ProtectedRoute roles={['Police Officer', 'Super Admin']}>
+                <ProtectedRoute roles={['Police Officer']}>
                   <AppLayout><UploadPage /></AppLayout>
                 </ProtectedRoute>
               }
             />
 
-            {/* Police + Judicial + Super Admin */}
+            {/* Police + Judicial */ }
             <Route
               path="/fir"
               element={
-                <ProtectedRoute roles={['Police Officer', 'Judicial Authority', 'Super Admin']}>
+                <ProtectedRoute roles={['Police Officer', 'Judicial Authority']}>
                   <AppLayout><FirRegistryPage /></AppLayout>
                 </ProtectedRoute>
               }
@@ -71,7 +71,7 @@ export default function App() {
             <Route
               path="/fir/:id"
               element={
-                <ProtectedRoute roles={['Police Officer', 'Judicial Authority', 'Super Admin']}>
+                <ProtectedRoute roles={['Police Officer', 'Judicial Authority']}>
                   <AppLayout><FirDetailPage /></AppLayout>
                 </ProtectedRoute>
               }
@@ -79,7 +79,7 @@ export default function App() {
             <Route
               path="/vault"
               element={
-                <ProtectedRoute roles={['Police Officer', 'Judicial Authority', 'Super Admin']}>
+                <ProtectedRoute roles={['Police Officer', 'Judicial Authority']}>
                   <AppLayout><VaultPage /></AppLayout>
                 </ProtectedRoute>
               }
@@ -87,27 +87,27 @@ export default function App() {
             <Route
               path="/vault/:id"
               element={
-                <ProtectedRoute roles={['Police Officer', 'Judicial Authority', 'Super Admin']}>
+                <ProtectedRoute roles={['Police Officer', 'Judicial Authority']}>
                   <AppLayout><EvidenceDetailPage /></AppLayout>
                 </ProtectedRoute>
               }
             />
 
-            {/* Judicial + Super Admin */}
+            {/* Judicial */ }
             <Route
               path="/audit"
               element={
-                <ProtectedRoute roles={['Judicial Authority', 'Super Admin']}>
+                <ProtectedRoute roles={['Judicial Authority']}>
                   <AppLayout><AuditLogPage /></AppLayout>
                 </ProtectedRoute>
               }
             />
 
-            {/* Admin + Super Admin */}
+            {/* Admin */ }
             <Route
               path="/admin/users"
               element={
-                <ProtectedRoute roles={['Super Admin', 'Admin']}>
+                <ProtectedRoute roles={['Admin']}>
                   <AppLayout><AdminUsersPage /></AppLayout>
                 </ProtectedRoute>
               }

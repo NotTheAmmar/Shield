@@ -53,24 +53,62 @@ const RETRY_DELAY_MS = 3000;
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function runMigrations() {
-    const sqlPath = path.join(__dirname, '..', 'migrations', 'init.sql');
-    if (!fs.existsSync(sqlPath)) {
-        console.log('[Migration] No init.sql found, skipping.');
-        return;
-    }
-    const sql = fs.readFileSync(sqlPath, 'utf8');
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
             await pool.query('SELECT 1'); // Test connection
-            await pool.query(sql);
-            console.log('[Migration] Database tables ready.');
+            
+            // Inline Database Table Definitions for Evidence tracking
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS fir (
+                  id                UUID         PRIMARY KEY,
+                  case_category     VARCHAR(100) DEFAULT '',
+                  description       TEXT         DEFAULT '',
+                  location          VARCHAR(255) DEFAULT '',
+                  reporting_officer TEXT         NOT NULL,
+                  fir_number        VARCHAR(100) DEFAULT '',
+                  status            VARCHAR(50)  DEFAULT 'OPEN',
+                  registered_at     TIMESTAMPTZ  DEFAULT NOW()
+                );
+
+                CREATE TABLE IF NOT EXISTS evidence (
+                  id           UUID         PRIMARY KEY,
+                  fir_id       UUID         REFERENCES fir(id) NOT NULL,
+                  filename     VARCHAR(255) NOT NULL,
+                  bucket_name  VARCHAR(100) NOT NULL,
+                  object_key   VARCHAR(500) NOT NULL,
+                  sha256_hash  VARCHAR(64)  NOT NULL,
+                  uploaded_by  TEXT,
+                  uploaded_at  TIMESTAMPTZ  DEFAULT NOW()
+                );
+
+                CREATE TABLE IF NOT EXISTS audit_log (
+                  id           SERIAL       PRIMARY KEY,
+                  evidence_id  UUID         REFERENCES evidence(id),
+                  action       VARCHAR(50),
+                  result       VARCHAR(20),
+                  actor_id     TEXT,
+                  checked_at   TIMESTAMPTZ  DEFAULT NOW()
+                );
+
+                CREATE TABLE IF NOT EXISTS api_audit_log (
+                  id           SERIAL PRIMARY KEY,
+                  user_id      TEXT,
+                  method       VARCHAR(10) NOT NULL,
+                  endpoint     VARCHAR(255) NOT NULL,
+                  ip_address   VARCHAR(45) NOT NULL,
+                  status_code  INT NOT NULL,
+                  accessed_at  TIMESTAMPTZ DEFAULT NOW()
+                );
+            `);
+            
+            console.log('[Init] Database schemas (FIR, Evidence, Audit) ready.');
             return;
         } catch (err) {
             if (attempt < MAX_RETRIES) {
-                console.log(`[Migration] Attempt ${attempt}/${MAX_RETRIES} failed (${err.message}). Retrying in ${RETRY_DELAY_MS / 1000}s...`);
+                console.log(`[Init] Attempt ${attempt}/${MAX_RETRIES} failed (${err.message}). Retrying in ${RETRY_DELAY_MS / 1000}s...`);
                 await sleep(RETRY_DELAY_MS);
             } else {
-                console.error('[Migration] Failed after all retries:', err.message);
+                console.error('[Init] Failed after all retries:', err.message);
             }
         }
     }

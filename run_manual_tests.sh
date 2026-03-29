@@ -4,8 +4,8 @@ echo "🛡️ Starting SHIELD Backend Master Evaluation Suite (Bash/cURL)..."
 echo "TEST SECRET EVIDENCE PAYLOAD" > test_evidence.txt
 
 # Step 1
-echo -en "\n[1] Testing Auth Service: Super Admin Login... "
-O1=$(curl -s -w "\n%{http_code}" -X POST http://localhost:3001/api/auth/login -H "Content-Type: application/json" -d '{"email":"admin@police.gov","password":"Sh13ld@Pr0duct10n2026!","role":"Super Admin"}')
+echo -en "\n[1] Testing Auth Service: Admin Login... "
+O1=$(curl -s -w "\n%{http_code}" -X POST http://localhost:3001/api/auth/login -H "Content-Type: application/json" -d '{"email":"admin@police.gov","password":"Sh13ld@Pr0duct10n2026!","role":"Admin"}')
 BODY=$(echo "$O1" | sed '$d')
 ADMIN_TOKEN=$(echo "$BODY" | grep -o '"token":"[^"]*' | cut -d'"' -f4)
 if [ -z "$ADMIN_TOKEN" ]; then echo "❌ FAILED: $BODY"; exit 1; else echo "✅ JWT Issued"; fi
@@ -41,14 +41,14 @@ if [ -z "$EVIDENCE_ID" ]; then echo "❌ FAILED: $BODY5"; exit 1; else echo "✅
 
 # Step 6
 echo -en "[6] Testing Security: Cryptographic Verification... "
-O6=$(curl -s -w "\n%{http_code}" -X GET http://localhost:3001/api/evidence/verify/$EVIDENCE_ID -H "Authorization: Bearer $ADMIN_TOKEN")
+O6=$(curl -s -w "\n%{http_code}" -X GET http://localhost:3001/api/evidence/verify/$EVIDENCE_ID -H "Authorization: Bearer $OFFICER_TOKEN")
 BODY6=$(echo "$O6" | sed '$d')
 STATUS=$(echo "$BODY6" | grep -o '"status":"[^"]*' | cut -d'"' -f4)
 if [ "$STATUS" != "OK" ]; then echo "❌ FAILED: $BODY6"; exit 1; else echo "✅ Hash Match ImmuDB vs MinIO = 1.0 (OK)"; fi
 
 # Step 7
 echo -en "[7] Testing Telemetry: Dashboard Stats... "
-O7=$(curl -s -w "\n%{http_code}" -X GET http://localhost:3001/api/dashboard/stats -H "Authorization: Bearer $ADMIN_TOKEN")
+O7=$(curl -s -w "\n%{http_code}" -X GET http://localhost:3001/api/dashboard/stats -H "Authorization: Bearer $OFFICER_TOKEN")
 BODY7=$(echo "$O7" | sed '$d')
 TOTAL_EVIDENCE=$(echo "$BODY7" | grep -o '"totalEvidence":[0-9]*' | cut -d ':' -f2)
 if [ -z "$TOTAL_EVIDENCE" ]; then echo "❌ FAILED: $BODY7"; exit 1; else echo "✅ Stats Active. Total Evidence: $TOTAL_EVIDENCE"; fi

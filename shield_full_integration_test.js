@@ -1,7 +1,6 @@
 const crypto = require('crypto');
 const fs = require('fs');
 
-
 const GATEWAY = 'http://localhost:3001/api';
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
@@ -21,19 +20,19 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
 
 async function testSuite() {
     try {
-        console.log('🛡️ Starting Full SHIELD Native Integration Test Suite...');
+        console.log('🛡️ Starting Full SHIELD Native Integration Test Suite (Zero-Trust)...');
 
-        // 1. Super Admin Login
-        console.log('\n[1] Testing Authentication: Super Admin Login...');
+        // 1. Admin Login
+        console.log('\n[1] Testing Authentication: Admin Login...');
         const loginRes = await fetchWithTimeout(`${GATEWAY}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: 'admin@police.gov', password: 'Sh13ld@Pr0duct10n2026!', role: 'Super Admin' })
+            body: JSON.stringify({ email: 'admin@police.gov', password: 'Sh13ld@Pr0duct10n2026!', role: 'Admin' })
         });
         const loginData = await loginRes.json();
-        if (!loginRes.ok) throw new Error(`Super Admin Login failed: ${loginData.error}`);
+        if (!loginRes.ok) throw new Error(`Admin Login failed: ${loginData.error}`);
         const adminJwt = loginData.token;
-        console.log('✅ Super Admin Logged In. JWT Issued.');
+        console.log('✅ Admin Logged In. JWT Issued.');
 
         // 2. Create a new Police Officer via Admin Route
         console.log('\n[2] Testing Auth Microservice: Provisioning New Police Officer...');
@@ -52,8 +51,24 @@ async function testSuite() {
         if (!createRes.ok) throw new Error(`Create User failed: ${createData.error}`);
         console.log(`✅ Created Police Officer via Admin Route: ${uniqueEmail}`);
 
-        // 3. Login as the newly created Police Officer
-        console.log('\n[3] Testing Police Officer Login...');
+        // 2b. Create a new Judicial Authority via Admin Route
+        console.log('\n[2b] Testing Auth Microservice: Provisioning New Judicial Authority...');
+        const judgeEmail = `judge_${Date.now()}@court.gov.in`;
+        const judgeId = `JUD_${Date.now()}`;
+        
+        const createJudgeRes = await fetchWithTimeout(`${GATEWAY}/admin/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminJwt}` },
+            body: JSON.stringify({
+                name: 'Judge Test', email: judgeEmail, employeeId: judgeId, 
+                role: 'Judicial Authority', plainPassword: 'secretpassword'
+            })
+        });
+        if (!createJudgeRes.ok) throw new Error(`Create Judge failed`);
+        console.log(`✅ Created Judicial Authority via Admin Route: ${judgeEmail}`);
+
+        // 3. Login as the newly created Police Officer & Judge
+        console.log('\n[3] Testing Police & Judge Login...');
         const polLogin = await fetchWithTimeout(`${GATEWAY}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -63,7 +78,16 @@ async function testSuite() {
         const polJwt = (await polLogin.json()).token;
         console.log('✅ Police Officer Token Granted.');
 
-        // 4. Create an FIR natively in PostgreSQL (must use multipart/form-data for busboy)
+        const judgeLogin = await fetchWithTimeout(`${GATEWAY}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: judgeEmail, password: 'secretpassword', role: 'Judicial Authority' })
+        });
+        if (!judgeLogin.ok) throw new Error('Judge login failed!');
+        const judgeJwt = (await judgeLogin.json()).token;
+        console.log('✅ Judicial Authority Token Granted.');
+
+        // 4. Create an FIR natively (Police Only)
         console.log('\n[4] Testing Evidence Microservice: Creating FIR...');
         const firForm = new FormData();
         firForm.append('firNumber', `TEST/AUTO/${Date.now()}`);
@@ -77,13 +101,12 @@ async function testSuite() {
             body: firForm
         }, 8000);
         const firText = await firRes.text();
-        let firData;
-        try { firData = JSON.parse(firText); } catch { throw new Error(`FIR response not JSON: ${firText.substring(0, 200)}`); }
+        let firData = JSON.parse(firText);
         if (!firRes.ok) throw new Error(`FIR Create failed: ${firData.error}`);
         const firId = firData.fir_id;
-        console.log(`✅ FIR Created in PostgreSQL: ${firId}`);
+        console.log(`✅ FIR Created natively: ${firId}`);
 
-        // 5. Upload Evidence via MinIO streams
+        // 5. Upload Evidence via MinIO streams (Police/Judge Only)
         console.log('\n[5] Testing Storage & Blockchain: Uploading Evidence File...');
         const evForm = new FormData();
         evForm.append('fir_id', firId);
@@ -95,39 +118,56 @@ async function testSuite() {
             body: evForm
         }, 10000);
         const evText = await evRes.text();
-        let evData;
-        try { evData = JSON.parse(evText); } catch { throw new Error(`Evidence response not JSON: ${evText.substring(0, 200)}`); }
+        let evData = JSON.parse(evText);
         if (!evRes.ok) throw new Error(`Evidence Upload failed: ${evData.error}`);
         const evId = evData.id;
         console.log(`✅ Evidence Uploaded & Secured on Ledger. ID: ${evId}`);
 
-        // 6. Verify Evidence via the Pipeline
+        // 6. Verify Evidence via the Pipeline (Police/Judge Only)
         console.log('\n[6] Testing Live Cryptographic Verification...');
         const verifyRes = await fetchWithTimeout(`${GATEWAY}/evidence/verify/${evId}`, {
             method: 'GET',
-            headers: { 'Authorization': `Bearer ${adminJwt}` }
+            headers: { 'Authorization': `Bearer ${polJwt}` }
         }, 8000);
         const verifyData = await verifyRes.json();
         if (!verifyRes.ok) throw new Error(`Verification failed: ${JSON.stringify(verifyData)}`);
         console.log(`✅ Hash Validation Status: ${verifyData.status}`);
 
-        // 7. Verify Dashboard & Audit Service
-        console.log('\n[7] Testing Dashboard & Centralized Logging APIs...');
-        const statRes = await fetchWithTimeout(`${GATEWAY}/dashboard/stats`, {
+        // 7. Verify Dashboard & Audit Service with Strict RBAC limits
+        console.log('\n[7] Testing Zero-Trust Dashboard & Audit APIs...');
+        
+        // Admin SHOULD NOT be able to view evidence dashboard stats
+        const adminStatRes = await fetchWithTimeout(`${GATEWAY}/dashboard/stats`, {
             headers: { 'Authorization': `Bearer ${adminJwt}` }
+        });
+        if (adminStatRes.status !== 403) throw new Error(`Zero-Trust FAILED: Admin accessed evidence dashboard (Got ${adminStatRes.status})`);
+        
+        const statRes = await fetchWithTimeout(`${GATEWAY}/dashboard/stats`, {
+            headers: { 'Authorization': `Bearer ${polJwt}` }
         });
         const statData = await statRes.json();
         if (!statRes.ok) throw new Error(`Dashboard failed: ${JSON.stringify(statData)}`);
-        console.log(`✅ Live System Stats: ${JSON.stringify(statData)}`);
+        console.log(`✅ Live System Stats (Police Officer allowed): ${JSON.stringify(statData)}`);
+
+        // Audit Log only accessible by Judicial Authority
+        const auditAdminRes = await fetchWithTimeout(`${GATEWAY}/audit`, {
+            headers: { 'Authorization': `Bearer ${adminJwt}` }
+        });
+        if (auditAdminRes.status !== 403) throw new Error(`Zero-Trust FAILED: Admin accessed audit log (Got ${auditAdminRes.status})`);
+
+        const auditPolRes = await fetchWithTimeout(`${GATEWAY}/audit`, {
+            headers: { 'Authorization': `Bearer ${polJwt}` }
+        });
+        if (auditPolRes.status !== 403) throw new Error(`Zero-Trust FAILED: Police accessed audit log (Got ${auditPolRes.status})`);
 
         const auditRes = await fetchWithTimeout(`${GATEWAY}/audit`, {
-            headers: { 'Authorization': `Bearer ${adminJwt}` }
+            headers: { 'Authorization': `Bearer ${judgeJwt}` }
         });
         const auditData = await auditRes.json();
         if (!auditRes.ok) throw new Error(`Audit failed: ${JSON.stringify(auditData)}`);
-        console.log(`✅ Total Audit Log Entries: ${auditData.auditLog.length}`);
+        console.log(`✅ Total Audit Log Entries (Judicial Authority allowed): ${auditData.auditLog.length}`);
 
-        console.log('\n🎉 ALL 7 STEPS PASSED — 100% NATIVE MICROSERVICE INTEGRATION VERIFIED. ZERO MOCKS.');
+        console.log('\n🎉 ALL STEPS PASSED — 100% NATIVE ZERO-TRUST MICROSERVICE VERIFIED.');
 
     } catch (err) {
         console.error(`\n❌ TEST FAILED: ${err.message}`);

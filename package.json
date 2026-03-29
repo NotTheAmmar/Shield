@@ -12,6 +12,8 @@
     "concurrently": "^8.0.0"
   },
   "dependencies": {
-    "minio": "^8.0.7"
+    "jsonwebtoken": "^9.0.3",
+    "minio": "^8.0.7",
+    "pg": "^8.20.0"
   }
 }

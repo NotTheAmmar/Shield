@@ -6,7 +6,7 @@ const requireRoles = require('../middleware/rbac');
 const router = express.Router();
 
 // GET /api/admin/users
-router.get('/users', requireRoles(['Super Admin']), async (req, res) => {
+router.get('/users', requireRoles(['Admin']), async (req, res) => {
     try {
         const { rows } = await pool.query(
             'SELECT id, email, name, employee_id, role, status, created_at FROM users ORDER BY created_at DESC'
@@ -19,7 +19,7 @@ router.get('/users', requireRoles(['Super Admin']), async (req, res) => {
 });
 
 // POST /api/admin/users
-router.post('/users', requireRoles(['Super Admin']), async (req, res) => {
+router.post('/users', requireRoles(['Admin']), async (req, res) => {
     const { name, email, employeeId, role, plainPassword } = req.body;
 
     if (!name || !email || !employeeId || !role || !plainPassword) {
@@ -46,7 +46,7 @@ router.post('/users', requireRoles(['Super Admin']), async (req, res) => {
 });
 
 // PATCH /api/admin/users/:id
-router.patch('/users/:id', requireRoles(['Super Admin']), async (req, res) => {
+router.patch('/users/:id', requireRoles(['Admin']), async (req, res) => {
     const { id } = req.params;
     const { role, status } = req.body;
 

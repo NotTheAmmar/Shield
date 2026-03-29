@@ -9,9 +9,7 @@ const ROLE_MAP = {
   'judicial_authority': 'judicial_authority',
   'Judicial Authority': 'judicial_authority',
   'admin': 'admin',
-  'Admin': 'admin',
-  'super_admin': 'admin',
-  'Super Admin': 'admin',
+  'Admin': 'admin'
 };
 
 const normalizeRole = (role) => ROLE_MAP[role] || role?.toLowerCase();

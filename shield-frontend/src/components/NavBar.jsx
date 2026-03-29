@@ -6,12 +6,12 @@ import ThemeToggle from './ThemeToggle';
 import RoleBadge from './RoleBadge';
 
 const NAV_LINKS = [
-  { to: '/',             label: 'Dashboard',       Icon: LayoutDashboard, roles: ['Police Officer', 'Judicial Authority', 'Super Admin', 'Admin'] },
-  { to: '/upload',       label: 'Upload',           Icon: Upload,          roles: ['Police Officer', 'Super Admin'] },
-  { to: '/fir',          label: 'FIR Registry',     Icon: FileText,        roles: ['Police Officer', 'Judicial Authority', 'Super Admin'] },
-  { to: '/vault',        label: 'Evidence Vault',   Icon: Archive,         roles: ['Police Officer', 'Judicial Authority', 'Super Admin'] },
-  { to: '/audit',        label: 'Audit Log',         Icon: BookOpen,        roles: ['Judicial Authority', 'Super Admin'] },
-  { to: '/admin/users',  label: 'User Management',  Icon: Users,           roles: ['Super Admin', 'Admin'] },
+  { to: '/',             label: 'Dashboard',       Icon: LayoutDashboard, roles: ['Police Officer', 'Judicial Authority', 'Admin'] },
+  { to: '/upload',       label: 'Upload',           Icon: Upload,          roles: ['Police Officer'] },
+  { to: '/fir',          label: 'FIR Registry',     Icon: FileText,        roles: ['Police Officer', 'Judicial Authority'] },
+  { to: '/vault',        label: 'Evidence Vault',   Icon: Archive,         roles: ['Police Officer', 'Judicial Authority'] },
+  { to: '/audit',        label: 'Audit Log',         Icon: BookOpen,        roles: ['Judicial Authority'] },
+  { to: '/admin/users',  label: 'User Management',  Icon: Users,           roles: ['Admin'] },
 ];
 
 export default function NavBar() {
