@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
+import { useAuth } from './hooks/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
 import NavBar from './components/NavBar';
 
@@ -15,6 +16,7 @@ import VaultPage from './pages/VaultPage';
 import EvidenceDetailPage from './pages/EvidenceDetailPage';
 import AuditLogPage from './pages/AuditLogPage';
 import AdminUsersPage from './pages/AdminUsersPage';
+import ForcePasswordChangePage from './pages/ForcePasswordChangePage';
 
 function AppLayout({ children }) {
   return (
@@ -30,94 +32,109 @@ function AppLayout({ children }) {
   );
 }
 
+/**
+ * Gate that intercepts authenticated users who have not yet changed their
+ * temporary password. They see ONLY the ForcePasswordChangePage until done.
+ */
+function MustChangePasswordGate({ children }) {
+  const { isAuthenticated, mustChangePassword } = useAuth();
+  if (isAuthenticated && mustChangePassword) {
+    return <ForcePasswordChangePage />;
+  }
+  return children;
+}
+
 export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
-          <Routes>
-            {/* Public */}
-            <Route path="/login" element={<LoginPage />} />
+          <MustChangePasswordGate>
+            <Routes>
+              {/* Public */}
+              <Route path="/login" element={<LoginPage />} />
 
-            {/* Protected: All authenticated roles */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute roles={['Police Officer', 'Judicial Authority', 'Admin']}>
-                  <AppLayout><DashboardPage /></AppLayout>
-                </ProtectedRoute>
-              }
-            />
+              {/* Protected: All authenticated roles */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute roles={['Police Officer', 'Judicial Authority', 'Admin']}>
+                    <AppLayout><DashboardPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Police */ }
-            <Route
-              path="/upload"
-              element={
-                <ProtectedRoute roles={['Police Officer']}>
-                  <AppLayout><UploadPage /></AppLayout>
-                </ProtectedRoute>
-              }
-            />
+              {/* Police */ }
+              <Route
+                path="/upload"
+                element={
+                  <ProtectedRoute roles={['Police Officer']}>
+                    <AppLayout><UploadPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Police + Judicial */ }
-            <Route
-              path="/fir"
-              element={
-                <ProtectedRoute roles={['Police Officer', 'Judicial Authority']}>
-                  <AppLayout><FirRegistryPage /></AppLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/fir/:id"
-              element={
-                <ProtectedRoute roles={['Police Officer', 'Judicial Authority']}>
-                  <AppLayout><FirDetailPage /></AppLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/vault"
-              element={
-                <ProtectedRoute roles={['Police Officer', 'Judicial Authority']}>
-                  <AppLayout><VaultPage /></AppLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/vault/:id"
-              element={
-                <ProtectedRoute roles={['Police Officer', 'Judicial Authority']}>
-                  <AppLayout><EvidenceDetailPage /></AppLayout>
-                </ProtectedRoute>
-              }
-            />
+              {/* Police + Judicial */ }
+              <Route
+                path="/fir"
+                element={
+                  <ProtectedRoute roles={['Police Officer', 'Judicial Authority']}>
+                    <AppLayout><FirRegistryPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/fir/:id"
+                element={
+                  <ProtectedRoute roles={['Police Officer', 'Judicial Authority']}>
+                    <AppLayout><FirDetailPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/vault"
+                element={
+                  <ProtectedRoute roles={['Police Officer', 'Judicial Authority']}>
+                    <AppLayout><VaultPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/vault/:id"
+                element={
+                  <ProtectedRoute roles={['Police Officer', 'Judicial Authority']}>
+                    <AppLayout><EvidenceDetailPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Judicial */ }
-            <Route
-              path="/audit"
-              element={
-                <ProtectedRoute roles={['Judicial Authority']}>
-                  <AppLayout><AuditLogPage /></AppLayout>
-                </ProtectedRoute>
-              }
-            />
+              {/* Judicial */ }
+              <Route
+                path="/audit"
+                element={
+                  <ProtectedRoute roles={['Judicial Authority']}>
+                    <AppLayout><AuditLogPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Admin */ }
-            <Route
-              path="/admin/users"
-              element={
-                <ProtectedRoute roles={['Admin']}>
-                  <AppLayout><AdminUsersPage /></AppLayout>
-                </ProtectedRoute>
-              }
-            />
+              {/* Admin */ }
+              <Route
+                path="/admin/users"
+                element={
+                  <ProtectedRoute roles={['Admin']}>
+                    <AppLayout><AdminUsersPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              {/* Fallback */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </MustChangePasswordGate>
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>
   );
 }
+

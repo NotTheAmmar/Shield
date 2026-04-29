@@ -38,7 +38,8 @@ apiClient.interceptors.response.use(
 
     const isAuthRoute = originalRequest.url.includes('/auth/login') ||
                         originalRequest.url.includes('/auth/logout') ||
-                        originalRequest.url.includes('/auth/refresh');
+                        originalRequest.url.includes('/auth/refresh') ||
+                        originalRequest.url.includes('/auth/change-password');
     const isMeRoute = originalRequest.url.includes('/auth/me');
 
     // Only intercept 401s that are NOT explicit auth actions
@@ -88,9 +89,10 @@ apiClient.interceptors.response.use(
 // ── Auth ──────────────────────────────────────────────────────────────────
 
 export const authAPI = {
-  login: (credentials) => apiClient.post('/auth/login', credentials),
-  logout: () => apiClient.post('/auth/logout').catch(() => {}),
-  getMe: () => apiClient.get('/auth/me').catch(() => { throw new Error('Unauthenticated'); }),
+  login:          (credentials) => apiClient.post('/auth/login', credentials),
+  logout:         () => apiClient.post('/auth/logout').catch(() => {}),
+  getMe:          () => apiClient.get('/auth/me').catch(() => { throw new Error('Unauthenticated'); }),
+  changePassword: (data) => apiClient.post('/auth/change-password', data),
 };
 
 // ── Dashboard ─────────────────────────────────────────────────────────────

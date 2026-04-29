@@ -77,6 +77,43 @@ Invalidate the session server-side (blocklist the JWT).
 
 ---
 
+### `POST /api/auth/change-password`
+
+Change a user's password. Used primarily for the **mandatory first-login password change** flow. Requires an active HttpOnly session cookie (the user must be logged in).
+
+**Headers**: `Cookie: shield_access_token=<token>`
+
+#### Request Body
+
+```json
+{
+  "currentPassword": "TemporaryP@ssword1",
+  "newPassword":     "MyStr0ng#NewPass!"
+}
+```
+
+**Success `200`**
+
+```json
+{ "message": "Password changed successfully.", "mustChangePassword": false }
+```
+
+**Error `400`** *(validation failure)*
+
+```json
+{ "error": "New password must be at least 8 characters." }
+```
+
+**Error `401`** *(wrong current password)*
+
+```json
+{ "error": "Current password is incorrect." }
+```
+
+> **First-login flow**: When an admin creates a new user, the `must_change_password` flag is set to `true` in the DB. The login response includes `mustChangePassword: true`, and the frontend gates the entire application behind `ForcePasswordChangePage` until the password is changed.
+
+---
+
 ## 2. FIR Management  →  `shield-evidence` + `shield-ledger`
 
 ### `GET /api/firs`

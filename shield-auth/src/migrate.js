@@ -21,15 +21,21 @@ async function runMigrations() {
             // Inline table creation for development simplicity
             await pool.query(`
                 CREATE TABLE IF NOT EXISTS users (
-                  id             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-                  email          VARCHAR(255) UNIQUE NOT NULL,
-                  password_hash  VARCHAR(255) NOT NULL,
-                  name           VARCHAR(255) NOT NULL,
-                  employee_id    VARCHAR(50)  UNIQUE NOT NULL,
-                  role           VARCHAR(50)  NOT NULL,
-                  status         VARCHAR(20)  DEFAULT 'active',
-                  created_at     TIMESTAMPTZ  DEFAULT NOW()
+                  id                   UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+                  email                VARCHAR(255) UNIQUE NOT NULL,
+                  password_hash        VARCHAR(255) NOT NULL,
+                  name                 VARCHAR(255) NOT NULL,
+                  employee_id          VARCHAR(50)  UNIQUE NOT NULL,
+                  role                 VARCHAR(50)  NOT NULL,
+                  status               VARCHAR(20)  DEFAULT 'active',
+                  must_change_password BOOLEAN      DEFAULT TRUE,
+                  created_at           TIMESTAMPTZ  DEFAULT NOW()
                 );
+            `);
+
+            // Idempotent migration: add column if it doesn't exist yet (for existing DBs)
+            await pool.query(`
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT TRUE;
             `);
 
             console.log('[Auth Init] Seeding configured admin account...');
@@ -42,7 +48,7 @@ async function runMigrations() {
             const passwordHash = await bcrypt.hash(seedPassword, 12);
 
             await pool.query(`
-                INSERT INTO users (id, email, password_hash, name, employee_id, role, status)
+                INSERT INTO users (id, email, password_hash, name, employee_id, role, status, must_change_password)
                 VALUES (
                     '00000000-0000-0000-0000-000000000000',
                     $2,
@@ -50,7 +56,8 @@ async function runMigrations() {
                     $3,
                     $4,
                     'Admin',
-                    'active'
+                    'active',
+                    FALSE
                 )
                 ON CONFLICT (email) DO UPDATE SET password_hash = $1, role = 'Admin', name = $3
             `, [passwordHash, seedEmail, seedName, seedEmployeeId]);

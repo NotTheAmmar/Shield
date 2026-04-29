@@ -59,7 +59,8 @@ router.post('/login', async (req, res) => {
         res.cookie('shield_access_token', accessToken, { ...baseCookieOps, maxAge: 15 * 60 * 1000 });
         res.cookie('shield_refresh_token', refreshToken, { ...baseCookieOps, maxAge: 7 * 24 * 60 * 60 * 1000, path: '/api/auth/refresh' });
 
-        return res.json({ user: payload, token: accessToken });
+        // Include mustChangePassword in the response so the frontend can gate access
+        return res.json({ user: { ...payload, mustChangePassword: user.must_change_password === true }, token: accessToken });
     } catch (err) {
         console.error('[AUTH LOGIN]', err.message);
         return res.status(500).json({ error: 'Internal server error during login' });
@@ -113,6 +114,62 @@ router.post('/logout', (req, res) => {
     res.clearCookie('shield_access_token', baseCookieOps);
     res.clearCookie('shield_refresh_token', { ...baseCookieOps, path: '/api/auth/refresh' });
     res.json({ message: 'Logged out successfully.' });
+});
+
+/**
+ * POST /api/auth/change-password
+ * Requires valid HttpOnly access-token cookie (user is already "logged in").
+ * Body: { currentPassword, newPassword }
+ * On success: clears the must_change_password flag and returns updated user info.
+ */
+router.post('/change-password', async (req, res) => {
+    const token = req.cookies?.shield_access_token;
+    if (!token) return res.status(401).json({ error: 'Not authenticated' });
+
+    let decoded;
+    try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+        return res.status(401).json({ error: 'Token expired or invalid' });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'currentPassword and newPassword are required.' });
+    }
+
+    if (newPassword.length < 8) {
+        return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+    }
+
+    try {
+        const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [decoded.id]);
+        const user = rows[0];
+
+        if (!user) return res.status(404).json({ error: 'User not found.' });
+
+        const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
+        if (!isValidPassword) {
+            return res.status(401).json({ error: 'Current password is incorrect.' });
+        }
+
+        if (currentPassword === newPassword) {
+            return res.status(400).json({ error: 'New password must be different from the current password.' });
+        }
+
+        const newHash = await bcrypt.hash(newPassword, 12);
+
+        await pool.query(
+            'UPDATE users SET password_hash = $1, must_change_password = FALSE WHERE id = $2',
+            [newHash, decoded.id]
+        );
+
+        return res.json({ message: 'Password changed successfully.', mustChangePassword: false });
+    } catch (err) {
+        console.error('[AUTH CHANGE-PASSWORD]', err.message);
+        return res.status(500).json({ error: 'Internal server error during password change.' });
+    }
 });
 
 module.exports = router;
