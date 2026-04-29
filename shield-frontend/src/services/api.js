@@ -136,3 +136,12 @@ export const adminAPI = {
   createUser: (data) => apiClient.post('/admin/users', data),
   updateUser: (id, data) => apiClient.patch(`/admin/users/${id}`, data),
 };
+
+// ── Reports ───────────────────────────────────────────────────────────────
+
+export const reportsAPI = {
+  getChainOfCustody: (evidenceId) => apiClient.get(`/reports/chain-of-custody/${evidenceId}`),
+  getMetadata:       (evidenceId) => apiClient.get(`/reports/metadata/${evidenceId}`),
+  requestPdf:        (evidenceId) => apiClient.post(`/reports/chain-of-custody/${evidenceId}/pdf`),
+  getJobStatus:      (jobId) => apiClient.get(`/reports/status/${jobId}`),
+};

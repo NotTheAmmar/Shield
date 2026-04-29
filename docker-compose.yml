@@ -18,7 +18,7 @@ services:
       - shield-frontend
 
   db-users:
-    image: postgres:15-alpine
+    image: postgis/postgis:15-3.4-alpine
     container_name: db-users
     networks:
       - shield-network
@@ -157,6 +157,7 @@ services:
     depends_on:
       - minio-store
       - shield-ledger
+      - redis
 
   shield-ledger:
     build: ./shield-ledger
@@ -195,5 +196,43 @@ services:
       - shield-evidence
       - shield-ledger
 
+  redis:
+    image: redis:7-alpine
+    container_name: shield-redis
+    restart: unless-stopped
+    networks:
+      - shield-network
+    expose:
+      - "6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - ./.docker-data/redis:/data
+
+  shield-metadata-extractor:
+    build: ./shield-metadata-extractor
+    container_name: shield-metadata-extractor
+    restart: unless-stopped
+    networks:
+      - shield-network
+    volumes:
+      - extractor-processing:/processing
+    environment:
+      DB_HOST: db-users
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+      REDIS_HOST: shield-redis
+      REDIS_PORT: 6379
+      MINIO_ENDPOINT: minio-store
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      BUCKET_NAME: evidence
+    depends_on:
+      - redis
+      - minio-store
+
 volumes:
   immudb-data:
+  extractor-processing:

@@ -8,8 +8,18 @@ const pool = require('../db');
 const { minioInternal, minioPublic, BUCKET } = require('../config/minio');
 const ledger = require('../services/ledger');
 const requireRoles = require('../middleware/rbac');
+const { Queue } = require('bullmq');
+const IORedis = require('ioredis');
 
 const router = express.Router();
+
+// ── BullMQ Metadata Extraction Queue ──────────────────────────
+const redisConnection = new IORedis({
+    host: process.env.REDIS_HOST || 'shield-redis',
+    port: parseInt(process.env.REDIS_PORT) || 6379,
+    maxRetriesPerRequest: null,
+});
+const metadataQueue = new Queue('metadata-extraction', { connection: redisConnection });
 
 // ─────────────────────────────────────────────
 // Middleware: Internal Network Perimeter Guard
@@ -141,6 +151,14 @@ router.post('/upload', requireRoles(['Police Officer', 'Super Admin']), (req, re
                     await ledger.storeHash(evidenceId, hash);
 
                     await client.query('COMMIT');
+
+                    // Enqueue metadata extraction job (non-blocking)
+                    metadataQueue.add('extract', {
+                        evidenceId,
+                        objectKey,
+                        bucketName: BUCKET,
+                    }).catch(err => console.warn('⚠️ Could not enqueue metadata extraction:', err.message));
+
                     send(201, { id: evidenceId, sha256_hash: hash });
                 } catch (err) {
                     await client.query('ROLLBACK');

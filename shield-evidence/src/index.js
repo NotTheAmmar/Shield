@@ -27,11 +27,13 @@ app.get('/health', (req, res) => res.json({ status: 'OK', timestamp: new Date() 
 // API routes (Protected by JWT)
 const dashboardRoutes = require('./routes/dashboard');
 const auditRoutes = require('./routes/audit');
+const reportRoutes = require('./routes/reports');
 
 app.use('/api/evidence', auth, evidenceRoutes);
 app.use('/api/fir', auth, firRoutes);
 app.use('/api/dashboard', auth, dashboardRoutes);
 app.use('/api/audit', auth, auditRoutes);
+app.use('/api/reports', auth, reportRoutes);
 
 // Process-level monitors to catch fatal crashes that evade the Express event loop
 process.on('uncaughtException', (err) => {
