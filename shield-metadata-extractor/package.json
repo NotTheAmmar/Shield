@@ -1,0 +1,17 @@
+{
+  "name": "shield-metadata-extractor",
+  "version": "1.0.0",
+  "description": "SHIELD Asynchronous Metadata Extraction Engine — BullMQ event-driven EXIF extractor",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node worker.js"
+  },
+  "dependencies": {
+    "bullmq": "^5.34.0",
+    "ioredis": "^5.4.1",
+    "exiftool-vendored": "^28.3.0",
+    "minio": "^8.0.2",
+    "pg": "^8.13.1",
+    "pdfkit": "^0.15.0"
+  }
+}
