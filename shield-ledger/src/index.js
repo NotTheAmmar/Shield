@@ -138,12 +138,13 @@ app.get('/api/ledger/:evidenceId', async (req, res) => {
             fallback: true,
         });
     } catch (err) {
-        // ImmuDB returns KEY_NOT_FOUND for missing keys
-        if (err.message?.includes('key not found')) {
+        const errMsg = err.message || err.details || String(err) || '';
+        // ImmuDB returns KEY_NOT_FOUND or key not found for missing keys
+        if (errMsg.includes('key not found') || errMsg.includes('KEY_NOT_FOUND')) {
             return res.status(404).json({ error: 'Hash not found in ledger' });
         }
-        console.error(`[Ledger] Get error: ${err.message}`);
-        return res.status(500).json({ error: 'Failed to retrieve hash from ledger', details: err.message });
+        console.error(`[Ledger] Get error: ${errMsg}`);
+        return res.status(500).json({ error: 'Failed to retrieve hash from ledger', details: errMsg });
     }
 });
 

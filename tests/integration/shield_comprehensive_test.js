@@ -31,11 +31,12 @@ function log(testName, passed, details, skipped = false) {
     else failCount++;
 }
 
-async function http(method, path, { token, body, headers = {}, multipart, timeout = 8000 } = {}) {
+async function http(method, path, { token, body, headers = {}, multipart, timeout = 8000, cookies } = {}) {
     const url = `${GATEWAY}${path}`;
     const opts = { method, headers: { ...headers } };
 
     if (token) opts.headers['Authorization'] = `Bearer ${token}`;
+    if (cookies) opts.headers['Cookie'] = cookies;
 
     if (multipart) {
         // Manual multipart/form-data construction
@@ -844,6 +845,293 @@ async function main() {
             `Before: ${countBefore}, After: ${countAfter}`);
     } catch (e) {
         log('T50: FIR count increases after creation', false, e.message);
+    }
+
+    // ═════════════════════════════════════════════════════════
+    // PHASE 11: Forensic Reports & Metadata
+    // ═════════════════════════════════════════════════════════
+    console.log('\n━━ PHASE 11: Forensic Reports & Metadata ━━━━━━━━━━━');
+
+    // T51: Get Chain of Custody (officer allowed)
+    if (evidenceId && officerToken) {
+        try {
+            const r = await http('GET', `/api/reports/chain-of-custody/${evidenceId}`, { token: officerToken });
+            log('T51: Get Chain of Custody (JSON) → 200', r.status === 200 && r.data?.evidence?.id === evidenceId,
+                `Status: ${r.status}, fileName: ${r.data?.evidence?.fileName}`);
+        } catch (e) {
+            log('T51: Get Chain of Custody (JSON) → 200', false, e.message);
+        }
+    } else {
+        log('T51: Get Chain of Custody (JSON) → 200', false, 'Skipped: no evidence', true);
+    }
+
+    // T52: Get Evidence Metadata (officer allowed)
+    if (evidenceId && officerToken) {
+        try {
+            const r = await http('GET', `/api/reports/metadata/${evidenceId}`, { token: officerToken });
+            log('T52: Get Evidence Metadata → 200', r.status === 200 && r.data?.forensicFlags !== undefined,
+                `Status: ${r.status}, flagsCount: ${r.data?.forensicFlags?.length}`);
+        } catch (e) {
+            log('T52: Get Evidence Metadata → 200', false, e.message);
+        }
+    } else {
+        log('T52: Get Evidence Metadata → 200', false, 'Skipped: no evidence', true);
+    }
+
+    // T53: Request PDF Forensic Report (officer allowed)
+    let reportJobId = null;
+    if (evidenceId && officerToken) {
+        try {
+            const r = await http('POST', `/api/reports/chain-of-custody/${evidenceId}/pdf`, { token: officerToken });
+            reportJobId = r.data?.jobId;
+            log('T53: Request PDF Report (BullMQ Queue) → 200', r.status === 200 && !!reportJobId,
+                `Status: ${r.status}, jobId: ${reportJobId}`);
+        } catch (e) {
+            log('T53: Request PDF Report (BullMQ Queue) → 200', false, e.message);
+        }
+    } else {
+        log('T53: Request PDF Report (BullMQ Queue) → 200', false, 'Skipped: no evidence', true);
+    }
+
+    // T54: Check PDF Report Job Status (officer allowed)
+    if (reportJobId && officerToken) {
+        try {
+            const r = await http('GET', `/api/reports/status/${reportJobId}`, { token: officerToken });
+            log('T54: Check PDF Job Status → 200', r.status === 200 && r.data?.status !== undefined,
+                `Status: ${r.status}, jobStatus: ${r.data?.status}`);
+        } catch (e) {
+            log('T54: Check PDF Job Status → 200', false, e.message);
+        }
+    } else {
+        log('T54: Check PDF Job Status → 200', false, 'Skipped: no job queued', true);
+    }
+
+    // T54b: Poll PDF Job Status until READY and Download PDF
+    if (reportJobId && officerToken) {
+        try {
+            let attempts = 0;
+            let jobReady = false;
+            let statusRes = null;
+            while (attempts < 10 && !jobReady) {
+                statusRes = await http('GET', `/api/reports/status/${reportJobId}`, { token: officerToken });
+                if (statusRes.status === 200 && statusRes.data?.status === 'READY') {
+                    jobReady = true;
+                    break;
+                }
+                attempts++;
+                await sleep(1000); // Wait 1s between attempts
+            }
+
+            if (jobReady) {
+                log('T54b: Poll PDF Job Status to READY → OK', true, `READY after ${attempts} attempts`);
+                
+                // Now download the PDF!
+                const downloadRes = await http('GET', `/api/reports/download/${reportJobId}`, { token: officerToken });
+                const isPdf = downloadRes.status === 200 && downloadRes.headers.get('content-type')?.includes('application/pdf');
+                log('T54c: Download PDF Report → 200 + PDF Content', isPdf,
+                    `Status: ${downloadRes.status}, contentType: ${downloadRes.headers.get('content-type')}`);
+            } else {
+                log('T54b: Poll PDF Job Status to READY → OK', false, `Job did not become READY, last status: ${statusRes?.data?.status}`);
+                log('T54c: Download PDF Report → 200 + PDF Content', false, 'Skipped: job not ready', true);
+            }
+        } catch (e) {
+            log('T54b: Poll PDF Job Status to READY → OK', false, e.message);
+            log('T54c: Download PDF Report → 200 + PDF Content', false, 'Skipped due to error', true);
+        }
+    } else {
+        log('T54b: Poll PDF Job Status to READY → OK', false, 'Skipped: no job queued', true);
+        log('T54c: Download PDF Report → 200 + PDF Content', false, 'Skipped', true);
+    }
+
+    // ═════════════════════════════════════════════════════════
+    // PHASE 12: Advanced Auth & Admin Operations
+    // ═════════════════════════════════════════════════════════
+    console.log('\n━━ PHASE 12: Advanced Auth & Admin Operations ━━━━━━');
+
+    // T55: Get Admin User Detail by ID (admin allowed)
+    if (officerUserId && adminToken) {
+        try {
+            const r = await http('GET', `/api/admin/users/${officerUserId}`, { token: adminToken });
+            log('T55: Get User Detail by ID → 200', r.status === 200 && r.data?.user?.id === officerUserId,
+                `Status: ${r.status}, name: ${r.data?.user?.name}`);
+        } catch (e) {
+            log('T55: Get User Detail by ID → 200', false, e.message);
+        }
+    } else {
+        log('T55: Get User Detail by ID → 200', false, 'Skipped: no user ID', true);
+    }
+
+    // T56: Get Non-existent User Detail by ID → 404
+    try {
+        const r = await http('GET', `/api/admin/users/${crypto.randomUUID()}`, { token: adminToken });
+        log('T56: Get non-existent User Detail → 404', r.status === 404,
+            `Status: ${r.status}`);
+    } catch (e) {
+        log('T56: Get non-existent User Detail → 404', false, e.message);
+    }
+
+    // T57: Reset User Password (admin allowed)
+    if (officerUserId && adminToken) {
+        try {
+            const r = await http('POST', `/api/admin/users/${officerUserId}/reset-password`, {
+                token: adminToken,
+                body: { plainPassword: 'NewResettedPassword123!' }
+            });
+            log('T57: Admin Reset User Password → 200', r.status === 200 && r.data?.user?.email !== undefined,
+                `Status: ${r.status}, message: ${r.data?.message}`);
+        } catch (e) {
+            log('T57: Admin Reset User Password → 200', false, e.message);
+        }
+    } else {
+        log('T57: Admin Reset User Password → 200', false, 'Skipped: no user ID', true);
+    }
+
+    // T58: Verify First-Login Flag and Change Password flow (Cookie Auth)
+    if (officerEmail) {
+        try {
+            // First login with newly reset password
+            const loginRes = await http('POST', '/api/auth/login', {
+                body: { email: officerEmail, password: 'NewResettedPassword123!', role: 'Police Officer' }
+            });
+            const setCookies = loginRes.headers.getSetCookie ? loginRes.headers.getSetCookie() : [];
+            const parsedCookies = setCookies.map(c => c.split(';')[0]).join('; ');
+            
+            const hasChangePasswordFlag = loginRes.data?.user?.mustChangePassword === true;
+            log('T58a: Reset trigger sets mustChangePassword to true', hasChangePasswordFlag,
+                `mustChangePassword: ${hasChangePasswordFlag}`);
+
+            // Now call change-password using HttpOnly access cookie
+            if (parsedCookies) {
+                const changeRes = await http('POST', '/api/auth/change-password', {
+                    cookies: parsedCookies,
+                    body: {
+                        currentPassword: 'NewResettedPassword123!',
+                        newPassword: 'FinalOfficerPassword2026!'
+                    }
+                });
+                log('T58b: Change Password with HttpOnly session cookie → 200', changeRes.status === 200,
+                    `Status: ${changeRes.status}, message: ${changeRes.data?.message}`);
+
+                // Try login again with final password
+                const loginFinal = await http('POST', '/api/auth/login', {
+                    body: { email: officerEmail, password: 'FinalOfficerPassword2026!', role: 'Police Officer' }
+                });
+                log('T58c: Login with final updated password → 200', loginFinal.status === 200,
+                    `Status: ${loginFinal.status}, mustChangePassword: ${loginFinal.data?.user?.mustChangePassword}`);
+            } else {
+                log('T58b: Change Password with HttpOnly session cookie → 200', false, 'Skipped: could not capture cookies');
+                log('T58c: Login with final updated password → 200', false, 'Skipped', true);
+            }
+        } catch (e) {
+            log('T58a: First-Login / Change Password flow', false, e.message);
+        }
+    }
+
+    // T59: Get current user details via /auth/me cookie endpoint
+    if (officerEmail) {
+        try {
+            const loginRes = await http('POST', '/api/auth/login', {
+                body: { email: officerEmail, password: 'FinalOfficerPassword2026!', role: 'Police Officer' }
+            });
+            const setCookies = loginRes.headers.getSetCookie ? loginRes.headers.getSetCookie() : [];
+            const parsedCookies = setCookies.map(c => c.split(';')[0]).join('; ');
+            
+            if (parsedCookies) {
+                const meRes = await http('GET', '/api/auth/me', { cookies: parsedCookies });
+                log('T59: Get current user detail (/auth/me) → 200', meRes.status === 200 && meRes.data?.user?.email === officerEmail,
+                    `Status: ${meRes.status}, user: ${meRes.data?.user?.name}`);
+            } else {
+                log('T59: Get current user detail (/auth/me) → 200', false, 'Skipped: could not capture cookies', true);
+            }
+        } catch (e) {
+            log('T59: Get current user detail (/auth/me) → 200', false, e.message);
+        }
+    }
+
+    // T60: Refresh auth session cookie via /auth/refresh
+    if (officerEmail) {
+        try {
+            const loginRes = await http('POST', '/api/auth/login', {
+                body: { email: officerEmail, password: 'FinalOfficerPassword2026!', role: 'Police Officer' }
+            });
+            const setCookies = loginRes.headers.getSetCookie ? loginRes.headers.getSetCookie() : [];
+            const parsedCookies = setCookies.map(c => c.split(';')[0]).join('; ');
+            
+            if (parsedCookies) {
+                const refreshRes = await http('POST', '/api/auth/refresh', { cookies: parsedCookies });
+                log('T60: Refresh user session cookie → 200', refreshRes.status === 200,
+                    `Status: ${refreshRes.status}, message: ${refreshRes.data?.message}`);
+            } else {
+                log('T60: Refresh user session cookie → 200', false, 'Skipped: could not capture cookies', true);
+            }
+        } catch (e) {
+            log('T60: Refresh user session cookie → 200', false, e.message);
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════
+    // PHASE 13: Internal Network Admin endpoints & Zero-Trust
+    // ═════════════════════════════════════════════════════════
+    console.log('\n━━ PHASE 13: Internal Admin Operations & Zero-Trust ━━');
+
+    // T61: Get internal evidence list (admin allowed)
+    let internalEvidenceId = null;
+    try {
+        const r = await http('GET', '/api/evidence/internal/list', { token: adminToken });
+        const hasRecords = r.data?.records && Array.isArray(r.data.records);
+        if (hasRecords && r.data.records.length > 0) {
+            internalEvidenceId = r.data.records[0].id;
+        }
+        log('T61: Internal evidence list (admin allowed) → 200', r.status === 200 && hasRecords,
+            `Status: ${r.status}, count: ${r.data?.records?.length}`);
+    } catch (e) {
+        log('T61: Internal evidence list (admin allowed) → 200', false, e.message);
+    }
+
+    // T62: Internal evidence list (officer blocked) → 403
+    if (officerToken) {
+        try {
+            const r = await http('GET', '/api/evidence/internal/list', { token: officerToken });
+            log('T62: Internal evidence list (officer blocked) → 403', r.status === 403,
+                `Status: ${r.status}`);
+        } catch (e) {
+            log('T62: Internal evidence list (officer blocked) → 403', false, e.message);
+        }
+    } else {
+        log('T62: Internal evidence list (officer blocked) → 403', false, 'Skipped: no officer token', true);
+    }
+
+    // T63: Internal batch verification (admin allowed)
+    if (evidenceId) {
+        try {
+            const r = await http('POST', '/api/evidence/internal/verify-batch', {
+                token: adminToken,
+                body: { ids: [evidenceId] }
+            });
+            const success = r.status === 200 && r.data?.results?.[evidenceId]?.status === 'OK';
+            log('T63: Internal batch verification (admin allowed) → 200', success,
+                `Status: ${r.status}, result: ${r.data?.results?.[evidenceId]?.status}`);
+        } catch (e) {
+            log('T63: Internal batch verification (admin allowed) → 200', false, e.message);
+        }
+    } else {
+        log('T63: Internal batch verification (admin allowed) → 200', false, 'Skipped: no evidence ID found', true);
+    }
+
+    // T64: Internal batch verification (officer blocked) → 403
+    if (evidenceId && officerToken) {
+        try {
+            const r = await http('POST', '/api/evidence/internal/verify-batch', {
+                token: officerToken,
+                body: { ids: [evidenceId] }
+            });
+            log('T64: Internal batch verification (officer blocked) → 403', r.status === 403,
+                `Status: ${r.status}`);
+        } catch (e) {
+            log('T64: Internal batch verification (officer blocked) → 403', false, e.message);
+        }
+    } else {
+        log('T64: Internal batch verification (officer blocked) → 403', false, 'Skipped', true);
     }
 
     // ═════════════════════════════════════════════════════════

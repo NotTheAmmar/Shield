@@ -75,35 +75,42 @@ npm run stop
 
 ## 🧪 Testing and Security Simulation Suite
 
-SHIELD includes a centralized testing suite located in the `/tests` folder to verify the functionality of all services and simulate security attacks.
+SHIELD includes a centralized testing suite located in the `/tests` folder to verify the functionality of all services, enforce zero-trust constraints, and simulate security attacks.
 
+For a detailed breakdown of the testing strategy, E2E assertions, and architecture, refer to the [Testing Documentation](tests/README.md).
+
+### Quick Runners
 Ensure that the Docker stack is running (`docker compose up`) before executing these scripts.
 
-### 1. Seeding Mock Data
-Populate the PostgreSQL database and MinIO storage with mock case data and digital evidence files for local testing:
 ```bash
-npm run seed
+npm run seed                 # Wipe and populate mock PG & MinIO data
+npm run test:comprehensive   # Primary E2E test suite (69 advanced assertions)
+npm run test:tamper          # Overwrite MinIO file directly and prove ImmuDB catches it
+npm run watchdog:local       # Run a local database/ledger integrity cycle
+npm run test:manual          # Run raw shell curl diagnostics
 ```
 
-### 2. Running Automated Functional Tests
-Execute the comprehensive test suites against the live API Gateway (runs 50+ assertions evaluating authentication, role-based access control (RBAC), FIR management, zero-trust constraints, and evidence uploading):
-```bash
-npm run test:comprehensive   # Runs the full functional test suite
-npm run test:integration     # Runs the core API gateway integration test
-npm run test:sprint1         # Runs the legacy functional verification script
-```
+---
 
-### 3. Executing Security & Tampering Simulations
-SHIELD's flagship feature is ledger-backed verification. To simulate an attacker gaining direct access to the raw MinIO storage layer and modifying a file (completely bypassing the API Gateway), run:
-```bash
-npm run test:tamper          # Overwrites a MinIO file directly and shows that ImmuDB catches the attack
-```
+## 🚢 Continuous Integration (GitHub Actions)
 
-### 4. Running the Local Watchdog
-Run the ledger-backed watchdog verifier in a local terminal to scan all existing database records and verify their integrity:
-```bash
-npm run watchdog:local       # Run a local integrity check cycle
-```
+SHIELD features automated E2E testing on every push and pull request. The configuration is defined in [.github/workflows/ci.yml](.github/workflows/ci.yml).
+
+The pipeline automatically:
+1. Provisions dependencies across the monorepo.
+2. Instantiates environment files from `.env.example`.
+3. Boots the multi-container Docker Compose stack.
+4. Executes database seeds and the entire 69-assertion functional comprehensive test suite.
+5. Runs forensic tampering simulations.
+6. Gracefully tears down all containers and volumes.
+
+---
+
+## ⛓️ EVM Smart Contract Anchor Preparation (Roadmap)
+
+To prepare for future Ethereum Virtual Machine (EVM) anchoring, the repository includes a decentralized ledger design skeleton:
+- **Solidity Smart Contract**: [ShieldLedger.sol](contracts/ShieldLedger.sol) contains the production-grade Solidity code to anchor evidence hashes and UUIDs in an immutable, decentralized manner.
+- **Hardhat Compilation & Local Node**: [hardhat.config.js](hardhat.config.js) defines the development network workspace, ready for Solidity compilation and Ganache/Hardhat node integration.
 
 ---
 
@@ -112,15 +119,14 @@ npm run watchdog:local       # Run a local integrity check cycle
 Once running, the services will be available on your `localhost` at the following ports:
 
 **Applications:**
-
 - Frontend (React + Vite): `http://localhost:3000`
-- API Gateway: `http://localhost:3001`
+- API Gateway (BFF): `http://localhost:3001`
 - Auth Service: `http://localhost:4000`
 - Evidence Service: `http://localhost:4001`
-- Ledger Service: `http://localhost:4002`
+- Ledger Service (Immudb Node Wrapper): `http://localhost:4002`
 
 **Infrastructure:**
+- PostgreSQL Database (`db-users`): `5432`
+- MinIO Object Store (`minio-store`): `9000` (Console UI at `9001`)
+- Immudb Ledger Database (`db-ledger`): `3322` (Web Console at `8080`)
 
-- PostgreSQL (`db-users`): `5432`
-- MinIO Object Store (`minio-store`): `9000` (Console at `9001`)
-- Immudb Ledger (`db-ledger`): `3322` (Web Console at `8080`)

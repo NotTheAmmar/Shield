@@ -23,6 +23,11 @@ The project relies on three core databases/stores, managed via Docker:
 -   **Immudb (`db-ledger`)**: A lightweight, high-speed immutable database used to store the cryptographic hashes (SHA-256) of all evidence and FIR records. This provides the tamper-evident guarantees of the system.
 -   **MinIO (`minio-store`)**: Secure, off-chain storage for the actual raw digital evidence files (videos, documents, images).
 
+### Future EVM Blockchain Integration Layer (Roadmap)
+For decentralized, trustless public anchors, SHIELD will support a public/private EVM-based blockchain anchoring layer (such as Ethereum or Polygon). 
+-   **Solidity Contracts (`contracts/`)**: Cryptographic anchors are written in Solidity smart contracts (`ShieldLedger.sol`) which seal evidence UUIDs and hashes into public gas-optimized state mappings.
+-   **Hardhat (`hardhat.config.js`)**: Serves as the compilation and testing framework for compiling, deploying, and generating ABI bindings for web3 integration.
+
 ## 2. Directory Structure
 
 This project uses a **Monorepo** structure. All microservices and infrastructure configurations live in this single repository to simplify collaboration and testing.
@@ -36,8 +41,11 @@ shield-project/
 ├── CONTRIBUTING.md        # Guidelines for collaborating on this repo
 ├── package.json           # Root scripts for cross-platform task running
 ├── docker-compose.yml     # Main composition file orchestrating all services and databases
+├── hardhat.config.js      # [Future EVM] Hardhat smart contract development config
 ├── .docker-data/          # [GitIgnored] Local persistence volumes for PostgreSQL, Immudb, and MinIO
-├── .github/               # GitHub issue and PR templates
+├── .github/               # GitHub configurations (Workflows & PR templates)
+│   └── workflows/
+│       └── ci.yml         # Continuous Integration workflow (Docker E2E runner)
 ├── .vscode/               # VS Code Workspace settings (Debug configs & Tasks)
 ├── nginx/                 # Nginx configuration (reverse-proxy load balancer)
 │
@@ -48,6 +56,9 @@ shield-project/
 ├── shield-ledger/         # [Node.js] Ledger Interface
 ├── shield-watchdog/       # [Node.js] Background automated watchdog scanner
 ├── shield-metadata-extractor/ # [Node.js] Media file metadata queue consumer
+│
+├── contracts/             # [Solidity 0.8.x] EVM Smart Contract source files
+│   └── ShieldLedger.sol   # Evidence anchor Solidity contract
 │
 └── tests/                 # Centralized E2E & Security Simulation Tests
     ├── helpers/           # Seeding and mock data scripts
@@ -60,3 +71,4 @@ shield-project/
 We use Docker Compose to orchestrate the entire environment locally. Through our root `package.json`, we provide cross-platform scripts to easily spin up all 7 node services alongside the 3 infrastructure containers on a custom Docker bridge network (`shield-network`).
 
 Please refer to the `README.md` for exact instructions on how to install dependencies, run the application cluster, and execute the test suites.
+
