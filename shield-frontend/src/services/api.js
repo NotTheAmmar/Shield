@@ -135,8 +135,10 @@ export const auditAPI = {
 
 export const adminAPI = {
   listUsers:  (params) => apiClient.get('/admin/users', { params }),
+  getUser:    (id) => apiClient.get(`/admin/users/${id}`),
   createUser: (data) => apiClient.post('/admin/users', data),
   updateUser: (id, data) => apiClient.patch(`/admin/users/${id}`, data),
+  resetPassword: (id, data) => apiClient.post(`/admin/users/${id}/reset-password`, data),
 };
 
 // ── Reports ───────────────────────────────────────────────────────────────

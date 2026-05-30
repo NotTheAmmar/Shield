@@ -21,6 +21,8 @@ export default function DataTable({
   onSort,
   onPageChange,
   rowClassName,
+  onRowClick,
+  rowStyle,
 }) {
   // Defensively normalize: accept array, object-with-.data, or null/undefined
   const rows = Array.isArray(data)
@@ -84,6 +86,11 @@ export default function DataTable({
                 <tr
                   key={row[rowKey]}
                   className={rowClassName ? rowClassName(row) : ''}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  style={{
+                    ...(typeof rowStyle === 'function' ? rowStyle(row) : (rowStyle || {})),
+                    ...(onRowClick ? { cursor: 'pointer' } : {}),
+                  }}
                 >
                   {columns.map((col) => (
                     <td key={col.key} className={col.className || ''}>

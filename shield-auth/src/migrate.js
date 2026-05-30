@@ -37,6 +37,12 @@ async function runMigrations() {
             await pool.query(`
                 ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT TRUE;
             `);
+            await pool.query(`
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS designation VARCHAR(100);
+            `);
+            await pool.query(`
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS station VARCHAR(100);
+            `);
 
             console.log('[Auth Init] Seeding configured admin account...');
             // Pull seed credentials strictly from the environment payload

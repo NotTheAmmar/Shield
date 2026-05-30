@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { UserPlus, X, Copy, CheckCircle } from 'lucide-react';
+import { UserPlus, X, Shield, Activity, User, Clock, CheckCircle, ChevronRight } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import DataTable from '../components/DataTable';
-
 import RoleBadge from '../components/RoleBadge';
-import { adminAPI } from '../services/api';
+import { adminAPI, auditAPI } from '../services/api';
 
 function fmtDate(iso) {
   if (!iso) return '—';
   return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
+}
+function fmtDateTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function generatePassword() {
@@ -18,12 +21,12 @@ function generatePassword() {
   return pw;
 }
 
-// ── Create User Modal ────────────────────────────────────────────────────────
+// ── Create User Modal ─────────────────────────────────────────────────────────
 
 function CreateUserModal({ onClose, onCreated }) {
   const [form, setForm] = useState({
     name: '', email: '', role: 'Police Officer',
-    employeeId: '',
+    employeeId: '', designation: '', station: '',
     plainPassword: generatePassword(),
   });
   const [loading, setLoading] = useState(false);
@@ -34,7 +37,10 @@ function CreateUserModal({ onClose, onCreated }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.role || !form.employeeId || !form.plainPassword) { setError('All fields are required.'); return; }
+    if (!form.name || !form.email || !form.role || !form.employeeId || !form.plainPassword) {
+      setError('All fields are required.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -105,7 +111,7 @@ function CreateUserModal({ onClose, onCreated }) {
                 </button>
               </div>
               <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 4 }}>
-                Copy this password and share it securely with the user. They must change it upon first login.
+                Copy this password and share it securely. The user must change it on first login.
               </p>
             </div>
           </div>
@@ -121,7 +127,262 @@ function CreateUserModal({ onClose, onCreated }) {
   );
 }
 
-// ── Main Page ────────────────────────────────────────────────────────────────
+// ── User Detail Slide-in Panel ────────────────────────────────────────────────
+
+const ACTION_LABELS = {
+  UPLOADED_FIR: 'Uploaded FIR', UPLOADED_EVIDENCE: 'Uploaded Evidence',
+  VERIFIED_FIR: 'Verified FIR', VERIFIED_EVIDENCE: 'Verified Evidence',
+  DOWNLOADED_FIR: 'Downloaded FIR', DOWNLOADED_EVIDENCE: 'Downloaded Evidence',
+  LOGIN: 'Login', LOGOUT: 'Logout',
+  USER_CREATED: 'User Created', USER_DEACTIVATED: 'User Deactivated', USER_REACTIVATED: 'User Reactivated',
+};
+
+function UserDetailPanel({ userId, onClose, onToggleStatus, togglingId }) {
+  const [user, setUser] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [tab, setTab] = useState('profile'); // 'profile' | 'activity'
+  const [loading, setLoading] = useState(true);
+  const [logsLoading, setLogsLoading] = useState(false);
+  
+  // Password Reset State
+  const [resetting, setResetting] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    adminAPI.getUser(userId)
+      .then((res) => setUser(res.user))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  useEffect(() => {
+    if (tab !== 'activity') return;
+    setLogsLoading(true);
+    auditAPI.list({ userId, limit: 50 })
+      .then((res) => setLogs(res.auditLog || []))
+      .catch(() => setLogs([]))
+      .finally(() => setLogsLoading(false));
+  }, [tab, userId]);
+
+  const handleResetPassword = async () => {
+    if (!window.confirm(`Are you sure you want to reset the password for ${user.name}?`)) return;
+    setResetting(true);
+    try {
+      const pw = generatePassword();
+      await adminAPI.resetPassword(userId, { plainPassword: pw });
+      setNewPassword(pw);
+      setUser(prev => ({ ...prev, must_change_password: true }));
+    } catch (err) {
+      alert('Failed to reset password: ' + (err?.response?.data?.error || err.message));
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const isActive = user?.status === 'active';
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+          zIndex: 200, backdropFilter: 'blur(2px)',
+        }}
+      />
+      {/* Panel */}
+      <div style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0, width: 500,
+        background: 'var(--surface)', borderLeft: '1px solid var(--border)',
+        zIndex: 201, display: 'flex', flexDirection: 'column',
+        boxShadow: '-8px 0 32px rgba(0,0,0,0.25)',
+        animation: 'slideInRight 0.22s ease',
+      }}>
+        {/* Header */}
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: '50%',
+            background: 'var(--primary-alpha, rgba(99,102,241,0.15))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <User size={20} color="var(--primary)" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
+              {loading ? '…' : (user?.name || 'Unknown')}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              {loading ? '' : user?.email}
+            </div>
+          </div>
+          <button className="btn btn-ghost btn-icon" onClick={onClose} aria-label="Close panel">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 24px', background: 'var(--surface-50)' }}>
+          {[['profile', 'Profile', <User size={16} />], ['activity', 'Activity Log', <Activity size={16} />]].map(([id, label, icon]) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: '0.95rem', fontWeight: tab === id ? 600 : 500,
+                color: tab === id ? 'var(--primary)' : 'var(--text-muted)',
+                borderBottom: tab === id ? '3px solid var(--primary)' : '3px solid transparent',
+                marginBottom: -1,
+                transition: 'all 0.2s',
+              }}
+            >
+              {icon} {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+              <span className="spinner" />
+            </div>
+          ) : !user ? (
+            <div className="alert alert-error">Failed to load user details.</div>
+          ) : tab === 'profile' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {/* Status Badge */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <RoleBadge role={user.role} />
+                <span className={`badge ${isActive ? 'badge-active' : 'badge-deactivated'}`}>
+                  {isActive ? 'Active' : 'Deactivated'}
+                </span>
+                {user.must_change_password && (
+                  <span style={{ background: 'var(--amber-light,rgba(245,158,11,0.15))', color: 'var(--amber,#f59e0b)', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600 }}>
+                    Pwd Change Required
+                  </span>
+                )}
+              </div>
+
+              {/* Detail fields */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                {[
+                  ['Employee ID', user.employee_id],
+                  ['Email Address', user.email],
+                  ['Designation', user.designation || '—'],
+                  ['Station / Court', user.station || '—'],
+                  ['Account Created', fmtDateTime(user.created_at)],
+                ].map(([label, val]) => (
+                  <div key={label} style={{ padding: 12, background: 'var(--surface-50)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 500, wordBreak: 'break-all' }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Password Management */}
+              <div style={{ marginTop: 8, padding: 16, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface-50)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Password Management</div>
+                  <button 
+                    className="btn btn-secondary btn-sm" 
+                    onClick={handleResetPassword}
+                    disabled={resetting}
+                  >
+                    {resetting ? <span className="spinner" style={{ width: 14, height: 14 }} /> : 'Reset Password'}
+                  </button>
+                </div>
+                {newPassword ? (
+                  <div style={{ background: 'var(--surface)', padding: 12, borderRadius: 6, border: '1px dashed var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, marginBottom: 2 }}>NEW TEMPORARY PASSWORD</div>
+                      <div style={{ fontFamily: 'monospace', fontSize: '1.1rem', letterSpacing: '1px' }}>{newPassword}</div>
+                    </div>
+                    <button 
+                      className="btn btn-ghost" 
+                      onClick={() => { navigator.clipboard.writeText(newPassword); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                    >
+                      {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Click reset to generate a new temporary password. The user will be required to change it upon their next login.
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            // Activity tab
+            logsLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+                <span className="spinner" />
+              </div>
+            ) : logs.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 0', fontSize: '0.88rem' }}>
+                No activity recorded for this user.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {logs.map((log, i) => (
+                  <div key={log.id || i} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 12,
+                    padding: '10px 0', borderBottom: '1px solid var(--border)',
+                  }}>
+                    <div style={{
+                      width: 8, height: 8, borderRadius: '50%', flexShrink: 0, marginTop: 6,
+                      background: log.result === 'failed' ? 'var(--crimson)' : 'var(--emerald)',
+                    }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 500, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                        {ACTION_LABELS[log.action] || log.action}
+                      </div>
+                      {log.targetLabel && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                          {log.targetLabel}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0, textAlign: 'right' }}>
+                      {fmtDateTime(log.timestamp)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        {!loading && user && (
+          <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button
+              className={`btn ${isActive ? 'btn-danger' : 'btn-secondary'}`}
+              disabled={togglingId === user.id}
+              onClick={() => onToggleStatus(user)}
+            >
+              {togglingId === user.id
+                ? <span className="spinner" style={{ width: 13, height: 13 }} />
+                : isActive ? 'Deactivate Account' : 'Reactivate Account'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to   { transform: translateX(0);    opacity: 1; }
+        }
+      `}</style>
+    </>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function AdminUsersPage() {
   const [data, setData] = useState([]);
@@ -136,6 +397,7 @@ export default function AdminUsersPage() {
   const [showModal, setShowModal] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -163,6 +425,8 @@ export default function AdminUsersPage() {
     try {
       await adminAPI.updateUser(user.id, { status: newStatus });
       setData((prev) => prev.map((u) => u.id === user.id ? { ...u, status: newStatus } : u));
+      // If panel is open for this user, refresh their data
+      if (selectedUserId === user.id) setSelectedUserId(null); // close & let re-open refresh
     } finally {
       setTogglingId(null);
     }
@@ -181,7 +445,7 @@ export default function AdminUsersPage() {
       render: (v, row) => (
         <div>
           <div style={{ fontWeight: 600 }}>{v}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{row.employeeId}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{row.employee_id}</div>
         </div>
       )
     },
@@ -206,23 +470,14 @@ export default function AdminUsersPage() {
       )
     },
     {
-      key: 'createdAt', label: 'Created',
+      key: 'created_at', label: 'Created',
       render: (v) => fmtDate(v)
     },
     {
-      key: 'id', label: 'Actions',
-      render: (v, row) => (
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button
-            className={`btn btn-sm ${row.status === 'active' ? 'btn-danger' : 'btn-secondary'}`}
-            style={{ opacity: togglingId === row.id ? 0.6 : 1 }}
-            disabled={togglingId === row.id}
-            onClick={() => handleToggleStatus(row)}
-          >
-            {togglingId === row.id
-              ? <span className="spinner" style={{ width: 12, height: 12 }} />
-              : row.status === 'active' ? 'Deactivate' : 'Reactivate'}
-          </button>
+      key: 'id', label: '',
+      render: (v) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--primary)', fontSize: 12, fontWeight: 500 }}>
+          View <ChevronRight size={13} />
         </div>
       )
     },
@@ -287,9 +542,20 @@ export default function AdminUsersPage() {
         limit={25}
         onPageChange={setPage}
         emptyMessage="No users found."
+        onRowClick={(row) => setSelectedUserId(row.id)}
+        rowStyle={{ cursor: 'pointer' }}
       />
 
       {showModal && <CreateUserModal onClose={() => setShowModal(false)} onCreated={handleCreated} />}
+
+      {selectedUserId && (
+        <UserDetailPanel
+          userId={selectedUserId}
+          onClose={() => setSelectedUserId(null)}
+          onToggleStatus={handleToggleStatus}
+          togglingId={togglingId}
+        />
+      )}
     </>
   );
 }

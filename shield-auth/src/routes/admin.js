@@ -9,7 +9,9 @@ const router = express.Router();
 router.get('/users', requireRoles(['Admin']), async (req, res) => {
     try {
         const { rows } = await pool.query(
-            'SELECT id, email, name, employee_id, role, status, created_at FROM users ORDER BY created_at DESC'
+            `SELECT id, email, name, employee_id, role, status, created_at,
+                    designation, station, must_change_password
+             FROM users ORDER BY created_at DESC`
         );
         res.json({ users: rows });
     } catch (err) {
@@ -18,9 +20,26 @@ router.get('/users', requireRoles(['Admin']), async (req, res) => {
     }
 });
 
+// GET /api/admin/users/:id
+router.get('/users/:id', requireRoles(['Admin']), async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, email, name, employee_id, role, status, created_at,
+                    designation, station, must_change_password
+             FROM users WHERE id = $1`,
+            [req.params.id]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'User not found' });
+        res.json({ user: rows[0] });
+    } catch (err) {
+        console.error('[ADMIN GET USER]', err.message);
+        res.status(500).json({ error: 'Failed to fetch user' });
+    }
+});
+
 // POST /api/admin/users
 router.post('/users', requireRoles(['Admin']), async (req, res) => {
-    const { name, email, employeeId, role, plainPassword } = req.body;
+    const { name, email, employeeId, role, plainPassword, designation, station } = req.body;
 
     if (!name || !email || !employeeId || !role || !plainPassword) {
         return res.status(400).json({ error: 'All fields are required' });
@@ -30,10 +49,10 @@ router.post('/users', requireRoles(['Admin']), async (req, res) => {
         const passwordHash = await bcrypt.hash(plainPassword, 10);
         
         const { rows } = await pool.query(`
-            INSERT INTO users (email, password_hash, name, employee_id, role)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, email, name, employee_id, role, status, created_at
-        `, [email, passwordHash, name, employeeId, role]);
+            INSERT INTO users (email, password_hash, name, employee_id, role, designation, station)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING id, email, name, employee_id, role, status, created_at, designation, station
+        `, [email, passwordHash, name, employeeId, role, designation || null, station || null]);
 
         res.status(201).json({ message: 'User created successfully', user: rows[0] });
     } catch (err) {
@@ -82,6 +101,33 @@ router.patch('/users/:id', requireRoles(['Admin']), async (req, res) => {
     } catch (err) {
         console.error('[ADMIN UPDATE USER]', err.message);
         res.status(500).json({ error: 'Failed to update user' });
+    }
+});
+
+// POST /api/admin/users/:id/reset-password
+router.post('/users/:id/reset-password', requireRoles(['Admin']), async (req, res) => {
+    const { id } = req.params;
+    const { plainPassword } = req.body;
+
+    if (!plainPassword) {
+        return res.status(400).json({ error: 'Plain password is required' });
+    }
+
+    try {
+        const passwordHash = await bcrypt.hash(plainPassword, 10);
+
+        const { rows } = await pool.query(`
+            UPDATE users SET password_hash = $1, must_change_password = TRUE
+            WHERE id = $2
+            RETURNING id, email
+        `, [passwordHash, id]);
+
+        if (!rows.length) return res.status(404).json({ error: 'User not found' });
+
+        res.json({ message: 'Password reset successfully', user: rows[0] });
+    } catch (err) {
+        console.error('[ADMIN RESET PASSWORD]', err.message);
+        res.status(500).json({ error: 'Failed to reset password' });
     }
 });
 

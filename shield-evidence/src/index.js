@@ -101,6 +101,45 @@ async function runMigrations() {
                   status_code  INT NOT NULL,
                   accessed_at  TIMESTAMPTZ DEFAULT NOW()
                 );
+
+                CREATE TABLE IF NOT EXISTS report_jobs (
+                  id            UUID        PRIMARY KEY,
+                  evidence_id   UUID        REFERENCES evidence(id),
+                  status        VARCHAR(20) DEFAULT 'QUEUED',
+                  download_url  TEXT,
+                  created_at    TIMESTAMPTZ DEFAULT NOW(),
+                  completed_at  TIMESTAMPTZ
+                );
+
+                CREATE TABLE IF NOT EXISTS evidence_metadata (
+                  id             SERIAL      PRIMARY KEY,
+                  evidence_id    UUID        REFERENCES evidence(id) UNIQUE,
+                  gps_location   GEOMETRY(Point, 4326),
+                  camera_make    VARCHAR(100),
+                  camera_model   VARCHAR(100),
+                  original_date  TIMESTAMPTZ,
+                  file_size      BIGINT,
+                  mime_type      VARCHAR(100),
+                  all_metadata   JSONB,
+                  processed_at   TIMESTAMPTZ DEFAULT NOW()
+                );
+
+                CREATE TABLE IF NOT EXISTS evidence_forensic_log (
+                  id           SERIAL       PRIMARY KEY,
+                  evidence_id  UUID         REFERENCES evidence(id),
+                  flags        TEXT[],
+                  details      JSONB,
+                  actor        TEXT,
+                  logged_at    TIMESTAMPTZ  DEFAULT NOW()
+                );
+            `);
+
+            // Idempotent: add columns if missing (older DB volumes)
+            await pool.query(`
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS jurisdiction_id VARCHAR(100);
+            `);
+            await pool.query(`
+                ALTER TABLE evidence_metadata ADD COLUMN IF NOT EXISTS all_metadata JSONB;
             `);
             
             console.log('[Init] Database schemas (FIR, Evidence, Audit) ready.');
