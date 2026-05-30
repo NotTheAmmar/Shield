@@ -1,14 +1,16 @@
-require('./shield-evidence/node_modules/dotenv').config({ path: './shield-evidence/.env' });
-const { Client } = require('./shield-evidence/node_modules/pg');
-const Minio = require('./shield-evidence/node_modules/minio');
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+const { Client } = require('pg');
+const Minio = require('minio');
 const crypto = require('crypto');
+
 // Safety guard for destruction testing script
 if (process.env.NODE_ENV === 'production') {
     console.error("🚨 FATAL SECURITY ERROR: Cannot run mock data truncation in production environment.");
     process.exit(1);
 }
 
-// Re-using config from integrity_watchdog.js
+// Configuration from environment variables
 const POSTGRES_USER = process.env.POSTGRES_USER || 'shield';
 const POSTGRES_PASSWORD = process.env.POSTGRES_PASSWORD || 'secure_password';
 const POSTGRES_DB = process.env.POSTGRES_DB || 'shield';

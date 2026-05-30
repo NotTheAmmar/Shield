@@ -14,6 +14,7 @@
  *   node tamper_evidence_v2.js <object-key>     # Tampers a specific file by key
  */
 const Minio = require('minio');
+const path = require('path');
 
 // ── MinIO connection (simulating stolen/leaked credentials) ──
 const minioClient = new Minio.Client({

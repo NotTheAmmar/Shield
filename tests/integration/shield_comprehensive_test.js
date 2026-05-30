@@ -7,10 +7,12 @@
 
 const crypto = require('crypto');
 const fs = require('fs');
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const GATEWAY = 'http://localhost:3001';
-const ADMIN_EMAIL = 'admin@police.gov';
-const ADMIN_PASSWORD = 'Sh13ld@Pr0duct10n2026!';
+const ADMIN_EMAIL = process.env.ADMIN_SEED_EMAIL || 'admin@shield.gov.in';
+const ADMIN_PASSWORD = process.env.ADMIN_SEED_PASSWORD || 'admin@123';
 const ADMIN_ROLE = 'Admin';
 
 let passCount = 0;

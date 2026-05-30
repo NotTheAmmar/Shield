@@ -2,6 +2,8 @@
  * SHIELD — Evidence Tampering Test
  */
 const path = require('path');
+const Minio = require('minio');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 async function http(method, p, { token, body } = {}) {
     const url = `http://localhost:3001${p}`;
@@ -21,7 +23,11 @@ async function main() {
     // 1. Login as Admin
     console.log('\n[1] Logging in as Admin...');
     const loginRes = await http('POST', '/api/auth/login', {
-        body: { email: 'admin@police.gov', password: 'Sh13ld@Pr0duct10n2026!', role: 'Admin' }
+        body: { 
+            email: process.env.ADMIN_SEED_EMAIL || 'admin@shield.gov.in', 
+            password: process.env.ADMIN_SEED_PASSWORD || 'admin@123', 
+            role: 'Admin' 
+        }
     });
     const adminToken = loginRes.data.token;
     if (!adminToken) throw new Error('Could not get admin token');
@@ -67,7 +73,6 @@ async function main() {
     console.log(`   Derived Target Object: bucket='${bucketName}', key='${objectKey}'`);
     
     // Connect to MinIO API directly using the host-mapped port 9000
-    const Minio = require('minio');
     const minioClient = new Minio.Client({
         endPoint: 'localhost',
         port: 9000,

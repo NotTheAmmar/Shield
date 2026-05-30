@@ -6,7 +6,7 @@ By generating cryptographic hash values (SHA-256) at the exact time of submissio
 
 ## 📖 Documentation
 
-- [Architecture & Monorepo Structure](STRUCTURE.md): Learn how our 5 microservices connect.
+- [Architecture & Monorepo Structure](STRUCTURE.md): Learn how our 7 microservices connect.
 - [Contributing Guidelines](CONTRIBUTING.md): Please read this before opening a Pull Request!
 
 ---
@@ -32,7 +32,7 @@ git clone https://github.com/your-org/shield-project.git
 cd shield-project
 ```
 
-Next, run the root setup script. This uses `concurrently` to install the `npm` dependencies for all 5 microservices simultaneously.
+Next, run the root setup script. This uses `concurrently` to install the `npm` dependencies for all microservices simultaneously:
 
 ```bash
 npm run setup
@@ -63,17 +63,51 @@ docker compose build --no-cache
 docker compose up
 ```
 
-This builds fresh images for all services and starts them. The gateway runs with `node --watch`, and the frontend runs via `vite` dev server — both hot-reload on file changes automatically.
+This builds fresh images for all services and starts them. The gateway and node microservices will reload on file changes automatically.
 
 **To stop the cluster:**
 
 ```bash
-docker compose down
+npm run stop
 ```
 
-*(Advanced: If you only want to run the infrastructure databases via Docker and run the Node services locally via terminal, you can use `npm run dev:infra`.)*
+---
 
-### 🚢 Service Ports
+## 🧪 Testing and Security Simulation Suite
+
+SHIELD includes a centralized testing suite located in the `/tests` folder to verify the functionality of all services and simulate security attacks.
+
+Ensure that the Docker stack is running (`docker compose up`) before executing these scripts.
+
+### 1. Seeding Mock Data
+Populate the PostgreSQL database and MinIO storage with mock case data and digital evidence files for local testing:
+```bash
+npm run seed
+```
+
+### 2. Running Automated Functional Tests
+Execute the comprehensive test suites against the live API Gateway (runs 50+ assertions evaluating authentication, role-based access control (RBAC), FIR management, zero-trust constraints, and evidence uploading):
+```bash
+npm run test:comprehensive   # Runs the full functional test suite
+npm run test:integration     # Runs the core API gateway integration test
+npm run test:sprint1         # Runs the legacy functional verification script
+```
+
+### 3. Executing Security & Tampering Simulations
+SHIELD's flagship feature is ledger-backed verification. To simulate an attacker gaining direct access to the raw MinIO storage layer and modifying a file (completely bypassing the API Gateway), run:
+```bash
+npm run test:tamper          # Overwrites a MinIO file directly and shows that ImmuDB catches the attack
+```
+
+### 4. Running the Local Watchdog
+Run the ledger-backed watchdog verifier in a local terminal to scan all existing database records and verify their integrity:
+```bash
+npm run watchdog:local       # Run a local integrity check cycle
+```
+
+---
+
+## 🚢 Service Ports
 
 Once running, the services will be available on your `localhost` at the following ports:
 

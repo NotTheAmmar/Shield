@@ -5,7 +5,7 @@ const requireRoles = require('../middleware/rbac');
 const router = express.Router();
 
 // GET /api/audit
-router.get('/', requireRoles(['Judicial Authority', 'Admin']), async (req, res) => {
+router.get('/', requireRoles(['Judicial Authority']), async (req, res) => {
     const { userId, action, limit = 100 } = req.query;
 
     try {

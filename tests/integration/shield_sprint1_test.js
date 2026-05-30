@@ -142,7 +142,7 @@ async function main() {
             const fileContent = fs.readFileSync(testFilePath);
 
             let formBody = '';
-            // fir_id field MUST come before file (Flaw #16)
+            // fir_id field MUST come before file
             formBody += `--${boundary}\r\n`;
             formBody += `Content-Disposition: form-data; name="fir_id"\r\n\r\n`;
             formBody += `${firId}\r\n`;
