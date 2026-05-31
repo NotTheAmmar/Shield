@@ -372,7 +372,11 @@ async function main() {
     try {
         const r = await http('POST', '/api/fir/create', {
             token: officerToken || adminToken,
-            multipart: { incidentType: 'Test', description: 'No FIR number' }
+            multipart: { 
+                incidentType: 'Test', 
+                description: 'No FIR number',
+                file: { _file: true, filename: 'fir_document.pdf', contentType: 'application/pdf', data: 'MOCK FIR PDF CONTENT' }
+            }
         });
         log('T20: Create FIR without firNumber → 400', r.status === 400,
             `Status: ${r.status}, error: ${r.data?.error}`);
@@ -385,7 +389,11 @@ async function main() {
         try {
             const r = await http('POST', '/api/fir/create', {
                 token: judgeToken,
-                multipart: { firNumber: 'FIR/JUDGE/BLOCKED', incidentType: 'Test' }
+                multipart: { 
+                    firNumber: 'FIR/JUDGE/BLOCKED', 
+                    incidentType: 'Test',
+                    file: { _file: true, filename: 'fir_document.pdf', contentType: 'application/pdf', data: 'MOCK FIR PDF CONTENT' }
+                }
             });
             log('T21: Judge blocked from FIR creation → 403', r.status === 403,
                 `Status: ${r.status}, error: ${r.data?.error}`);
@@ -407,7 +415,8 @@ async function main() {
                 firNumber: firNumber,
                 incidentType: 'Cybercrime',
                 description: 'Comprehensive test FIR',
-                location: 'Test Lab, Mumbai'
+                location: 'Test Lab, Mumbai',
+                file: { _file: true, filename: 'fir_document.pdf', contentType: 'application/pdf', data: 'MOCK FIR PDF CONTENT' }
             }
         });
         firId = r.data?.fir_id;
@@ -416,6 +425,7 @@ async function main() {
     } catch (e) {
         log('T22: Create FIR → 201', false, e.message);
     }
+
 
     // T23: List FIRs → 200
     if (officerToken) {
@@ -835,7 +845,8 @@ async function main() {
                 firNumber: `FIR/2026/COUNT/${Date.now()}`,
                 incidentType: 'Theft',
                 description: 'Count test FIR',
-                location: 'Count Test Lab'
+                location: 'Count Test Lab',
+                file: { _file: true, filename: 'fir_document_2.pdf', contentType: 'application/pdf', data: 'MOCK FIR PDF CONTENT 2' }
             }
         });
 

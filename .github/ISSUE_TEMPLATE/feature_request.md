@@ -1,19 +1,23 @@
 ---
-name: Feature Request
-about: Suggest an idea for the Shield Project
-title: '[FEATURE] '
-labels: enhancement
-assignees: ''
+name: "💡 Feature Request"
+about: "Propose a new feature, integration, or cryptographic enhancement for SHIELD"
+title: "[FEATURE] "
+labels: ["enhancement"]
+assignees: ""
 ---
 
-## Is your feature request related to a problem? Please describe.
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+## 💡 Feature Description
+<!-- A clear and concise description of what the feature or improvement is. -->
 
-## Describe the solution you'd like
-A clear and concise description of what you want to happen. State which modules (e.g., shield-frontend, shield-gateway) this change would affect.
+## 🎯 Use Case & User Benefit
+<!-- Why is this feature needed? How does it help investigators, judicial officers, or administrators? -->
 
-## Describe alternatives you've considered
-A clear and concise description of any alternative solutions or features you've considered.
+## ⛓️ Architectural Alignment
+* **Primary Target Service**: <!-- Select: shield-auth, shield-evidence, shield-gateway, shield-ledger, shield-watchdog, shield-frontend, contracts, or global config -->
+* **Integrity Guarantee Impact**: <!-- Describe how this affects SHA-256 evidence hashing, Immudb ledgers, or EVM smart contract preparing anchors. -->
 
-## Additional context
-Add any other context or mockups for the feature request here.
+## 🚀 Proposed Solution
+<!-- A detailed explanation of your planned technical design or implementation flow. -->
+
+## 📋 Additional Context or Mockups
+<!-- Add any UI mockups, screenshots, database schema edits, or visual walkthroughs here. -->

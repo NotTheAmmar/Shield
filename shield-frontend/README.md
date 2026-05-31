@@ -43,3 +43,11 @@ npm run dev
 ```
 
 The frontend will boot on `http://localhost:3000`. Hot-reloading is configured by default.
+
+## ⚙️ Configuration (Environment Variables)
+
+The frontend dev server and production builder are configured via environment variables:
+
+| Variable | Description | Default |
+|---|---|---|
+| `VITE_GATEWAY_URL` | The URL of the API Gateway BFF (browser-accessible target) | `http://localhost:3001` |

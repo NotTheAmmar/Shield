@@ -10,9 +10,7 @@
     "seed": "node tests/helpers/seed_mock_data.js",
     "test:comprehensive": "node tests/integration/shield_comprehensive_test.js",
     "test:integration": "node tests/integration/shield_full_integration_test.js",
-    "test:sprint1": "node tests/integration/shield_sprint1_test.js",
     "test:tamper": "node tests/simulation/tamper_evidence_v2.js",
-    "test:tamper:legacy": "node tests/simulation/tamper_evidence.js",
     "watchdog:local": "node tests/integration/watchdog_local.js",
     "test:manual": "bash tests/integration/run_manual_tests.sh"
   },

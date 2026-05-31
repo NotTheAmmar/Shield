@@ -39,9 +39,10 @@ function listAllObjects(bucket) {
 }
 
 // ── Helper: SHIELD API call (only used for detection phase) ──
-async function http(method, p, { cookies, body } = {}) {
+async function http(method, p, { token, cookies, body } = {}) {
     const url = `http://localhost:3001${p}`;
     const opts = { method, headers: {}, redirect: 'manual' };
+    if (token) opts.headers['Authorization'] = `Bearer ${token}`;
     if (cookies) opts.headers['Cookie'] = cookies;
     if (body) {
         opts.headers['Content-Type'] = 'application/json';
@@ -53,6 +54,7 @@ async function http(method, p, { cookies, body } = {}) {
     try { data = await res.json(); } catch { data = {}; }
     return { status: res.status, data, setCookies };
 }
+
 
 function extractCookies(headers) {
     return headers.map(c => c.split(';')[0]).join('; ');
@@ -81,7 +83,7 @@ async function main() {
     console.log(`   ✅ Connected! Bucket "${BUCKET}" is accessible.`);
 
     console.log('\n[2] Scanning evidence storage for files...');
-    const objects = await listAllObjects(BUCKET);
+    const objects = (await listAllObjects(BUCKET)).filter(o => !o.name.startsWith('fir-'));
     if (objects.length === 0) {
         throw new Error('No evidence files found in MinIO. Upload evidence via the UI first.');
     }
@@ -150,23 +152,23 @@ async function main() {
 
     console.log('\n[5] Logging into SHIELD to run integrity verification...');
     // Try both credential sets
-    let cookies;
+    let token;
     const login1 = await http('POST', '/api/auth/login', {
         body: { email: 'admin@police.gov', password: 'Sh13ld@Pr0duct10n2026!', role: 'Admin' }
     });
-    if (login1.data?.user) {
-        cookies = extractCookies(login1.setCookies);
+    if (login1.data?.token) {
+        token = login1.data.token;
     } else {
         const login2 = await http('POST', '/api/auth/login', {
             body: { email: 'admin@shield.gov.in', password: 'admin@123', role: 'Admin' }
         });
-        if (!login2.data?.user) throw new Error('Cannot login to verify. Try manually in the UI.');
-        cookies = extractCookies(login2.setCookies);
+        if (!login2.data?.token) throw new Error('Cannot login to verify. Try manually in the UI.');
+        token = login2.data.token;
     }
     console.log('   ✅ Logged in for verification');
 
     console.log(`\n[6] Verifying evidence ${evidenceId.substring(0, 8)}... against ImmuDB ledger...`);
-    const verifyRes = await http('GET', `/api/evidence/verify/${evidenceId}`, { cookies });
+    const verifyRes = await http('GET', `/api/evidence/verify/${evidenceId}`, { token });
 
     if (verifyRes.status === 404) {
         console.log('   ⚠️  Evidence ID not found in SHIELD database.');

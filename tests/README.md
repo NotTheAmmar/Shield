@@ -14,10 +14,8 @@ tests/
 │   ├── run_manual_tests.sh           # Native curl-based integration test script
 │   ├── shield_comprehensive_test.js  # Main E2E test suite (69 advanced assertions)
 │   ├── shield_full_integration_test.js # Core integration test suite
-│   ├── shield_sprint1_test.js        # Legacy Sprint 1 validation suite
 │   └── watchdog_local.js             # Local integrity audit scan runner
 ├── simulation/
-│   ├── tamper_evidence.js            # Basic object storage tampering simulation
 │   └── tamper_evidence_v2.js         # Advanced database vs storage tampering suite
 └── README.md                         # This file (Testing Documentation)
 ```

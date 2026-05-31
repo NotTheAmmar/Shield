@@ -22,16 +22,27 @@ The **Evidence Service** is a Node.js microservice handling the core business lo
 
 This service requires critical secrets configured in its environment:
 
-| Variable | Description |
-|---|---|
-| `PORT` | Local service port (defaults to `4001`) |
-| `DB_HOST` | Hostname of the relational database (`db-users`) |
-| `MINIO_ENDPOINT` | Hostname of the MinIO object store (`minio-store`) |
-| `MINIO_ACCESS_KEY`| MinIO root username |
-| `MINIO_SECRET_KEY`| MinIO root password |
-| `REDIS_HOST` | Redis cache and queue broker hostname (`redis`) |
-| `MASTER_KEY` | Symmetric key verifying internal service-to-service communications |
-| `JWT_SECRET` | Secret key used to verify JWT headers passed by Gateway |
+| Variable | Description | Default |
+|---|---|---|
+| `PORT` | Local service port | `4001` |
+| `DB_HOST` | Hostname of the relational database | `db-users` |
+| `DB_PORT` | Port of the relational database | `5432` |
+| `DB_USER` | Relational database username | `shield` |
+| `DB_PASSWORD` | Relational database password | `key_pass` |
+| `DB_NAME` | Relational database name | `shield_db` |
+| `MINIO_ENDPOINT` | Hostname of the MinIO object store | `minio-store` |
+| `MINIO_PORT` | Port of the MinIO object store | `9000` |
+| `MINIO_PUBLIC_HOST`| Browser-resolvable MinIO hostname | `localhost` |
+| `MINIO_ACCESS_KEY`| MinIO root username | `shield` |
+| `MINIO_SECRET_KEY`| MinIO root password | `key_pass` |
+| `BUCKET_NAME` | Main S3 evidence storage bucket | `evidence` |
+| `REDIS_HOST` | Redis cache and queue broker hostname | `shield-redis` |
+| `REDIS_PORT` | Redis cache and queue broker port | `6379` |
+| `LEDGER_URL` | Microservice URL for shield-ledger | `http://shield-ledger:4002` |
+| `MOCK_LEDGER` | Fallback to in-memory ledger if true | `false` |
+| `MASTER_KEY` | Symmetric key verifying internal communications | |
+| `JWT_SECRET` | Secret key used to verify JWT user headers | |
+
 
 ## 📦 API Gateway Endpoints (`/api/evidence`)
 

@@ -98,6 +98,7 @@ async function testSuite() {
         firForm.append('incidentType', 'Cybercrime');
         firForm.append('description', 'Automated Integration Test Case');
         firForm.append('location', 'Virtual Lab');
+        firForm.append('file', new Blob(['MOCK FIR PDF CONTENT']), 'fir_document.pdf');
         
         const firRes = await fetchWithTimeout(`${GATEWAY}/fir/create`, {
             method: 'POST',

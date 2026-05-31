@@ -72,6 +72,24 @@ This builds fresh images for all services and starts them. The gateway and node 
 npm run stop
 ```
 
+### 4. Production Deployment via Docker Hub
+
+For production environments, the custom microservices of the SHIELD project are automatically compiled and published to **Docker Hub** via our automated CD pipeline. 
+
+The underlying infrastructure databases (PostgreSQL/PostGIS, Immudb, MinIO) and the edge reverse proxy (Nginx) utilize their official, pre-built public images. When starting the stack, Docker Compose automatically fetches these from their official public registries! This ensures you only have to build and maintain the lightweight application images.
+
+To deploy the unified production stack without compiling source code locally:
+
+```bash
+# 1. Set your Docker Hub username
+export DOCKER_USER=your_dockerhub_username
+
+# 2. Spin up the production-ready compose cluster
+docker compose -f docker-compose.prod.yml up -d
+```
+
+This pulls your custom microservice images from Docker Hub, integrates them with the official database nodes, and boots the entire secure network in the background.
+
 ---
 
 ## 🧪 Testing and Security Simulation Suite

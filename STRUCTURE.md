@@ -42,6 +42,7 @@ shield-project/
 ├── CONTRIBUTING.md        # Guidelines for collaborating on this repo
 ├── package.json           # Root scripts for cross-platform task running
 ├── docker-compose.yml     # Main composition file orchestrating all services and databases
+├── docker-compose.prod.yml # Production compose pulling pre-built Docker Hub images
 ├── hardhat.config.js      # [Future EVM] Hardhat smart contract development config
 ├── .docker-data/          # [GitIgnored] Local persistence volumes for PostgreSQL, Immudb, and MinIO
 ├── .github/               # GitHub configurations (Workflows & PR templates)
