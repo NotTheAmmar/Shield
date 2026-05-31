@@ -8,18 +8,10 @@ const pool = require('../db');
 const { minioInternal, minioPublic, BUCKET } = require('../config/minio');
 const ledger = require('../services/ledger');
 const requireRoles = require('../middleware/rbac');
-const { Queue } = require('bullmq');
-const IORedis = require('ioredis');
+const { extractMetadata } = require('../services/metadata');
 
 const router = express.Router();
 
-// ── BullMQ Metadata Extraction Queue ──────────────────────────
-const redisConnection = new IORedis({
-    host: process.env.REDIS_HOST || 'shield-redis',
-    port: parseInt(process.env.REDIS_PORT) || 6379,
-    maxRetriesPerRequest: null,
-});
-const metadataQueue = new Queue('metadata-extraction', { connection: redisConnection });
 
 // ─────────────────────────────────────────────
 // Middleware: Internal Network Perimeter Guard
@@ -61,6 +53,8 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
 
     // ── Mutable state captured during busboy events ───────────────────
     let fir_id, capturedFilename, capturedMime;
+    let capturedCategory = 'other', capturedDescription = '';
+    let fileSize = 0;
     let fileProcessed = false;   // Flaw #22 — multi-file guard
 
     // ── Busboy init with file size limit (Flaw #18) ───────────────────
@@ -72,6 +66,8 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
     // ── Capture text fields first (Flaw #16) ──────────────────────────
     bb.on('field', (name, val) => {
         if (name === 'fir_id') fir_id = val;
+        if (name === 'category') capturedCategory = val;
+        if (name === 'description') capturedDescription = val;
     });
 
     // ── Handle file stream ────────────────────────────────────────────
@@ -131,6 +127,7 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
         // Pipe data through both hash and MinIO
         fileStream.pipe(hashStream);
         fileStream.pipe(passThrough);
+        fileStream.on('data', (chunk) => { fileSize += chunk.length; });
 
         // Await BOTH MinIO confirmation AND hash digest (Flaw #13)
         Promise.all([putPromise, hashPromise])
@@ -140,26 +137,25 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
                 try {
                     await client.query('BEGIN');
 
+                    // Lock hash into ImmuDB via shield-ledger (Flaw #1)
+                    const ledgerResult = await ledger.storeHash(evidenceId, hash);
+                    const ledgerTxId = ledgerResult?.txId || null;
+                    const ledgerTimestamp = ledgerTxId ? new Date().toISOString() : null;
+
                     await client.query(
                         `INSERT INTO evidence
-               (id, fir_id, filename, bucket_name, object_key, sha256_hash, uploaded_by)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                        [evidenceId, fir_id, capturedFilename, BUCKET, objectKey, hash, userId]
+               (id, fir_id, filename, bucket_name, object_key, sha256_hash, uploaded_by, category, mime_type, file_size, ledger_tx_id, ledger_timestamp, uploader_name, uploader_employee_id, description)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+                        [evidenceId, fir_id, capturedFilename, BUCKET, objectKey, hash, userId, capturedCategory, capturedMime, fileSize, ledgerTxId, ledgerTimestamp, req.user.name || null, req.user.employee_id || req.user.employeeId || null, capturedDescription]
                     );
-
-                    // Lock hash into ImmuDB via shield-ledger (Flaw #1)
-                    await ledger.storeHash(evidenceId, hash);
 
                     await client.query('COMMIT');
 
-                    // Enqueue metadata extraction job (non-blocking)
-                    metadataQueue.add('extract', {
-                        evidenceId,
-                        objectKey,
-                        bucketName: BUCKET,
-                    }).catch(err => console.warn('⚠️ Could not enqueue metadata extraction:', err.message));
+                    // Run metadata extraction asynchronously (non-blocking)
+                    extractMetadata(evidenceId, objectKey, BUCKET)
+                        .catch(err => console.warn('⚠️ Could not extract metadata:', err.message));
 
-                    send(201, { id: evidenceId, sha256_hash: hash });
+                    send(201, { id: evidenceId, sha256_hash: hash, ledgerTxId });
                 } catch (err) {
                     await client.query('ROLLBACK');
                     try { await minioInternal.removeObject(BUCKET, objectKey); } catch (_) { }
@@ -381,7 +377,7 @@ router.get('/', requireRoles(['Police Officer', 'Judicial Authority']), async (r
         }
 
         if (category) {
-            conditions.push(`f.case_category = $${paramIdx}`);
+            conditions.push(`e.category = $${paramIdx}`);
             params.push(category);
             paramIdx++;
         }
@@ -410,7 +406,7 @@ router.get('/', requireRoles(['Police Officer', 'Judicial Authority']), async (r
                 f.fir_number as "firNumber", 
                 f.id as "firId",
                 e.sha256_hash as "hash", 
-                f.case_category as "category", 
+                COALESCE(e.category, 'other') as "category", 
                 e.uploaded_at as "uploadDate",
                 COALESCE(
                     (SELECT CASE WHEN al2.result = 'TAMPERED' THEN 'tampered' WHEN al2.result = 'OK' THEN 'verified' END
@@ -456,10 +452,21 @@ router.get('/:id', requireRoles(['Police Officer', 'Judicial Authority']), async
                 f.fir_number as "firNumber", 
                 f.id as "firId",
                 e.sha256_hash as "hash", 
-                f.case_category as "category", 
+                COALESCE(e.category, 'other') as "category",
                 e.uploaded_at as "uploadDate", 
-                'pending' as status,
-                e.uploaded_by as "uploaderId"
+                e.uploaded_by as "uploaderId",
+                e.mime_type as "mimeType",
+                e.file_size as "fileSize",
+                e.ledger_tx_id as "ledgerTxId",
+                e.ledger_timestamp as "ledgerTimestamp",
+                e.uploader_name as "uploaderName",
+                e.uploader_employee_id as "uploaderEmployeeId",
+                e.description,
+                COALESCE(
+                    (SELECT CASE WHEN al2.result = 'TAMPERED' THEN 'tampered' WHEN al2.result = 'OK' THEN 'verified' END
+                     FROM audit_log al2 WHERE al2.evidence_id = e.id ORDER BY al2.checked_at DESC LIMIT 1),
+                    'pending'
+                ) as status
              FROM evidence e 
              JOIN fir f ON e.fir_id = f.id 
              WHERE e.id = $1`, [req.params.id]
@@ -471,8 +478,10 @@ router.get('/:id', requireRoles(['Police Officer', 'Judicial Authority']), async
              FROM audit_log WHERE evidence_id = $1 ORDER BY checked_at DESC`, [req.params.id]
         );
         
+        const record = rows[0];
         res.json({
-            ...rows[0],
+            ...record,
+            uploadedBy: record.uploaderName ? { name: record.uploaderName, employeeId: record.uploaderEmployeeId } : null,
             fileUrl: `/api/evidence/download/${req.params.id}`,
             history: auditRows.rows
         });

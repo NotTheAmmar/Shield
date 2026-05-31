@@ -1,12 +1,13 @@
 # SHIELD - **Secure Hash-based Immutable Evidence Locker & Database**
 
-SHIELD is a secure, decentralized digital system designed to handle First Information Reports (FIRs) and associated digital evidence for law enforcement and judicial systems. 
+SHIELD is a secure, decentralized digital system designed to handle First Information Reports (FIR) and associated digital evidence for law enforcement and judicial systems. 
 
 By generating cryptographic hash values (SHA-256) at the exact time of submission, SHIELD ensures the absolute data integrity of digital evidence (CCTV footage, documents, images) and FIR records. It enables tamper detection and maintains a cryptographically verifiable chain of custody without relying on centralized, vulnerable storage systems.
 
 ## 📖 Documentation
 
 - [Architecture & Monorepo Structure](STRUCTURE.md): Learn how our 7 microservices connect.
+- [Database & Storage Architecture](DATABASE.md): Understand PostgreSQL/PostGIS, Immudb Ledger, and MinIO details.
 - [Contributing Guidelines](CONTRIBUTING.md): Please read this before opening a Pull Request!
 
 ---
@@ -114,19 +115,25 @@ To prepare for future Ethereum Virtual Machine (EVM) anchoring, the repository i
 
 ---
 
-## 🚢 Service Ports
+## 🚢 Service Ports & Unified Entrypoint
 
-Once running, the services will be available on your `localhost` at the following ports:
+Once running, the entire SHIELD application is unified behind an **Nginx Reverse Proxy** (`shield-nginx`) exposing the standard HTTP port **80**.
 
-**Applications:**
-- Frontend (React + Vite): `http://localhost:3000`
+**Unified Entrypoint:**
+- **Web App (Frontend)**: `http://localhost` (Routes to React + Vite application)
+- **API Gateway (Backend)**: `http://localhost/api/` (Routes to BFF Gateway API)
+
+Alternatively, you can access the individual microservices and databases directly at their respective ports:
+
+**Individual Microservices:**
+- Frontend (React + Vite dev server): `http://localhost:3000`
 - API Gateway (BFF): `http://localhost:3001`
 - Auth Service: `http://localhost:4000`
 - Evidence Service: `http://localhost:4001`
 - Ledger Service (Immudb Node Wrapper): `http://localhost:4002`
 
-**Infrastructure:**
+**Infrastructure & Consoles:**
 - PostgreSQL Database (`db-users`): `5432`
-- MinIO Object Store (`minio-store`): `9000` (Console UI at `9001`)
-- Immudb Ledger Database (`db-ledger`): `3322` (Web Console at `8080`)
+- MinIO Object Store (`minio-store`): `9000` (Console Web UI at `http://localhost:9001`)
+- Immudb Ledger Database (`db-ledger`): `3322` (Web Console at `http://localhost:8080`)
 

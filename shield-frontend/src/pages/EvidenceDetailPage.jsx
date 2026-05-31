@@ -130,11 +130,11 @@ export default function EvidenceDetailPage() {
                 </div>
                 <div className="detail-row">
                   <span className="detail-row-label">Uploaded By</span>
-                  <span className="detail-row-value">{ev.uploadedBy?.name}</span>
+                  <span className="detail-row-value">{ev.uploadedBy?.name || ev.uploaderName || '—'}</span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-row-label">Employee ID</span>
-                  <span className="detail-row-value">{ev.uploadedBy?.employeeId}</span>
+                  <span className="detail-row-value">{ev.uploadedBy?.employeeId || ev.uploaderEmployeeId || '—'}</span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-row-label">Upload Date</span>

@@ -37,10 +37,10 @@ router.post('/login', async (req, res) => {
         // Try to log the event to API audit log (fire and forget)
         const ip = req.ip || '0.0.0.0';
         pool.query(
-            `INSERT INTO api_audit_log (user_id, method, endpoint, ip_address, status_code) 
-             VALUES ($1, 'LOGIN', '/api/auth/login', $2, 200)`,
-            [user.id, ip]
-        ).catch(() => {}); // ignore if table doesn't exist yet
+            `INSERT INTO api_audit_log (user_id, user_name, user_role, user_employee_id, method, endpoint, ip_address, status_code) 
+             VALUES ($1, $2, $3, $4, 'LOGIN', '/api/auth/login', $5, 200)`,
+            [user.id, user.name, user.role, user.employee_id, ip]
+        ).catch(() => {});
 
         const payload = {
             id: user.id,
@@ -110,7 +110,21 @@ router.post('/refresh', async (req, res) => {
 router.post('/logout', (req, res) => {
     const isProd = process.env.NODE_ENV === 'production';
     const baseCookieOps = { httpOnly: true, secure: isProd, sameSite: 'Strict' };
-    
+
+    // Try to log logout event using the access token cookie
+    try {
+        const token = req.cookies?.shield_access_token;
+        if (token) {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const ip = req.ip || '0.0.0.0';
+            pool.query(
+                `INSERT INTO api_audit_log (user_id, user_name, user_role, user_employee_id, method, endpoint, ip_address, status_code)
+                 VALUES ($1, $2, $3, $4, 'LOGOUT', '/api/auth/logout', $5, 200)`,
+                [decoded.id, decoded.name, decoded.role, decoded.employeeId, ip]
+            ).catch(() => {});
+        }
+    } catch {}
+
     res.clearCookie('shield_access_token', baseCookieOps);
     res.clearCookie('shield_refresh_token', { ...baseCookieOps, path: '/api/auth/refresh' });
     res.json({ message: 'Logged out successfully.' });
@@ -169,6 +183,76 @@ router.post('/change-password', async (req, res) => {
     } catch (err) {
         console.error('[AUTH CHANGE-PASSWORD]', err.message);
         return res.status(500).json({ error: 'Internal server error during password change.' });
+    }
+});
+
+// GET /api/auth/audit — Returns auth-side audit events (login, logout, user management)
+router.get('/audit', async (req, res) => {
+    // Manual JWT check since this route isn't behind the auth middleware wrapper
+    const token = req.cookies?.shield_access_token ||
+        (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null);
+
+    if (!token) return res.status(401).json({ error: 'Not authenticated' });
+
+    let caller;
+    try {
+        caller = jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    if (!['Admin', 'Judicial Authority'].includes(caller.role)) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const { userId, action, limit = 100 } = req.query;
+
+    try {
+        const conditions = [`al.method IN ('LOGIN', 'LOGOUT', 'USER_CREATED', 'USER_UPDATED', 'PASSWORD_RESET')`];
+        const values = [];
+        let idx = 1;
+
+        if (userId) {
+            conditions.push(`al.user_id = $${idx++}`);
+            values.push(userId);
+        }
+        if (action) {
+            conditions.push(`al.method = $${idx++}`);
+            values.push(action);
+        }
+
+        const where = `WHERE ${conditions.join(' AND ')}`;
+
+        const { rows } = await pool.query(
+            `SELECT 
+                al.id::text,
+                al.method as action,
+                CASE WHEN al.status_code < 400 THEN 'success' ELSE 'failed' END as result,
+                al.user_id as actor_id,
+                al.user_name,
+                al.user_role,
+                al.user_employee_id,
+                al.accessed_at as timestamp,
+                CASE al.method
+                    WHEN 'LOGIN' THEN 'User logged in'
+                    WHEN 'LOGOUT' THEN 'User logged out'
+                    WHEN 'USER_CREATED' THEN 'New user account created'
+                    WHEN 'USER_UPDATED' THEN 'User account updated'
+                    WHEN 'PASSWORD_RESET' THEN 'Password was reset by admin'
+                    ELSE al.method
+                END as "targetLabel",
+                NULL as "targetId",
+                'auth' as "targetType"
+             FROM api_audit_log al
+             ${where}
+             ORDER BY al.accessed_at DESC
+             LIMIT $${idx}`,
+            [...values, parseInt(limit) || 100]
+        );
+        res.json({ auditLog: rows });
+    } catch (err) {
+        console.error('[AUTH AUDIT]', err.message);
+        res.status(500).json({ error: 'Failed to fetch auth audit log' });
     }
 });
 

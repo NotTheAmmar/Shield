@@ -44,12 +44,31 @@ async function runMigrations() {
                 ALTER TABLE users ADD COLUMN IF NOT EXISTS station VARCHAR(100);
             `);
 
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS api_audit_log (
+                    id          BIGSERIAL    PRIMARY KEY,
+                    user_id     UUID,
+                    user_name   TEXT,
+                    user_role   TEXT,
+                    user_employee_id TEXT,
+                    method      TEXT,
+                    endpoint    TEXT,
+                    ip_address  TEXT,
+                    status_code INTEGER,
+                    accessed_at TIMESTAMPTZ  DEFAULT NOW()
+                );
+            `);
+
+            await pool.query(`ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_name TEXT;`);
+            await pool.query(`ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_role TEXT;`);
+            await pool.query(`ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_employee_id TEXT;`);
+
             console.log('[Auth Init] Seeding configured admin account...');
             // Pull seed credentials strictly from the environment payload
             const seedEmail = process.env.ADMIN_SEED_EMAIL || 'admin@police.gov';
             const seedPassword = process.env.ADMIN_SEED_PASSWORD || 'Sh13ld@Pr0duct10n2026!';
             const seedName = process.env.ADMIN_SEED_NAME || 'System Administrator';
-            const seedEmployeeId = process.env.ADMIN_SEED_EMPLOYEE_ID || 'EMP000';
+            const seedEmployeeId = process.env.ADMIN_SEED_EMPLOYEE_ID || 'EMP-00000';
 
             const passwordHash = await bcrypt.hash(seedPassword, 12);
 

@@ -109,8 +109,9 @@ export const firAPI = {
   upload: (formData) => apiClient.post('/fir/create', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
+  close:  (id) => apiClient.patch(`/fir/${id}/close`),
   verify: (id) => apiClient.get(`/evidence/verify/${id}`),
-  downloadUrl: (id) => `/api/evidence/download/${id}`,
+  downloadUrl: (id) => `/api/fir/${id}/download`,
 };
 
 // ── Evidence ──────────────────────────────────────────────────────────────
@@ -129,6 +130,7 @@ export const evidenceAPI = {
 
 export const auditAPI = {
   list: (params) => apiClient.get('/audit', { params }),
+  listAuth: (params) => apiClient.get('/auth/audit', { params }),
 };
 
 // ── Admin ─────────────────────────────────────────────────────────────────

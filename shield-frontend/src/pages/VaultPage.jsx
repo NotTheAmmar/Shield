@@ -53,7 +53,8 @@ export default function VaultPage() {
     setVerifyingId(ev.id);
     try {
       const res = await evidenceAPI.verify(ev.id);
-      setData((prev) => prev.map((e) => e.id === ev.id ? { ...e, status: res.status } : e));
+      const mappedStatus = res.status === 'OK' ? 'verified' : res.status === 'TAMPERED' ? 'tampered' : res.status;
+      setData((prev) => prev.map((e) => e.id === ev.id ? { ...e, status: mappedStatus } : e));
     } finally {
       setVerifyingId(null);
     }

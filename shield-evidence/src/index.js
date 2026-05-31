@@ -69,6 +69,12 @@ async function runMigrations() {
                   reporting_officer TEXT         NOT NULL,
                   fir_number        VARCHAR(100) DEFAULT '',
                   status            VARCHAR(50)  DEFAULT 'OPEN',
+                  filename          VARCHAR(255),
+                  bucket_name       VARCHAR(100),
+                  object_key        VARCHAR(500),
+                  sha256_hash       VARCHAR(64),
+                  mime_type         VARCHAR(100),
+                  file_size         BIGINT,
                   registered_at     TIMESTAMPTZ  DEFAULT NOW()
                 );
 
@@ -93,13 +99,16 @@ async function runMigrations() {
                 );
 
                 CREATE TABLE IF NOT EXISTS api_audit_log (
-                  id           SERIAL PRIMARY KEY,
-                  user_id      TEXT,
-                  method       VARCHAR(10) NOT NULL,
-                  endpoint     VARCHAR(255) NOT NULL,
-                  ip_address   VARCHAR(45) NOT NULL,
-                  status_code  INT NOT NULL,
-                  accessed_at  TIMESTAMPTZ DEFAULT NOW()
+                  id                SERIAL PRIMARY KEY,
+                  user_id           TEXT,
+                  user_name         TEXT,
+                  user_role         TEXT,
+                  user_employee_id  TEXT,
+                  method            VARCHAR(10) NOT NULL,
+                  endpoint          VARCHAR(255) NOT NULL,
+                  ip_address        VARCHAR(45) NOT NULL,
+                  status_code       INT NOT NULL,
+                  accessed_at       TIMESTAMPTZ DEFAULT NOW()
                 );
 
                 CREATE TABLE IF NOT EXISTS report_jobs (
@@ -137,9 +146,30 @@ async function runMigrations() {
             // Idempotent: add columns if missing (older DB volumes)
             await pool.query(`
                 ALTER TABLE fir ADD COLUMN IF NOT EXISTS jurisdiction_id VARCHAR(100);
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS filename VARCHAR(255);
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS bucket_name VARCHAR(100);
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS object_key VARCHAR(500);
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS sha256_hash VARCHAR(64);
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS mime_type VARCHAR(100);
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS file_size BIGINT;
             `);
             await pool.query(`
                 ALTER TABLE evidence_metadata ADD COLUMN IF NOT EXISTS all_metadata JSONB;
+            `);
+            await pool.query(`
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'other';
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS mime_type VARCHAR(100);
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS file_size BIGINT;
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS ledger_tx_id TEXT;
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS ledger_timestamp TIMESTAMPTZ;
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS uploader_name TEXT;
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS uploader_employee_id TEXT;
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+            `);
+            await pool.query(`
+                ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_name TEXT;
+                ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_role TEXT;
+                ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_employee_id TEXT;
             `);
             
             console.log('[Init] Database schemas (FIR, Evidence, Audit) ready.');

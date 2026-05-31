@@ -20,9 +20,9 @@ function StrengthRule({ met, label }) {
 }
 
 export default function ForcePasswordChangePage() {
-  const { user, clearMustChangePassword, logout } = useAuth();
+  const { user, clearMustChangePassword, logout, tempPassword } = useAuth();
 
-  const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [form, setForm] = useState({ currentPassword: tempPassword || '', newPassword: '', confirmPassword: '' });
   const [show, setShow] = useState({ current: false, newPwd: false, confirm: false });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -117,7 +117,8 @@ export default function ForcePasswordChangePage() {
               </div>
             )}
 
-            {/* Current (temporary) password */}
+            {/* Current (temporary) password — hidden if auto-filled from login */}
+            {!tempPassword && (
             <div className="form-group">
               <label className="form-label" htmlFor="currentPassword">Temporary Password</label>
               <div className="form-input-wrapper">
@@ -138,6 +139,7 @@ export default function ForcePasswordChangePage() {
                 </button>
               </div>
             </div>
+            )}
 
             {/* New password */}
             <div className="form-group">

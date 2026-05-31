@@ -21,12 +21,19 @@ function generatePassword() {
   return pw;
 }
 
+function generateEmployeeId() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
+  let id = 'EMP-';
+  for (let i = 0; i < 5; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
+}
+
 // ── Create User Modal ─────────────────────────────────────────────────────────
 
 function CreateUserModal({ onClose, onCreated }) {
   const [form, setForm] = useState({
     name: '', email: '', role: 'Police Officer',
-    employeeId: '', designation: '', station: '',
+    employeeId: generateEmployeeId(), designation: '', station: '',
     plainPassword: generatePassword(),
   });
   const [loading, setLoading] = useState(false);
@@ -84,8 +91,16 @@ function CreateUserModal({ onClose, onCreated }) {
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="u-employeeId">Employee ID *</label>
-              <input id="u-employeeId" name="employeeId" className="form-input" value={form.employeeId} onChange={handleChange} placeholder="EMP12345" required />
+              <label className="form-label" htmlFor="u-employeeId">Employee ID (Auto-Generated)</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input id="u-employeeId" name="employeeId" className="form-input" style={{ flex: 1, fontFamily: 'monospace' }} value={form.employeeId} readOnly required />
+                <button
+                  type="button" className="btn btn-secondary"
+                  onClick={() => setForm(f => ({ ...f, employeeId: generateEmployeeId() }))}
+                >
+                  Regenerate
+                </button>
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -130,11 +145,16 @@ function CreateUserModal({ onClose, onCreated }) {
 // ── User Detail Slide-in Panel ────────────────────────────────────────────────
 
 const ACTION_LABELS = {
-  UPLOADED_FIR: 'Uploaded FIR', UPLOADED_EVIDENCE: 'Uploaded Evidence',
-  VERIFIED_FIR: 'Verified FIR', VERIFIED_EVIDENCE: 'Verified Evidence',
-  DOWNLOADED_FIR: 'Downloaded FIR', DOWNLOADED_EVIDENCE: 'Downloaded Evidence',
-  LOGIN: 'Login', LOGOUT: 'Logout',
-  USER_CREATED: 'User Created', USER_DEACTIVATED: 'User Deactivated', USER_REACTIVATED: 'User Reactivated',
+  LOGIN: 'Logged In',
+  LOGOUT: 'Logged Out',
+  USER_CREATED: 'Created User Account',
+  USER_UPDATED: 'Updated User Account',
+  USER_DEACTIVATED: 'Account Deactivated',
+  USER_REACTIVATED: 'Account Reactivated',
+  PASSWORD_RESET: 'Password Reset by Admin',
+  UPLOADED_FIR: 'Registered FIR',
+  UPLOADED_EVIDENCE: 'Uploaded Evidence',
+  VERIFY: 'Verified Evidence',
 };
 
 function UserDetailPanel({ userId, onClose, onToggleStatus, togglingId }) {
@@ -160,7 +180,7 @@ function UserDetailPanel({ userId, onClose, onToggleStatus, togglingId }) {
   useEffect(() => {
     if (tab !== 'activity') return;
     setLogsLoading(true);
-    auditAPI.list({ userId, limit: 50 })
+    auditAPI.listAuth({ userId, limit: 50 })
       .then((res) => setLogs(res.auditLog || []))
       .catch(() => setLogs([]))
       .finally(() => setLogsLoading(false));
@@ -196,7 +216,7 @@ function UserDetailPanel({ userId, onClose, onToggleStatus, togglingId }) {
       {/* Panel */}
       <div style={{
         position: 'fixed', top: 0, right: 0, bottom: 0, width: 500,
-        background: 'var(--surface)', borderLeft: '1px solid var(--border)',
+        background: 'var(--bg-card)', borderLeft: '1px solid var(--border)',
         zIndex: 201, display: 'flex', flexDirection: 'column',
         boxShadow: '-8px 0 32px rgba(0,0,0,0.25)',
         animation: 'slideInRight 0.22s ease',
@@ -205,10 +225,10 @@ function UserDetailPanel({ userId, onClose, onToggleStatus, togglingId }) {
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
             width: 44, height: 44, borderRadius: '50%',
-            background: 'var(--primary-alpha, rgba(99,102,241,0.15))',
+            background: 'rgba(28,58,95,0.12)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
-            <User size={20} color="var(--primary)" />
+            <User size={20} color="var(--navy-700)" />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
@@ -224,7 +244,7 @@ function UserDetailPanel({ userId, onClose, onToggleStatus, togglingId }) {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 24px', background: 'var(--surface-50)' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 24px', background: 'var(--bg-page)' }}>
           {[['profile', 'Profile', <User size={16} />], ['activity', 'Activity Log', <Activity size={16} />]].map(([id, label, icon]) => (
             <button
               key={id}
@@ -233,8 +253,8 @@ function UserDetailPanel({ userId, onClose, onToggleStatus, togglingId }) {
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer',
                 fontSize: '0.95rem', fontWeight: tab === id ? 600 : 500,
-                color: tab === id ? 'var(--primary)' : 'var(--text-muted)',
-                borderBottom: tab === id ? '3px solid var(--primary)' : '3px solid transparent',
+                color: tab === id ? 'var(--navy-700)' : 'var(--text-muted)',
+                borderBottom: tab === id ? '3px solid var(--navy-700)' : '3px solid transparent',
                 marginBottom: -1,
                 transition: 'all 0.2s',
               }}
@@ -276,7 +296,7 @@ function UserDetailPanel({ userId, onClose, onToggleStatus, togglingId }) {
                   ['Station / Court', user.station || '—'],
                   ['Account Created', fmtDateTime(user.created_at)],
                 ].map(([label, val]) => (
-                  <div key={label} style={{ padding: 12, background: 'var(--surface-50)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                  <div key={label} style={{ padding: 12, background: 'var(--bg-page)', borderRadius: 8, border: '1px solid var(--border)' }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>{label}</div>
                     <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 500, wordBreak: 'break-all' }}>{val}</div>
                   </div>
@@ -284,7 +304,7 @@ function UserDetailPanel({ userId, onClose, onToggleStatus, togglingId }) {
               </div>
 
               {/* Password Management */}
-              <div style={{ marginTop: 8, padding: 16, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface-50)' }}>
+              <div style={{ marginTop: 8, padding: 16, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-page)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Password Management</div>
                   <button 
@@ -292,13 +312,13 @@ function UserDetailPanel({ userId, onClose, onToggleStatus, togglingId }) {
                     onClick={handleResetPassword}
                     disabled={resetting}
                   >
-                    {resetting ? <span className="spinner" style={{ width: 14, height: 14 }} /> : 'Reset Password'}
+                    {resetting ? <span className="spinner" style={{ width: 14, height: 14 }} /> : user.must_change_password ? 'Reset & Generate New Password' : 'Reset Password'}
                   </button>
                 </div>
                 {newPassword ? (
-                  <div style={{ background: 'var(--surface)', padding: 12, borderRadius: 6, border: '1px dashed var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ background: 'var(--bg-card)', padding: 12, borderRadius: 6, border: '1px dashed var(--navy-700)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, marginBottom: 2 }}>NEW TEMPORARY PASSWORD</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--navy-700)', fontWeight: 600, marginBottom: 2 }}>NEW TEMPORARY PASSWORD</div>
                       <div style={{ fontFamily: 'monospace', fontSize: '1.1rem', letterSpacing: '1px' }}>{newPassword}</div>
                     </div>
                     <button 
@@ -308,9 +328,14 @@ function UserDetailPanel({ userId, onClose, onToggleStatus, togglingId }) {
                       {copied ? 'Copied!' : 'Copy'}
                     </button>
                   </div>
+                ) : user.must_change_password ? (
+                  <div style={{ background: 'var(--amber-light)', padding: 12, borderRadius: 6, border: '1px solid var(--amber)', fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <Clock size={15} style={{ color: 'var(--amber)', flexShrink: 0, marginTop: 2 }} />
+                    <span>Temporary password has <strong>not been changed yet</strong>. If the user has lost it, use the button above to reset and generate a new one.</span>
+                  </div>
                 ) : (
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    Click reset to generate a new temporary password. The user will be required to change it upon their next login.
+                    User has set their own password. Click reset to generate a new temporary password — the user will be required to change it on next login.
                   </div>
                 )}
               </div>

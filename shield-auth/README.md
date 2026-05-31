@@ -31,6 +31,8 @@ This service is configured via environment variables injected through the docker
 | `JWT_SECRET` | Secret key used to sign and verify user JWTs | `secret` |
 | `ADMIN_SEED_EMAIL` | Default admin email to auto-seed on database migration | `admin@police.gov` |
 | `ADMIN_SEED_PASSWORD`| Default admin password to auto-seed on database migration| `Sh13ld@Pr0duct10n2026!` |
+| `ADMIN_SEED_NAME` | Default admin name to auto-seed on database migration | `System Administrator` |
+| `ADMIN_SEED_EMPLOYEE_ID`| Default admin employee ID to auto-seed on database migration| `EMP-00000` |
 
 ## 🚀 API Endpoints & Routes
 

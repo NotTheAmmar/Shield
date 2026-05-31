@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, Download, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, Download, Lock, AlertTriangle } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import HashDisplay from '../components/HashDisplay';
-import FilePreview from '../components/FilePreview';
 import DataTable from '../components/DataTable';
 import { firAPI } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
@@ -14,18 +13,16 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'long', timeStyle: 'short' });
 }
 
-function fmtBytes(bytes) {
-  if (!bytes) return '—';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+function fmtDateShort(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
 }
 
 const EV_COLUMNS = [
   { key: 'fileName', label: 'File Name', sortable: true,
     render: (v, row) => <Link to={`/vault/${row.id}`} className="cell-link">{v}</Link> },
   { key: 'category', label: 'Category',
-    render: (v) => <span style={{ textTransform: 'capitalize' }}>{v}</span> },
+    render: (v) => <span style={{ textTransform: 'capitalize' }}>{v || '—'}</span> },
   { key: 'uploadDate', label: 'Upload Date',
     render: (v) => fmtDate(v) },
   { key: 'hash', label: 'SHA-256',
@@ -41,8 +38,9 @@ export default function FirDetailPage() {
   const [fir, setFir] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [verifying, setVerifying] = useState(false);
-  const [verifyResult, setVerifyResult] = useState(null);
+  const [closing, setClosing] = useState(false);
+  const [closeError, setCloseError] = useState('');
+  const [closeSuccess, setCloseSuccess] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -52,17 +50,23 @@ export default function FirDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const handleVerify = async () => {
-    setVerifying(true);
-    setVerifyResult(null);
+  const handleCloseFir = async () => {
+    if (!window.confirm('Are you sure you want to close this FIR? This requires all evidence to be verified.')) return;
+    setClosing(true);
+    setCloseError('');
     try {
-      const res = await firAPI.verify(id);
-      setVerifyResult(res);
-      setFir((f) => f ? { ...f, status: res.status } : f);
-    } catch {
-      setVerifyResult({ error: 'Verification failed.' });
+      const res = await firAPI.close(id);
+      setFir((f) => f ? { ...f, status: res.status || 'CLOSED' } : f);
+      setCloseSuccess(true);
+      setTimeout(() => setCloseSuccess(false), 5000);
+    } catch (err) {
+      const errData = err?.response?.data || err;
+      let msg = errData?.error || err.message || 'Failed to close FIR.';
+      if (errData?.unverifiedFiles?.length) msg += ' Unverified: ' + errData.unverifiedFiles.join(', ');
+      if (errData?.tamperedFiles?.length) msg += ' Tampered: ' + errData.tamperedFiles.join(', ');
+      setCloseError(msg);
     } finally {
-      setVerifying(false);
+      setClosing(false);
     }
   };
 
@@ -70,11 +74,13 @@ export default function FirDetailPage() {
   if (error) return <div className="alert alert-error" style={{ margin: 24 }}>{error}</div>;
   if (!fir) return null;
 
+  const isClosed = (fir.status || '').toUpperCase() === 'CLOSED';
+
   return (
     <>
       <PageHeader
         title={fir.firNumber}
-        subtitle={`Uploaded ${fmtDate(fir.uploadDate)} by ${fir.uploadedBy?.name}`}
+        subtitle={`Registered ${fmtDate(fir.uploadDate)}`}
         actions={
           <button className="btn btn-ghost btn-sm" onClick={() => navigate(-1)}>
             <ArrowLeft size={14} /> Back
@@ -83,100 +89,85 @@ export default function FirDetailPage() {
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-        {/* Section 1: FIR Document */}
+        {/* FIR Metadata */}
         <div className="card">
           <div className="card-header">
-            <h2>FIR Document</h2>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <a
-                href={firAPI.downloadUrl(fir.id)}
-                download={fir.fileName}
-                className="btn btn-secondary btn-sm"
-              >
-                <Download size={13} /> Download Original
-              </a>
-            </div>
+            <h2>FIR Details</h2>
+            <span className={`badge badge-${isClosed ? 'success' : 'info'}`} style={{ textTransform: 'capitalize' }}>
+              {fir.status || 'Open'}
+            </span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
-            {/* Left metadata */}
-            <div className="card-body" style={{ borderRight: '1px solid var(--border)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div className="detail-row">
-                  <span className="detail-row-label">FIR Number</span>
-                  <span className="detail-row-value">{fir.firNumber}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-row-label">Status</span>
-                  <div><StatusBadge status={fir.status} /></div>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-row-label">Uploaded By</span>
-                  <span className="detail-row-value">{fir.uploadedBy?.name}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-row-label">Employee ID</span>
-                  <span className="detail-row-value">{fir.uploadedBy?.employeeId}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-row-label">Upload Date</span>
-                  <span className="detail-row-value">{fmtDate(fir.uploadDate)}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-row-label">File Size</span>
-                  <span className="detail-row-value">{fmtBytes(fir.fileSize)}</span>
-                </div>
+          <div className="card-body">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="detail-row">
+                <span className="detail-row-label">FIR Number</span>
+                <span className="detail-row-value">{fir.firNumber}</span>
               </div>
-
-              {/* Integrity Record */}
-              <div style={{ marginTop: 20 }}>
-                <div className="integrity-card">
-                  <div className="integrity-card-header">Integrity Record</div>
-                  <div className="integrity-card-rows">
-                    <HashDisplay hash={fir.hash} label="SHA-256 Hash" />
-                    <div className="detail-row">
-                      <span className="detail-row-label">ImmuDB Transaction ID</span>
-                      <span className="detail-row-value" style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{fir.ledgerTxId}</span>
-                    </div>
-                    <div className="detail-row">
-                      <span className="detail-row-label">Ledger Timestamp</span>
-                      <span className="detail-row-value">{fmtDate(fir.ledgerTimestamp)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {verifyResult && (
-                  <div className={`alert ${verifyResult.error ? 'alert-error' : verifyResult.match ? 'alert-success' : 'alert-error'}`} style={{ marginTop: 12 }}>
-                    {verifyResult.error
-                      ? verifyResult.error
-                      : verifyResult.match
-                      ? `✓ Integrity verified at ${fmtDate(verifyResult.verifiedAt)}`
-                      : `⚠ TAMPER DETECTED — Hash mismatch found.`}
-                  </div>
-                )}
-
-                <div style={{ marginTop: 12 }}>
-                  <button className="btn btn-secondary btn-sm" onClick={handleVerify} disabled={verifying}>
-                    {verifying ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Verifying…</> : <><RefreshCw size={13} /> Re-Verify Integrity</>}
-                  </button>
-                </div>
+              <div className="detail-row">
+                <span className="detail-row-label">Incident Type</span>
+                <span className="detail-row-value">{fir.incidentType || '—'}</span>
               </div>
+              <div className="detail-row">
+                <span className="detail-row-label">Registered Date</span>
+                <span className="detail-row-value">{fmtDate(fir.uploadDate)}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-row-label">Location</span>
+                <span className="detail-row-value">{fir.location || '—'}</span>
+              </div>
+              {fir.description && (
+                <div className="detail-row" style={{ gridColumn: '1 / -1' }}>
+                  <span className="detail-row-label">Description</span>
+                  <span className="detail-row-value">{fir.description}</span>
+                </div>
+              )}
             </div>
 
-            {/* Right preview */}
-            <div className="card-body">
-              <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--text-muted)' }}>{fir.fileName}</div>
-              <FilePreview fileUrl={fir.fileUrl} mimeType={fir.mimeType} fileName={fir.fileName} />
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
+              <a
+                className="btn btn-secondary btn-sm"
+                href={firAPI.downloadUrl(fir.id)}
+                target="_blank"
+                rel="noreferrer"
+                style={{ textDecoration: 'none' }}
+              >
+                <Download size={13} /> View / Download FIR
+              </a>
+              {role === 'Police Officer' && !isClosed && (
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={handleCloseFir}
+                  disabled={closing}
+                >
+                  {closing
+                    ? <><span className="spinner" style={{ width: 13, height: 13 }} /> Closing…</>
+                    : <><Lock size={13} /> Close FIR</>
+                  }
+                </button>
+              )}
             </div>
+
+            {closeError && (
+              <div className="alert alert-error" style={{ marginTop: 12 }}>
+                <AlertTriangle size={14} /> {closeError}
+              </div>
+            )}
+            {closeSuccess && (
+              <div className="alert alert-success" style={{ marginTop: 12 }}>
+                FIR has been closed successfully.
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Section 2: Linked Evidence */}
+        {/* Linked Evidence */}
         <div className="card">
           <div className="card-header">
             <h2>Linked Evidence ({fir.linkedEvidence?.length || 0} files)</h2>
-            {role === 'Police Officer' && (
+            {role === 'Police Officer' && !isClosed && (
               <Link to={`/upload?tab=evidence&firId=${fir.id}`} className="btn btn-primary btn-sm">
-                <Plus size={13} /> Attach More Evidence
+                <Plus size={13} /> Attach Evidence
               </Link>
             )}
           </div>
@@ -184,7 +175,6 @@ export default function FirDetailPage() {
             columns={EV_COLUMNS}
             data={fir.linkedEvidence || []}
             emptyMessage="No evidence files linked to this FIR yet."
-            rowClassName={(row) => row.status === 'tampered' ? 'tampered-row' : ''}
           />
         </div>
       </div>

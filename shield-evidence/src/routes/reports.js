@@ -10,73 +10,14 @@ const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
 const requireRoles = require('../middleware/rbac');
-const { Queue } = require('bullmq');
-const IORedis = require('ioredis');
 const { minioInternal } = require('../config/minio');
+const { generatePdfReport, getChainOfCustody } = require('../services/metadata');
 
 const router = express.Router();
 
-const redisConnection = new IORedis({
-    host: process.env.REDIS_HOST || 'shield-redis',
-    port: parseInt(process.env.REDIS_PORT) || 6379,
-    maxRetriesPerRequest: null,
-});
-const pdfQueue = new Queue('pdf-generation', { connection: redisConnection });
-
 // ── Chain of Custody Data Fetcher ─────────────────────────────
 
-async function getChainOfCustody(evidenceId) {
-    const { rows: [evidence] } = await pool.query(
-        `SELECT e.id, e.filename as "fileName", e.sha256_hash as hash, 
-                e.uploaded_at as "uploadDate", e.uploaded_by as "uploadedBy", e.fir_id as "firId"
-         FROM evidence e WHERE e.id = $1`, [evidenceId]
-    );
-    if (!evidence) return null;
-
-    const { rows: [fir] } = await pool.query(
-        `SELECT fir_number as "firNumber", case_category as category, location,
-                reporting_officer as "reportingOfficer", registered_at as "registeredAt",
-                jurisdiction_id as "jurisdictionId"
-         FROM fir WHERE id = $1`, [evidence.firId]
-    );
-
-    const { rows: metaRows } = await pool.query(
-        `SELECT ST_Y(gps_location) as "gpsLat", ST_X(gps_location) as "gpsLng",
-                camera_make as "cameraMake", camera_model as "cameraModel",
-                original_date as "originalDate", file_size as "fileSize",
-                mime_type as "mimeType"
-         FROM evidence_metadata WHERE evidence_id = $1`, [evidenceId]
-    );
-
-    const { rows: flags } = await pool.query(
-        `SELECT flags, details, actor, logged_at as "loggedAt"
-         FROM evidence_forensic_log WHERE evidence_id = $1
-         ORDER BY logged_at ASC`, [evidenceId]
-    );
-
-    const { rows: verifications } = await pool.query(
-        `SELECT action, result, actor_id as "actorId", checked_at as "checkedAt"
-         FROM audit_log WHERE evidence_id = $1
-         ORDER BY checked_at ASC`, [evidenceId]
-    );
-
-    const { rows: accessLog } = await pool.query(
-        `SELECT user_id as "userId", method, endpoint, ip_address as "ipAddress",
-                status_code as "statusCode", accessed_at as "accessedAt"
-         FROM api_audit_log WHERE endpoint LIKE $1
-         ORDER BY accessed_at ASC LIMIT 50`,
-        [`%${evidenceId}%`]
-    );
-
-    return {
-        evidence,
-        fir: fir || {},
-        metadata: metaRows[0] || null,
-        forensicFlags: flags,
-        verificationHistory: verifications,
-        accessLog,
-    };
-}
+// The getChainOfCustody function is now imported from metadata.js
 
 // ── GET /api/reports/chain-of-custody/:evidenceId ─────────────
 
@@ -141,7 +82,9 @@ router.post('/chain-of-custody/:evidenceId/pdf',
                 [jobId, evidenceId]
             );
 
-            await pdfQueue.add('generate', { evidenceId, jobId });
+            // Trigger async generation in background (fire and forget)
+            generatePdfReport({ evidenceId, jobId })
+                .catch(err => console.error('[PDF Gen Error]', err));
 
             res.json({ jobId, status: 'QUEUED' });
         } catch (err) {

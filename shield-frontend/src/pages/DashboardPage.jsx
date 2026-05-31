@@ -4,7 +4,7 @@ import { FileText, Archive, CheckCircle, Clock, AlertTriangle, Users, UserCheck,
 import { useAuth } from '../hooks/useAuth';
 import PageHeader from '../components/PageHeader';
 import StatCard from '../components/StatCard';
-import { dashboardAPI, adminAPI } from '../services/api';
+import { dashboardAPI, adminAPI, auditAPI } from '../services/api';
 
 // Format ISO timestamp to IST locale
 function fmtTime(iso) {
@@ -28,6 +28,9 @@ const ACTION_LABELS = {
   USER_CREATED: 'Created User Account',
   USER_DEACTIVATED: 'Deactivated User',
   USER_REACTIVATED: 'Reactivated User',
+  USER_UPDATED: 'Updated User',
+  PASSWORD_RESET: 'Password Reset',
+  VERIFY: 'Verified Evidence',
 };
 
 
@@ -65,17 +68,27 @@ export default function DashboardPage() {
         }
       }).catch(err => console.error("Failed to load dashboard stats", err));
     } else if (role === 'Admin') {
-      adminAPI.listUsers().then(({ data }) => {
-        if (data && data.users) {
-           const activeUsers = data.users.filter(u => u.status === 'active').length;
-           const inactiveUsers = data.users.length - activeUsers;
-           setAdminStats({
-             totalUsers: data.users.length,
-             activeUsers,
-             inactiveUsers
-           });
-        }
+      adminAPI.listUsers().then((res) => {
+        const users = res.users || [];
+        const activeUsers = users.filter(u => u.status === 'active').length;
+        const inactiveUsers = users.length - activeUsers;
+        setAdminStats({
+          totalUsers: users.length,
+          activeUsers,
+          inactiveUsers
+        });
       }).catch(err => console.error("Failed to fetch users for admin stat", err));
+
+      // Fetch recent user-account activity from auth service audit log
+      auditAPI.listAuth({ limit: 20 }).then((res) => {
+        const logs = res.auditLog || [];
+        setActivity(logs.slice(0, 6).map(log => ({
+          id: log.id,
+          action: log.action,
+          timestamp: log.timestamp,
+          targetLabel: log.user_name ? `${log.user_name} (${log.user_role || '—'})` : log.targetLabel,
+        })));
+      }).catch(err => console.error('Failed to fetch admin activity', err));
     }
   }, [role]);
 

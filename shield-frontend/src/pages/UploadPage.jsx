@@ -113,7 +113,7 @@ function UploadFirTab() {
           <div>
             <strong>FIR uploaded successfully.</strong>
             <div style={{ fontSize: 12, marginTop: 4, fontFamily: 'var(--font-mono)' }}>
-              {success.firNumber} · Hash: {success.hash?.slice(0, 24)}…
+              {success.firNumber}
             </div>
           </div>
         </div>
@@ -258,7 +258,14 @@ function UploadEvidenceTab({ searchParams }) {
       {success && (
         <div className="alert alert-success" role="alert">
           <CheckCircle size={16} />
-          <strong>{success.uploaded?.length || 1} file(s) uploaded successfully.</strong>
+          <div>
+            <strong>Evidence uploaded successfully.</strong>
+            {success.sha256_hash && (
+              <div style={{ fontSize: 12, marginTop: 4, fontFamily: 'var(--font-mono)' }}>
+                SHA-256: {success.sha256_hash.slice(0, 24)}…
+              </div>
+            )}
+          </div>
         </div>
       )}
       {error && <div className="alert alert-error" role="alert">{error}</div>}

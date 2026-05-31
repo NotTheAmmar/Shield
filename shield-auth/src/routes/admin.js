@@ -8,10 +8,34 @@ const router = express.Router();
 // GET /api/admin/users
 router.get('/users', requireRoles(['Admin']), async (req, res) => {
     try {
+        const { search, role, status } = req.query;
+        const conditions = [];
+        const values = [];
+        let idx = 1;
+
+        if (search) {
+            conditions.push(`(LOWER(name) LIKE $${idx} OR LOWER(email) LIKE $${idx})`);
+            values.push(`%${search.toLowerCase()}%`);
+            idx++;
+        }
+        if (role) {
+            conditions.push(`role = $${idx}`);
+            values.push(role);
+            idx++;
+        }
+        if (status) {
+            conditions.push(`status = $${idx}`);
+            values.push(status);
+            idx++;
+        }
+
+        const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
         const { rows } = await pool.query(
             `SELECT id, email, name, employee_id, role, status, created_at,
                     designation, station, must_change_password
-             FROM users ORDER BY created_at DESC`
+             FROM users ${where} ORDER BY created_at DESC`,
+            values
         );
         res.json({ users: rows });
     } catch (err) {
@@ -53,6 +77,13 @@ router.post('/users', requireRoles(['Admin']), async (req, res) => {
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING id, email, name, employee_id, role, status, created_at, designation, station
         `, [email, passwordHash, name, employeeId, role, designation || null, station || null]);
+
+        // Log USER_CREATED event
+        pool.query(
+            `INSERT INTO api_audit_log (user_id, user_name, user_role, user_employee_id, method, endpoint, ip_address, status_code)
+             VALUES ($1, $2, $3, $4, 'USER_CREATED', '/api/admin/users', $5, 201)`,
+            [req.user.id, req.user.name, req.user.role, req.user.employeeId, req.ip || '0.0.0.0']
+        ).catch(() => {});
 
         res.status(201).json({ message: 'User created successfully', user: rows[0] });
     } catch (err) {
@@ -97,6 +128,13 @@ router.patch('/users/:id', requireRoles(['Admin']), async (req, res) => {
         const { rows } = await pool.query(query, values);
         if (!rows.length) return res.status(404).json({ error: 'User not found' });
 
+        // Log USER_UPDATED event
+        pool.query(
+            `INSERT INTO api_audit_log (user_id, user_name, user_role, user_employee_id, method, endpoint, ip_address, status_code)
+             VALUES ($1, $2, $3, $4, 'USER_UPDATED', $5, $6, 200)`,
+            [req.user.id, req.user.name, req.user.role, req.user.employeeId, `/api/admin/users/${id}`, req.ip || '0.0.0.0']
+        ).catch(() => {});
+
         res.json({ message: 'User updated successfully', user: rows[0] });
     } catch (err) {
         console.error('[ADMIN UPDATE USER]', err.message);
@@ -123,6 +161,13 @@ router.post('/users/:id/reset-password', requireRoles(['Admin']), async (req, re
         `, [passwordHash, id]);
 
         if (!rows.length) return res.status(404).json({ error: 'User not found' });
+
+        // Log PASSWORD_RESET event
+        pool.query(
+            `INSERT INTO api_audit_log (user_id, user_name, user_role, user_employee_id, method, endpoint, ip_address, status_code)
+             VALUES ($1, $2, $3, $4, 'PASSWORD_RESET', $5, $6, 200)`,
+            [req.user.id, req.user.name, req.user.role, req.user.employeeId, `/api/admin/users/${id}/reset-password`, req.ip || '0.0.0.0']
+        ).catch(() => {});
 
         res.json({ message: 'Password reset successfully', user: rows[0] });
     } catch (err) {
