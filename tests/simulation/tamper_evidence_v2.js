@@ -15,14 +15,15 @@
  */
 const Minio = require('minio');
 const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 // ── MinIO connection (simulating stolen/leaked credentials) ──
 const minioClient = new Minio.Client({
     endPoint: 'localhost',
     port: 9000,
     useSSL: false,
-    accessKey: 'shield',       // Attacker obtained these credentials
-    secretKey: 'key_pass'
+    accessKey: process.env.MINIO_ROOT_USER || 'shield',       // Attacker obtained these credentials
+    secretKey: process.env.MINIO_ROOT_PASSWORD || 'key_pass'
 });
 
 const BUCKET = 'evidence';
