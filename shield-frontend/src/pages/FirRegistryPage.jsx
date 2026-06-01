@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import DataTable from '../components/DataTable';
-import StatusBadge from '../components/StatusBadge';
-import HashDisplay from '../components/HashDisplay';
+
 import { firAPI } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -15,17 +14,14 @@ function fmtDate(iso) {
 const COLUMNS = [
   { key: 'firNumber', label: 'FIR Number', sortable: true,
     render: (v, row) => <Link to={`/fir/${row.id}`} className="cell-link">{v}</Link> },
-  { key: 'fileName', label: 'Uploaded File', sortable: true },
-  { key: 'uploadDate', label: 'Upload Date (IST)', sortable: true,
+  { key: 'incidentType', label: 'Incident Type',
+    render: (v) => v || '—' },
+  { key: 'uploadDate', label: 'Registered Date (IST)', sortable: true,
     render: (v) => fmtDate(v) },
-  { key: 'uploadedBy', label: 'Uploaded By',
-    render: (v) => v?.name || '—' },
-  { key: 'hash', label: 'SHA-256 Hash',
-    render: (v) => <HashDisplay hash={v} truncate /> },
-  { key: 'evidenceCount', label: 'Evidence', sortable: true,
-    render: (v) => <span style={{ fontWeight: 600 }}>{v}</span> },
+  { key: 'evidenceCount', label: 'Evidence Files', sortable: true,
+    render: (v) => <span style={{ fontWeight: 600 }}>{v || 0}</span> },
   { key: 'status', label: 'Status',
-    render: (v) => <StatusBadge status={v} /> },
+    render: (v) => <span className={`badge badge-${(v || 'open').toLowerCase() === 'open' ? 'info' : 'success'}`} style={{ textTransform: 'capitalize' }}>{v || 'Open'}</span> },
 ];
 
 export default function FirRegistryPage() {

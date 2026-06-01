@@ -6,6 +6,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [tempPassword, setTempPassword] = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
   // Validate identity implicitly by having the backend inspect the HttpOnly cookie
@@ -28,7 +29,9 @@ export function AuthProvider({ children }) {
   const login = useCallback(async ({ email, password, role }) => {
     const data = await authAPI.login({ email, password, role });
     setUser(data.user); // The HttpOnly dual-cookies are automatically set by the browser
-    setMustChangePassword(data.user?.mustChangePassword === true);
+    const needsChange = data.user?.mustChangePassword === true;
+    setMustChangePassword(needsChange);
+    if (needsChange) setTempPassword(password);
     return data;
   }, []);
 
@@ -41,6 +44,7 @@ export function AuthProvider({ children }) {
   // Called after a successful forced password change to ungate the UI
   const clearMustChangePassword = useCallback(() => {
     setMustChangePassword(false);
+    setTempPassword(null);
   }, []);
 
   const isAuthenticated = Boolean(user);
@@ -53,7 +57,7 @@ export function AuthProvider({ children }) {
   }, [role]);
 
   return (
-    <AuthContext.Provider value={{ user, role, isAuthenticated, isInitializing, mustChangePassword, login, logout, hasRole, clearMustChangePassword }}>
+    <AuthContext.Provider value={{ user, role, isAuthenticated, isInitializing, mustChangePassword, tempPassword, login, logout, hasRole, clearMustChangePassword }}>
       {children}
     </AuthContext.Provider>
   );

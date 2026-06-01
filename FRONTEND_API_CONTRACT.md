@@ -143,19 +143,12 @@ List all FIRs. Supports filtering and pagination.
     {
       "id": "fir_001",
       "firNumber": "FIR/2025/MH/0042",
-      "fileName": "fir_0042_scan.pdf",
-      "fileSize": 2048576,
+      "incidentType": "Theft",
+      "description": "Reported theft at...",
+      "location": "Andheri West",
       "uploadDate": "2025-03-15T10:30:00Z",
-      "uploadedBy": {
-        "id": "usr_abc123",
-        "name": "Rajesh Kumar",
-        "employeeId": "MH/INS/2041"
-      },
-      "hash": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456",
       "evidenceCount": 3,
-      "status": "verified",
-      "ledgerTxId": "tx_immu_0099",
-      "ledgerTimestamp": "2025-03-15T10:30:15Z"
+      "status": "OPEN"
     }
   ],
   "pagination": {
@@ -166,6 +159,8 @@ List all FIRs. Supports filtering and pagination.
   }
 }
 ```
+
+> **Note**: FIR records are metadata-only. File-related fields (`fileName`, `hash`, `fileSize`, `uploadedBy`) are not returned from the FIR list. Evidence files linked to a FIR are tracked separately via the evidence endpoints.
 
 ---
 
@@ -181,20 +176,12 @@ Get a single FIR by ID, including its linked evidence.
 {
   "id": "fir_001",
   "firNumber": "FIR/2025/MH/0042",
-  "fileName": "fir_0042_scan.pdf",
-  "fileSize": 2048576,
-  "mimeType": "application/pdf",
+  "incidentType": "Theft",
+  "description": "Reported theft at...",
+  "location": "Andheri West",
   "uploadDate": "2025-03-15T10:30:00Z",
-  "uploadedBy": {
-    "id": "usr_abc123",
-    "name": "Rajesh Kumar",
-    "employeeId": "MH/INS/2041"
-  },
-  "hash": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456",
-  "status": "verified",
-  "ledgerTxId": "tx_immu_0099",
-  "ledgerTimestamp": "2025-03-15T10:30:15Z",
-  "fileUrl": "/api/firs/fir_001/download",
+  "status": "OPEN",
+  "reportingOfficer": "usr_abc123",
   "linkedEvidence": [
     {
       "id": "ev_101",
@@ -208,6 +195,7 @@ Get a single FIR by ID, including its linked evidence.
 }
 ```
 
+> **Note**: FIR records are metadata-only. Fields like `fileName`, `hash`, `fileSize`, `fileUrl`, `mimeType`, `ledgerTxId`, and `ledgerTimestamp` are not applicable to FIR records. Evidence files linked to a FIR carry their own integrity records.
 **Error `404`**
 
 ```json
@@ -233,15 +221,14 @@ Upload a scanned FIR document.
 
 ```json
 {
-  "id": "fir_002",
+  "status": "success",
+  "fir_id": "fir_002",
   "firNumber": "FIR/2025/MH/0043",
-  "fileName": "fir_0043_scan.pdf",
-  "hash": "c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678",
-  "status": "pending",
-  "uploadDate": "2025-03-18T14:22:00Z",
-  "ledgerTxId": "tx_immu_0100",
-  "ledgerTimestamp": "2025-03-18T14:22:03Z"
+  "message": "FIR registered successfully"
 }
+```
+
+> **Note**: FIR files are now stored securely in MinIO, similar to Evidence files. Their hashes and metadata are recorded in the FIR table.
 ```
 
 **Error `409`**
@@ -271,6 +258,43 @@ Re-run integrity check for a FIR against the ledger hash.
 }
 ```
 
+---
+
+### `PATCH /api/fir/:id/close`
+
+Close a FIR. **Constraint**: All evidence linked to the FIR must be verified (not tampered, not pending). Requires at least one evidence file.
+
+**Headers**: `Authorization: Bearer <token>`  
+**Required Role**: `Police Officer`
+
+**Success `200`**
+
+```json
+{
+  "message": "FIR closed successfully",
+  "firNumber": "FIR/2025/MH/0042",
+  "status": "CLOSED"
+}
+```
+
+**Error `400` — Unverified evidence**
+
+```json
+{
+  "error": "Cannot close FIR: All evidence must be verified first.",
+  "unverifiedFiles": ["photo_scene.jpg"]
+}
+```
+
+**Error `400` — Tampered evidence**
+
+```json
+{
+  "error": "Cannot close FIR: Some evidence has been tampered with.",
+  "tamperedFiles": ["cctv_footage.mp4"]
+}
+```
+
 **Tampered `200`** *(hash mismatch)*
 
 ```json
@@ -286,13 +310,13 @@ Re-run integrity check for a FIR against the ledger hash.
 
 ---
 
-### `GET /api/firs/:id/download`
+### `GET /api/fir/:id/download`
 
 Stream the original uploaded FIR file.
 
 **Headers**: `Authorization: Bearer <token>`
 
-**Response**: Binary file stream with correct `Content-Type` header.
+**Response**: Binary file stream with correct `Content-Type` header (redirects to a 30-second presigned MinIO URL).
 
 ---
 
@@ -376,7 +400,6 @@ Get a single evidence item with full metadata.
   "mimeType": "video/mp4",
   "uploadDate": "2025-03-15T11:00:00Z",
   "uploadedBy": {
-    "id": "usr_abc123",
     "name": "Rajesh Kumar",
     "employeeId": "MH/INS/2041"
   },
@@ -384,8 +407,14 @@ Get a single evidence item with full metadata.
   "status": "verified",
   "ledgerTxId": "tx_immu_0100",
   "ledgerTimestamp": "2025-03-15T11:00:08Z",
-  "fileUrl": "/api/evidence/ev_101/download"
+  "fileUrl": "/api/evidence/download/ev_101",
+  "history": [
+    { "action": "VERIFY", "result": "OK", "actor": "usr_abc123", "timestamp": "2025-03-18T14:25:00Z" }
+  ]
 }
+```
+
+> **Note**: `uploadedBy` is denormalized at upload time from the JWT token. `category` is now stored directly on the evidence table (not derived from the FIR's `case_category`). `status` is computed from the most recent audit_log entry.
 ```
 
 ---
@@ -409,17 +438,13 @@ Upload one or more evidence files linked to a FIR.
 
 ```json
 {
-  "uploaded": [
-    {
-      "id": "ev_102",
-      "fileName": "photo_scene.jpg",
-      "hash": "d4e5f6789012345678901234567890abcdef1234567890abcdef123456789",
-      "status": "pending",
-      "ledgerTxId": "tx_immu_0101",
-      "ledgerTimestamp": "2025-03-18T14:30:00Z"
-    }
-  ]
+  "id": "ev_102",
+  "sha256_hash": "d4e5f6789012345678901234567890abcdef1234567890abcdef123456789",
+  "ledgerTxId": "tx_immu_0101"
 }
+```
+
+> **Note**: The upload response now returns `sha256_hash` (the computed hash) and `ledgerTxId`. The `category` is stored on the evidence record directly.
 ```
 
 ---

@@ -18,7 +18,7 @@ services:
       - shield-frontend
 
   db-users:
-    image: postgres:15-alpine
+    image: postgis/postgis:15-3.4-alpine
     container_name: db-users
     networks:
       - shield-network
@@ -26,8 +26,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    expose:
-      - "5432"
+    ports:
+      - "5432:5432"
     volumes:
       - ./.docker-data/postgres:/var/lib/postgresql/data
 

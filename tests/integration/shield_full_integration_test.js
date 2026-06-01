@@ -1,7 +1,11 @@
 const crypto = require('crypto');
 const fs = require('fs');
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const GATEWAY = 'http://localhost:3001/api';
+const ADMIN_EMAIL = process.env.ADMIN_SEED_EMAIL || 'admin@shield.gov.in';
+const ADMIN_PASSWORD = process.env.ADMIN_SEED_PASSWORD || 'admin@123';
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
     return new Promise((resolve, reject) => {
@@ -27,7 +31,7 @@ async function testSuite() {
         const loginRes = await fetchWithTimeout(`${GATEWAY}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: 'admin@police.gov', password: 'Sh13ld@Pr0duct10n2026!', role: 'Admin' })
+            body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD, role: 'Admin' })
         });
         const loginData = await loginRes.json();
         if (!loginRes.ok) throw new Error(`Admin Login failed: ${loginData.error}`);
@@ -94,6 +98,7 @@ async function testSuite() {
         firForm.append('incidentType', 'Cybercrime');
         firForm.append('description', 'Automated Integration Test Case');
         firForm.append('location', 'Virtual Lab');
+        firForm.append('file', new Blob(['MOCK FIR PDF CONTENT']), 'fir_document.pdf');
         
         const firRes = await fetchWithTimeout(`${GATEWAY}/fir/create`, {
             method: 'POST',

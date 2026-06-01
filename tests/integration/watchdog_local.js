@@ -1,4 +1,5 @@
-require('./shield-evidence/node_modules/dotenv').config({ path: './.env' });
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 // Configuration from environment variables
 const API_BASE_URL = 'http://127.0.0.1:3001/api/evidence/internal';
@@ -14,7 +15,7 @@ const chunkArray = (array, size) => {
 };
 
 async function main() {
-    console.log("🛡️  Starting SHIELD Integrity Watchdog (Ledger-Backed Verifier)...");
+    console.log("🛡️  Starting SHIELD Integrity Watchdog (Ledger-Backed Verifier - Local Run)...");
 
     let hasErrors = false;
 
@@ -73,7 +74,7 @@ async function main() {
                             'x-internal-service-key': INTERNAL_SERVICE_KEY
                         },
                         body: JSON.stringify({ ids: batch })
-                    });
+                     });
 
                     if (!verifyResponse.ok) {
                         throw new Error(`Batch verification failed with status ${verifyResponse.status}`);

@@ -27,11 +27,13 @@ app.get('/health', (req, res) => res.json({ status: 'OK', timestamp: new Date() 
 // API routes (Protected by JWT)
 const dashboardRoutes = require('./routes/dashboard');
 const auditRoutes = require('./routes/audit');
+const reportRoutes = require('./routes/reports');
 
 app.use('/api/evidence', auth, evidenceRoutes);
 app.use('/api/fir', auth, firRoutes);
 app.use('/api/dashboard', auth, dashboardRoutes);
 app.use('/api/audit', auth, auditRoutes);
+app.use('/api/reports', auth, reportRoutes);
 
 // Process-level monitors to catch fatal crashes that evade the Express event loop
 process.on('uncaughtException', (err) => {
@@ -67,6 +69,12 @@ async function runMigrations() {
                   reporting_officer TEXT         NOT NULL,
                   fir_number        VARCHAR(100) DEFAULT '',
                   status            VARCHAR(50)  DEFAULT 'OPEN',
+                  filename          VARCHAR(255),
+                  bucket_name       VARCHAR(100),
+                  object_key        VARCHAR(500),
+                  sha256_hash       VARCHAR(64),
+                  mime_type         VARCHAR(100),
+                  file_size         BIGINT,
                   registered_at     TIMESTAMPTZ  DEFAULT NOW()
                 );
 
@@ -91,14 +99,77 @@ async function runMigrations() {
                 );
 
                 CREATE TABLE IF NOT EXISTS api_audit_log (
-                  id           SERIAL PRIMARY KEY,
-                  user_id      TEXT,
-                  method       VARCHAR(10) NOT NULL,
-                  endpoint     VARCHAR(255) NOT NULL,
-                  ip_address   VARCHAR(45) NOT NULL,
-                  status_code  INT NOT NULL,
-                  accessed_at  TIMESTAMPTZ DEFAULT NOW()
+                  id                SERIAL PRIMARY KEY,
+                  user_id           TEXT,
+                  user_name         TEXT,
+                  user_role         TEXT,
+                  user_employee_id  TEXT,
+                  method            VARCHAR(10) NOT NULL,
+                  endpoint          VARCHAR(255) NOT NULL,
+                  ip_address        VARCHAR(45) NOT NULL,
+                  status_code       INT NOT NULL,
+                  accessed_at       TIMESTAMPTZ DEFAULT NOW()
                 );
+
+                CREATE TABLE IF NOT EXISTS report_jobs (
+                  id            UUID        PRIMARY KEY,
+                  evidence_id   UUID        REFERENCES evidence(id),
+                  status        VARCHAR(20) DEFAULT 'QUEUED',
+                  download_url  TEXT,
+                  created_at    TIMESTAMPTZ DEFAULT NOW(),
+                  completed_at  TIMESTAMPTZ
+                );
+
+                CREATE TABLE IF NOT EXISTS evidence_metadata (
+                  id             SERIAL      PRIMARY KEY,
+                  evidence_id    UUID        REFERENCES evidence(id) UNIQUE,
+                  gps_location   GEOMETRY(Point, 4326),
+                  camera_make    VARCHAR(100),
+                  camera_model   VARCHAR(100),
+                  original_date  TIMESTAMPTZ,
+                  file_size      BIGINT,
+                  mime_type      VARCHAR(100),
+                  all_metadata   JSONB,
+                  processed_at   TIMESTAMPTZ DEFAULT NOW()
+                );
+
+                CREATE TABLE IF NOT EXISTS evidence_forensic_log (
+                  id           SERIAL       PRIMARY KEY,
+                  evidence_id  UUID         REFERENCES evidence(id),
+                  flags        TEXT[],
+                  details      JSONB,
+                  actor        TEXT,
+                  logged_at    TIMESTAMPTZ  DEFAULT NOW()
+                );
+            `);
+
+            // Idempotent: add columns if missing (older DB volumes)
+            await pool.query(`
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS jurisdiction_id VARCHAR(100);
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS filename VARCHAR(255);
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS bucket_name VARCHAR(100);
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS object_key VARCHAR(500);
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS sha256_hash VARCHAR(64);
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS mime_type VARCHAR(100);
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS file_size BIGINT;
+            `);
+            await pool.query(`
+                ALTER TABLE evidence_metadata ADD COLUMN IF NOT EXISTS all_metadata JSONB;
+            `);
+            await pool.query(`
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'other';
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS mime_type VARCHAR(100);
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS file_size BIGINT;
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS ledger_tx_id TEXT;
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS ledger_timestamp TIMESTAMPTZ;
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS uploader_name TEXT;
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS uploader_employee_id TEXT;
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+            `);
+            await pool.query(`
+                ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_name TEXT;
+                ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_role TEXT;
+                ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_employee_id TEXT;
             `);
             
             console.log('[Init] Database schemas (FIR, Evidence, Audit) ready.');

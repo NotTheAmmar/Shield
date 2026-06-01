@@ -4,7 +4,7 @@ module.exports = (req, res, next) => {
     // Internal Service Account Bypass
     const internalKey = req.headers['x-internal-service-key'];
     if (internalKey && process.env.MASTER_KEY && internalKey === process.env.MASTER_KEY) {
-        req.user = { id: 'INTERNAL-WORKER-000', role: 'Admin' };
+        req.user = { id: '00000000-0000-0000-0000-000000000000', role: 'Admin' };
         return next();
     }
 

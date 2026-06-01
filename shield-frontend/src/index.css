@@ -63,6 +63,10 @@
 
   /* Transitions */
   --transition: 150ms ease;
+
+  /* Primary alias */
+  --primary: var(--navy-700);
+  --primary-alpha: rgba(28,58,95,0.12);
 }
 
 /* ── Dark Mode Overrides ── */
@@ -98,6 +102,9 @@ html.dark {
   --amber-light: #451a03;
   --purple: #a855f7;
   --purple-light: #2e1065;
+
+  --primary: #4a7aac;
+  --primary-alpha: rgba(74,122,172,0.2);
 }
 
 /* ── Reset & Base ── */
@@ -570,6 +577,13 @@ html.dark .badge-admin { background: rgba(16, 185, 129, 0.15); }
 html.dark .badge-active { background: rgba(16, 185, 129, 0.15); }
 .badge-deactivated { background: var(--slate-100); color: var(--slate-500); }
 html.dark .badge-deactivated { background: rgba(136, 153, 166, 0.15); }
+
+.badge-info { background: rgba(28, 58, 95, 0.08); color: var(--navy-700); }
+html.dark .badge-info { background: rgba(74, 122, 172, 0.15); color: #93c5fd; }
+.badge-open { background: rgba(28, 58, 95, 0.08); color: var(--navy-700); }
+html.dark .badge-open { background: rgba(74, 122, 172, 0.15); color: #93c5fd; }
+.badge-success { background: var(--emerald-light); color: var(--emerald); }
+html.dark .badge-success { background: rgba(16, 185, 129, 0.15); }
 
 /* ── Data Table ── */
 .table-wrapper {

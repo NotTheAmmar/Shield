@@ -1,0 +1,11 @@
+# GitGuardian Configuration File
+# Instructs GitGuardian to ignore testing and template mock credentials
+
+version: 1
+gitguardian:
+  ignored_paths:
+    - "tests/**/*"
+    - "**/tests/**/*"
+    - ".env.example"
+    - "**/.env.example"
+    - "**/package-lock.json"

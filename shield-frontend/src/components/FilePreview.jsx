@@ -10,6 +10,16 @@ function getTypeInfo(mimeType) {
   return { type: 'other' };
 }
 
+function getIconForType(type) {
+  switch (type) {
+    case 'image': return <Image size={40} />;
+    case 'video': return <Film size={40} />;
+    case 'audio': return <Music size={40} />;
+    case 'pdf': return <FileText size={40} />;
+    default: return <File size={40} />;
+  }
+}
+
 export default function FilePreview({ fileUrl, mimeType, fileName }) {
   const { type } = getTypeInfo(mimeType);
 
@@ -17,12 +27,27 @@ export default function FilePreview({ fileUrl, mimeType, fileName }) {
     return (
       <div className="file-preview">
         <div className="file-preview-unavailable">
-          <div className="file-preview-unavailable-icon">
-            {type === 'image' ? <Image size={40} /> : type === 'video' ? <Film size={40} /> : type === 'audio' ? <Music size={40} /> : type === 'pdf' ? <FileText size={40} /> : <File size={40} />}
-          </div>
+          <div className="file-preview-unavailable-icon">{getIconForType(type)}</div>
           <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            Preview not available — file not yet connected to gateway
+            No file stored for this record.
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If mime type is unknown, show download-only
+  if (type === 'other') {
+    return (
+      <div className="file-preview">
+        <div className="file-preview-unavailable">
+          <File size={40} />
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            Preview not available for this file type.
+          </p>
+          <a href={fileUrl} download={fileName} className="btn btn-secondary btn-sm">
+            <Download size={14} /> Download File
+          </a>
         </div>
       </div>
     );
@@ -47,17 +72,6 @@ export default function FilePreview({ fileUrl, mimeType, fileName }) {
       )}
       {type === 'pdf' && (
         <iframe src={fileUrl} title={fileName || 'Document'} />
-      )}
-      {type === 'other' && (
-        <div className="file-preview-unavailable">
-          <File size={40} />
-          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            No preview available for this file type.
-          </p>
-          <a href={fileUrl} download={fileName} className="btn btn-secondary btn-sm">
-            <Download size={14} /> Download File
-          </a>
-        </div>
       )}
     </div>
   );

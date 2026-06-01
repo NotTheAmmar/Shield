@@ -1,0 +1,56 @@
+name: SHIELD Docker Hub Publish (CD)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+
+jobs:
+  publish-images:
+    name: Build & Publish Microservice Images
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - "shield-auth"
+          - "shield-evidence"
+          - "shield-frontend"
+          - "shield-gateway"
+          - "shield-ledger"
+          - "shield-watchdog"
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Calculates a clean tag from Git reference
+      - name: Calculate Image Metadata Tags
+        id: meta
+        run: |
+          SHA_SHORT=$(git rev-parse --short HEAD)
+          echo "sha_tag=${SHA_SHORT}" >> $GITHUB_OUTPUT
+
+      - name: Build and Push Service Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          file: ./${{ matrix.service }}/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ steps.meta.outputs.sha_tag }}
+          cache-from: type=gha,scope=build-${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=build-${{ matrix.service }}

@@ -4,6 +4,7 @@ WORKDIR /usr/src/app
 
 COPY package*.json ./
 
+RUN apk add --no-cache perl
 RUN npm install
 
 COPY . .
