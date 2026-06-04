@@ -155,3 +155,8 @@ Alternatively, you can access the individual microservices and databases directl
 - MinIO Object Store (`minio-store`): `9000` (Console Web UI at `http://localhost:9001`)
 - Immudb Ledger Database (`db-ledger`): `3322` (Web Console at `http://localhost:8080`)
 
+## Contributors
+* Ammar Rangwala
+* Vishvambar Udavant
+* Ish Chaniyara
+* Ziyadali Sayed
