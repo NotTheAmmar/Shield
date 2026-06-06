@@ -32,7 +32,7 @@ function generateEmployeeId() {
 
 function CreateUserModal({ onClose, onCreated }) {
   const [form, setForm] = useState({
-    name: '', email: '', role: 'Police Officer',
+    name: '', email: '', role: 'police_officer',
     employeeId: generateEmployeeId(), designation: '', station: '',
     plainPassword: generatePassword(),
   });

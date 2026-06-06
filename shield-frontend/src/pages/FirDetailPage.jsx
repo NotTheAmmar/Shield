@@ -134,7 +134,7 @@ export default function FirDetailPage() {
               >
                 <Download size={13} /> View / Download FIR
               </a>
-              {role === 'Police Officer' && !isClosed && (
+              {role === 'police_officer' && !isClosed && (
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={handleCloseFir}
@@ -165,7 +165,7 @@ export default function FirDetailPage() {
         <div className="card">
           <div className="card-header">
             <h2>Linked Evidence ({fir.linkedEvidence?.length || 0} files)</h2>
-            {role === 'Police Officer' && !isClosed && (
+            {role === 'police_officer' && !isClosed && (
               <Link to={`/upload?tab=evidence&firId=${fir.id}`} className="btn btn-primary btn-sm">
                 <Plus size={13} /> Attach Evidence
               </Link>

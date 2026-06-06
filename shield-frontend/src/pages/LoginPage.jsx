@@ -4,16 +4,16 @@ import { Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 const ROLES = [
-  { value: 'Police Officer', label: 'Police Officer' },
-  { value: 'Judicial Authority', label: 'Judicial Authority' },
-  { value: 'Admin', label: 'Administrator' },
+  { value: 'police_officer', label: 'police_officer' },
+  { value: 'judicial_authority', label: 'judicial_authority' },
+  { value: 'admin', label: 'Administrator' },
 ];
 
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ email: '', password: '', role: 'Police Officer' });
+  const [form, setForm] = useState({ email: '', password: '', role: 'police_officer' });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
