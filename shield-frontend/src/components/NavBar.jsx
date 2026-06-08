@@ -6,12 +6,12 @@ import ThemeToggle from './ThemeToggle';
 import RoleBadge from './RoleBadge';
 
 const NAV_LINKS = [
-  { to: '/',             label: 'Dashboard',       Icon: LayoutDashboard, roles: ['Police Officer', 'Judicial Authority', 'Admin'] },
-  { to: '/upload',       label: 'Upload',           Icon: Upload,          roles: ['Police Officer'] },
-  { to: '/fir',          label: 'FIR Registry',     Icon: FileText,        roles: ['Police Officer', 'Judicial Authority'] },
-  { to: '/vault',        label: 'Evidence Vault',   Icon: Archive,         roles: ['Police Officer', 'Judicial Authority'] },
-  { to: '/audit',        label: 'Audit Log',         Icon: BookOpen,        roles: ['Judicial Authority'] },
-  { to: '/admin/users',  label: 'User Management',  Icon: Users,           roles: ['Admin'] },
+  { to: '/',             label: 'Dashboard',       Icon: LayoutDashboard, roles: ['police_officer', 'judicial_authority', 'admin'] },
+  { to: '/upload',       label: 'Upload',           Icon: Upload,          roles: ['police_officer'] },
+  { to: '/fir',          label: 'FIR Registry',     Icon: FileText,        roles: ['police_officer', 'judicial_authority'] },
+  { to: '/vault',        label: 'Evidence Vault',   Icon: Archive,         roles: ['police_officer', 'judicial_authority'] },
+  { to: '/audit',        label: 'Audit Log',         Icon: BookOpen,        roles: ['judicial_authority'] },
+  { to: '/admin/users',  label: 'User Management',  Icon: Users,           roles: ['admin'] },
 ];
 
 export default function NavBar() {

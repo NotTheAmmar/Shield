@@ -60,14 +60,14 @@ export default function DashboardPage() {
   const [adminStats, setAdminStats] = useState(null);
 
   useEffect(() => {
-    if (role === 'Police Officer' || role === 'Judicial Authority') {
+    if (role === 'police_officer' || role === 'judicial_authority') {
       dashboardAPI.getStats().then((data) => {
         if (data) {
           setStats(data.stats);
           setActivity(data.recentActivity || []);
         }
       }).catch(err => console.error("Failed to load dashboard stats", err));
-    } else if (role === 'Admin') {
+    } else if (role === 'admin') {
       adminAPI.listUsers().then((res) => {
         const users = res.users || [];
         const activeUsers = users.filter(u => u.status === 'active').length;
@@ -102,7 +102,7 @@ export default function DashboardPage() {
       />
 
       <div className="stat-cards-grid">
-        {(role === 'Police Officer' || role === 'Judicial Authority') && stats && (
+        {(role === 'police_officer' || role === 'judicial_authority') && stats && (
           <>
             <StatCard label="Total FIRs in System" value={stats.totalFirs} icon={FileText} accent="var(--navy-700)" />
             <StatCard label="Total Evidence Files" value={stats.totalEvidence} icon={Archive} accent="var(--navy-700)" />
@@ -110,7 +110,7 @@ export default function DashboardPage() {
             <StatCard label="Tamper Alerts" value={stats.tamperedCount} icon={AlertTriangle} accent="var(--crimson)" onClick={() => navigate('/vault?status=tampered')} />
           </>
         )}
-        {role === 'Admin' && adminStats && (
+        {role === 'admin' && adminStats && (
           <>
             <StatCard label="Total System Users" value={adminStats.totalUsers} icon={Users} accent="var(--navy-700)" />
             <StatCard label="Active Users" value={adminStats.activeUsers} icon={UserCheck} accent="var(--emerald)" />
@@ -143,7 +143,7 @@ export default function DashboardPage() {
           </div>
           <div className="card-body">
             <div className="quick-action-bar" style={{ flexDirection: 'column' }}>
-              {(role === 'Police Officer') && (
+              {(role === 'police_officer') && (
                 <>
                   <Link to="/upload" className="btn btn-primary btn-full">
                     <Upload size={14} /> Upload FIR / Evidence
@@ -156,7 +156,7 @@ export default function DashboardPage() {
                   </Link>
                 </>
               )}
-              {role === 'Judicial Authority' && (
+              {role === 'judicial_authority' && (
                 <>
                   <Link to="/fir" className="btn btn-primary btn-full">
                     <FileText size={14} /> Browse FIR Registry
@@ -169,7 +169,7 @@ export default function DashboardPage() {
                   </Link>
                 </>
               )}
-              {role === 'Admin' && (
+              {role === 'admin' && (
                 <>
                   <Link to="/admin/users" className="btn btn-primary btn-full">
                     <Settings size={14} /> Manage Users

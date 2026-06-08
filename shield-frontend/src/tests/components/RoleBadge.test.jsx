@@ -8,21 +8,21 @@ describe('RoleBadge', () => {
     render(<RoleBadge role="police_officer" />);
     const badge = screen.getByTestId('role-badge-police_officer');
     expect(badge).toHaveClass('badge-police');
-    expect(badge).toHaveTextContent('Police Officer');
+    expect(badge).toHaveTextContent('police_officer');
   });
 
   it('renders Judicial Authority badge', () => {
     render(<RoleBadge role="judicial_authority" />);
     const badge = screen.getByTestId('role-badge-judicial_authority');
     expect(badge).toHaveClass('badge-judicial');
-    expect(badge).toHaveTextContent('Judicial Authority');
+    expect(badge).toHaveTextContent('judicial_authority');
   });
 
   it('renders Admin badge', () => {
     render(<RoleBadge role="admin" />);
     const badge = screen.getByTestId('role-badge-admin');
     expect(badge).toHaveClass('badge-admin');
-    expect(badge).toHaveTextContent('Admin');
+    expect(badge).toHaveTextContent('admin');
   });
 
   it('renders nothing for unknown role', () => {

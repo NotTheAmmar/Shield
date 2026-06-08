@@ -60,7 +60,7 @@ describe('DashboardPage', () => {
   });
 
   it('shows Manage Users quick action for admin', async () => {
-    useAuth.mockReturnValue({ role: 'admin', user: { name: 'Admin' } });
+    useAuth.mockReturnValue({ role: 'admin', user: { name: 'admin' } });
     wrap();
     await waitFor(() => {
       expect(screen.getByText('Manage Users')).toBeInTheDocument();
