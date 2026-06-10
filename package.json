@@ -7,16 +7,22 @@
     "dev:infra": "docker compose up -d db-users db-ledger minio-store",
     "dev:full": "docker compose up --build",
     "stop": "docker compose down",
+    "blockchain:up": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true npx hardhat compile && docker compose -f docker-compose.blockchain.yml up -d",
+    "blockchain:down": "docker compose -f docker-compose.blockchain.yml down",
     "seed": "node tests/helpers/seed_mock_data.js",
     "test:comprehensive": "node tests/integration/shield_comprehensive_test.js",
     "test:integration": "node tests/integration/shield_full_integration_test.js",
     "test:tamper": "node tests/simulation/tamper_evidence_v2.js",
+    "test:contract": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true npx hardhat test",
+    "test:blockchain": "bash tests/blockchain/blockchain_network_test.sh",
     "watchdog:local": "node tests/integration/watchdog_local.js",
     "test:manual": "bash tests/integration/run_manual_tests.sh"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "concurrently": "^8.0.0",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.28.6"
   },
   "dependencies": {
     "jsonwebtoken": "^9.0.3",

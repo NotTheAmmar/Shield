@@ -23,10 +23,15 @@ The project relies on three core databases/stores, managed via Docker:
 -   **Immudb (`db-ledger`)**: A lightweight, high-speed immutable database used to store the cryptographic hashes (SHA-256) of all evidence and FIR records. This provides the tamper-evident guarantees of the system.
 -   **MinIO (`minio-store`)**: Secure, off-chain storage for the actual raw digital evidence files (videos, documents, images).
 
-### Future EVM Blockchain Integration Layer (Roadmap)
-For decentralized, trustless public anchors, SHIELD will support a public/private EVM-based blockchain anchoring layer (such as Ethereum or Polygon). 
--   **Solidity Contracts (`contracts/`)**: Cryptographic anchors are written in Solidity smart contracts (`ShieldLedger.sol`) which seal evidence UUIDs and hashes into public gas-optimized state mappings.
--   **Hardhat (`hardhat.config.js`)**: Serves as the compilation and testing framework for compiling, deploying, and generating ABI bindings for web3 integration.
+### EVM Blockchain Integration Layer
+SHIELD runs a private 3-node Clique Proof-of-Authority (PoA) Ethereum network for tamper-proof evidence anchoring. Each node represents a real-world institution and operates as both a block sealer and a transaction signer on behalf of its organization.
+-   **Solidity Contracts (`contracts/`)**: The `ShieldLedger.sol` contract anchors evidence UUIDs and SHA-256 hashes into on-chain state. It stores the sealing institution's address (`registeredBy`) for each record, creating a cryptographically verifiable chain of custody.
+-   **Hardhat (`hardhat.config.js`)**: Compiles contracts, runs Solidity unit tests, and automatically exports the contract ABI to `shield-ledger/src/abis/` on every compile. Includes a `localnet` network entry pointing to `node-police`'s RPC.
+-   **Private Blockchain Network (`docker-compose.blockchain.yml`)**: Boots 3 Geth nodes on an isolated `blockchain-network` Docker bridge:
+    -   `blockchain-bootnode`: Static peer-discovery relay with a committed key for deterministic `enode://` URLs.
+    -   `node-police`: Full sealer node representing the police institution. Multi-homed on `shield-network` so `shield-ledger` can reach its JSON-RPC at port `8545`.
+    -   `node-court`: Full sealer node representing the judicial institution. Multi-homed on `shield-network`, RPC at port `8546`.
+-   **Institutional Signer Model**: Until individual officer keys are introduced, each node signs all transactions from its institution. `node-police` signs on behalf of all police officers; `node-court` signs for all court users. The `registeredBy` field in the contract records the institution's address. This design is forward-compatible — no blockchain infrastructure changes will be needed when individual officer keys are added.
 
 ## 2. Directory Structure
 
@@ -43,8 +48,9 @@ shield-project/
 ├── package.json           # Root scripts for cross-platform task running
 ├── docker-compose.yml     # Main composition file orchestrating all services and databases
 ├── docker-compose.prod.yml # Production compose pulling pre-built Docker Hub images
-├── hardhat.config.js      # [Future EVM] Hardhat smart contract development config
-├── .docker-data/          # [GitIgnored] Local persistence volumes for PostgreSQL, Immudb, and MinIO
+├── docker-compose.blockchain.yml # Private 3-node Clique PoA blockchain network
+├── hardhat.config.js      # Hardhat: compile, test, and ABI export config
+├── .docker-data/          # [GitIgnored] Local persistence volumes for PostgreSQL, Immudb, MinIO, and Geth
 ├── .github/               # GitHub configurations (Workflows & PR templates)
 │   └── workflows/
 │       └── ci.yml         # Continuous Integration workflow (Docker E2E runner)
@@ -56,21 +62,36 @@ shield-project/
 ├── shield-auth/           # [Node.js] Authentication Service
 ├── shield-evidence/       # [Node.js] Evidence Management
 ├── shield-ledger/         # [Node.js] Ledger Interface
+│   └── src/
+│       ├── index.js       # Service entry point
+│       └── abis/          # [Auto-generated] Contract ABIs exported by `npx hardhat compile`
+│           └── ShieldLedger.json
 ├── shield-watchdog/       # [Node.js] Background automated watchdog scanner
-
 │
 ├── contracts/             # [Solidity 0.8.x] EVM Smart Contract source files
 │   └── ShieldLedger.sol   # Evidence anchor Solidity contract
 │
+├── blockchain/            # Private Geth network configuration (committed to repo)
+│   ├── genesis.json       # Clique PoA genesis block (Chain ID 31337, 2 sealers, zero gas)
+│   ├── bootnode.key       # Static bootnode private key (deterministic enode://)
+│   ├── password.txt       # Dev-only account unlock password
+│   └── keystore/
+│       ├── police-account.json  # Police institution Ethereum keystore
+│       └── court-account.json   # Court institution Ethereum keystore
+│
 └── tests/                 # Centralized E2E & Security Simulation Tests
     ├── helpers/           # Seeding and mock data scripts
     ├── integration/       # E2E functional test suites & bash cURL runners
-    └── simulation/        # Direct-attack security tampering simulation scripts
+    ├── simulation/        # Direct-attack security tampering simulation scripts
+    └── blockchain/        # Blockchain-specific tests
+        ├── ShieldLedger.test.js         # Hardhat Solidity unit tests (run: npx hardhat test)
+        └── blockchain_network_test.sh   # Docker network integration tests
 ```
 
 ## 3. Local Development Environment
 
 We use Docker Compose to orchestrate the entire environment locally. Through our root `package.json`, we provide cross-platform scripts to easily spin up all 7 node services alongside the 3 infrastructure containers on a custom Docker bridge network (`shield-network`).
 
-Please refer to the `README.md` for exact instructions on how to install dependencies, run the application cluster, and execute the test suites.
+The blockchain layer runs in a **separate compose file** (`docker-compose.blockchain.yml`) to keep the main `docker compose up` log stream clean. The institutional nodes (`node-police`, `node-court`) are multi-homed — they join both `blockchain-network` (for Ethereum P2P peering) and `shield-network` (so application services can reach their JSON-RPC endpoints).
 
+Please refer to the `README.md` for exact instructions on how to install dependencies, run the application cluster, start the blockchain network, and execute the test suites.

@@ -72,26 +72,6 @@ This builds fresh images for all services and starts them. The gateway and node 
 npm run stop
 ```
 
-### 4. Production Deployment via Docker Hub
-
-For production environments, the custom microservices of the SHIELD project are automatically compiled and published to **Docker Hub** via our automated CD pipeline. 
-
-The underlying infrastructure databases (PostgreSQL/PostGIS, Immudb, MinIO) and the edge reverse proxy (Nginx) utilize their official, pre-built public images. When starting the stack, Docker Compose automatically fetches these from their official public registries! This ensures you only have to build and maintain the lightweight application images.
-
-To deploy the unified production stack without compiling source code locally:
-
-```bash
-# 1. Set your Docker Hub username
-export DOCKER_USER=your_dockerhub_username
-
-# 2. Spin up the production-ready compose cluster
-docker compose -f docker-compose.prod.yml up -d
-```
-
-This pulls your custom microservice images from Docker Hub, integrates them with the official database nodes, and boots the entire secure network in the background.
-
----
-
 ## 🧪 Testing and Security Simulation Suite
 
 SHIELD includes a centralized testing suite located in the `/tests` folder to verify the functionality of all services, enforce zero-trust constraints, and simulate security attacks.
@@ -107,31 +87,70 @@ npm run test:comprehensive   # Primary E2E test suite (69 advanced assertions)
 npm run test:tamper          # Overwrite MinIO file directly and prove ImmuDB catches it
 npm run watchdog:local       # Run a local database/ledger integrity cycle
 npm run test:manual          # Run raw shell curl diagnostics
+npm run test:contract        # Run Hardhat Solidity unit tests (no Docker needed)
+npm run test:blockchain      # Run Docker blockchain network integration tests
 ```
 
----
+## 🔗 Blockchain Network
 
-## 🚢 Continuous Integration (GitHub Actions)
+SHIELD runs a private 3-node Clique Proof-of-Authority (PoA) Ethereum network to anchor evidence hashes on-chain.
 
-SHIELD features automated E2E testing on every push and pull request. The configuration is defined in [.github/workflows/ci.yml](.github/workflows/ci.yml).
+### Institutional Signer Model
 
-The pipeline automatically:
-1. Provisions dependencies across the monorepo.
-2. Instantiates environment files from `.env.example`.
-3. Boots the multi-container Docker Compose stack.
-4. Executes database seeds and the entire 69-assertion functional comprehensive test suite.
-5. Runs forensic tampering simulations.
-6. Gracefully tears down all containers and volumes.
+Each node represents a real-world institution:
 
----
+| Node | Institution | Role | RPC Port |
+|---|---|---|---|
+| `blockchain-bootnode` | — | Peer discovery relay | — |
+| `node-police` | Police Station | Sealer + transaction signer | `8545` |
+| `node-court` | Court / Judiciary | Sealer + transaction signer | `8546` |
 
-## ⛓️ EVM Smart Contract Anchor Preparation (Roadmap)
+When a police officer uploads a FIR, the `shield-ledger` service submits the anchoring transaction to `node-police`, which signs it with the police institution's Ethereum key. The `registeredBy` field in the `ShieldLedger` contract records the institution's address.
 
-To prepare for future Ethereum Virtual Machine (EVM) anchoring, the repository includes a decentralized ledger design skeleton:
-- **Solidity Smart Contract**: [ShieldLedger.sol](contracts/ShieldLedger.sol) contains the production-grade Solidity code to anchor evidence hashes and UUIDs in an immutable, decentralized manner.
-- **Hardhat Compilation & Local Node**: [hardhat.config.js](hardhat.config.js) defines the development network workspace, ready for Solidity compilation and Ganache/Hardhat node integration.
+> **Future officer-key integration**: When individual officer private keys are introduced, officers will sign their own transactions. No blockchain infrastructure changes are required \u2014 it is purely an application-layer change.
 
----
+### Network Topology
+
+```
+blockchain-network (isolated)                  shield-network (shared with app)
+┌────────────────────────────────┐             ┌──────────────────────────────┐
+│  blockchain-bootnode           │             │  shield-ledger               │
+│  node-police ◄─────────────────┼─────────────► node-police (RPC: 8545)     │
+│  node-court  ◄─────────────────┼─────────────► node-court  (RPC: 8546)     │
+└────────────────────────────────┘             └──────────────────────────────┘
+```
+
+### Starting the Blockchain Network
+
+```bash
+# 1. Start the main stack first (required — creates the shield-network bridge)
+docker compose up -d
+
+# 2. Start the blockchain network (automatically compiles contracts & exports ABI)
+npm run blockchain:up
+
+# 3. Verify the network is running
+npm run test:blockchain
+```
+
+### Stopping the Blockchain Network
+
+```bash
+npm run blockchain:down
+# or: docker compose -f docker-compose.blockchain.yml down
+```
+
+> **Note**: Blockchain chain data is persisted in `.docker-data/geth-*/`. To start fresh, delete those directories before running `blockchain:up`.
+
+### Blockchain Accounts
+
+| Account | Address | Private Key Location |
+|---|---|---|
+| Police Institution | `0x80de6eF5a945D6Cc1DAd5375E3CeD4DF466e0384` | `blockchain/keystore/police-account.json` |
+| Court Institution | `0x01a08fc1e3c0EB8d2Be2301Ba36761485d1a2B4e` | `blockchain/keystore/court-account.json` |
+
+Keystore password: `shield-dev-password-2026` (dev only \u2014 zero-value chain, no real ETH).
+
 
 ## 🚢 Service Ports & Unified Entrypoint
 

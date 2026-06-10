@@ -4,7 +4,7 @@ First off, welcome to the team! :tada:
 This guide sets the ground rules for how our team will collaborate on the SHIELD monorepo using the *GitHub Flow* (Open Source style).
 
 ## Our Architecture: The Monorepo
-We are using a **Monorepo** approach. This means all 5 modules (Frontend, Gateway, Auth, Evidence, and Ledger) live in this single GitHub repository.
+We are using a **Monorepo** approach. This means all 6 microservice modules (Frontend, Gateway, Auth, Evidence, Ledger, and Watchdog) live in this single GitHub repository.
 If your feature requires changes in the `shield-frontend` and `shield-auth`, you should make those changes on the **same branch** and open a **single Pull Request**.
 
 ## The Golden Rules

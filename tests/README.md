@@ -85,3 +85,59 @@ Our test suites explicitly assert zero-trust constraints:
 - **Police Officers**: Can create FIRs and upload digital evidence, but are **blocked (403)** from viewing administrative pages.
 - **Judicial Authorities**: Have exclusive access to the forensic operational audit logs, but are **blocked (403)** from registering evidence.
 - **Internal Routes**: Routes under `/api/evidence/internal/*` are guarded by an IP perimeter whitelist (`internalNetworkGuard`), allowing only localhost or internal Docker Class A/B/C subnets.
+
+---
+
+## ⛓️ Blockchain Tests
+
+Two dedicated test suites validate the private EVM blockchain layer.
+
+### 6. Smart Contract Unit Tests
+
+Tests the `ShieldLedger.sol` contract logic in isolation using the built-in Hardhat EVM. **No Docker required**.
+
+```bash
+npm run test:contract
+# or: npx hardhat test
+```
+
+**Test cases (9 assertions):**
+| # | Description |
+|---|---|
+| 1 | Contract deploys and sets owner correctly |
+| 2 | Anchors valid evidence and emits `EvidenceAnchored` event |
+| 3 | Retrieves correct hash, timestamp, and signer after anchoring |
+| 4 | Reverts on duplicate evidence ID |
+| 5 | Reverts on empty evidence ID |
+| 6 | Reverts on hash shorter than 64 characters |
+| 7 | Reverts on hash longer than 64 characters |
+| 8 | Stores multiple distinct evidence records independently |
+| 9 | Records the actual caller's address as `registeredBy` |
+
+### 7. Docker Network Integration Tests
+
+Validates the live Docker blockchain infrastructure end-to-end.
+
+**Prerequisites:**
+```bash
+docker compose up -d                                         # main stack (creates shield-network)
+npm run blockchain:up                                        # starts blockchain stack & compiles contracts
+```
+
+```bash
+npm run test:blockchain
+# or: bash tests/blockchain/blockchain_network_test.sh
+```
+
+**Test cases (12+ assertions):**
+| # | Description |
+|---|---|
+| 1–3 | All 3 containers (`bootnode`, `node-police`, `node-court`) are running |
+| 4–5 | `node-police` (port 8545) and `node-court` (port 8546) JSON-RPC endpoints respond |
+| 6–7 | Both nodes report Chain ID `31337` (`0x7a69`) |
+| 8–9 | Both nodes report ≥1 peer after bootnode discovery |
+| 10 | Block number increases over time (sealing is active) |
+| 11 | Zero-gas-price transaction is accepted by `node-police` |
+| 12 | That transaction is visible on `node-court` after propagation |
+| 13 | `shield-ledger/src/abis/ShieldLedger.json` exists and contains expected function signatures |
+
