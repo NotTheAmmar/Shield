@@ -1,0 +1,3 @@
+# This directory holds the ABI JSON files exported by `npx hardhat compile`.
+# The ShieldLedger.json file is auto-generated — do not edit it manually.
+# Run `npx hardhat compile` to regenerate.

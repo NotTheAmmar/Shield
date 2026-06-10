@@ -1,15 +1,57 @@
 /**
  * @type import('hardhat/config').HardhatUserConfig
- * @dev Template Hardhat Configuration for Future EVM Integration.
- * 
- * To initialize:
- * 1. npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox
- * 2. npx hardhat compile
- * 3. npx hardhat node (runs a local EVM node at http://127.0.0.1:8545)
+ * @dev Hardhat Configuration for SHIELD EVM blockchain integration.
+ *
+ * Usage:
+ *   npx hardhat compile   — Compiles contracts AND auto-exports ABI to shield-ledger/src/abis/
+ *   npx hardhat test      — Runs Solidity unit tests against the built-in Hardhat EVM
+ *   npx hardhat node      — Starts a local EVM node at http://127.0.0.1:8545
+ *
+ * For the private Docker blockchain network, see docker-compose.blockchain.yml.
  */
+
+const fs   = require("fs");
+const path = require("path");
 
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
+
+// ── Post-compile ABI Export ────────────────────────────────────────────────
+// After every `npx hardhat compile`, this task automatically copies the
+// ShieldLedger ABI into shield-ledger/src/abis/ so the backend team always
+// has an up-to-date ABI without any manual copy step.
+//
+// Hardhat v2: TASK_COMPILE is a string constant from builtin-tasks/task-names.
+// `task` is a global provided by Hardhat's config loader — no import needed.
+const { TASK_COMPILE } = require("hardhat/builtin-tasks/task-names");
+
+task(TASK_COMPILE, "Compiles the entire project and exports ABIs").setAction(
+  async (args, hre, runSuper) => {
+    // Run the default compile task first
+    await runSuper(args);
+
+    const artifactPath = path.join(
+      __dirname,
+      "artifacts",
+      "contracts",
+      "ShieldLedger.sol",
+      "ShieldLedger.json"
+    );
+
+    const abiOutputDir  = path.join(__dirname, "shield-ledger", "src", "abis");
+    const abiOutputFile = path.join(abiOutputDir, "ShieldLedger.json");
+
+    if (!fs.existsSync(artifactPath)) {
+      console.log("\n[ABI Export] ShieldLedger artifact not found — skipping ABI export.");
+      return;
+    }
+
+    const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
+    fs.mkdirSync(abiOutputDir, { recursive: true });
+    fs.writeFileSync(abiOutputFile, JSON.stringify(artifact.abi, null, 2));
+    console.log("\n[ABI Export] ShieldLedger.json written to shield-ledger/src/abis/");
+  }
+);
 
 module.exports = {
   solidity: {
@@ -26,10 +68,16 @@ module.exports = {
     hardhat: {
       chainId: 1337,
     },
-    // Future deployment to a local Ganache or Hardhat network
+    // Built-in Hardhat node (fast, zero-cost, in-process EVM for rapid testing)
     localhost: {
       url: "http://127.0.0.1:8545",
       chainId: 1337,
+    },
+    // Private SHIELD Docker blockchain network (node-police RPC)
+    // Start with: docker compose -f docker-compose.blockchain.yml up -d
+    localnet: {
+      url: "http://127.0.0.1:8545",
+      chainId: 31337,
     },
     // Future deployment to Ethereum Sepolia Testnet
     sepolia: {

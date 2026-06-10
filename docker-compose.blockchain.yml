@@ -1,0 +1,109 @@
+networks:
+  blockchain-network:
+    driver: bridge
+    name: blockchain-network
+
+  shield-network:
+    external: true
+    name: shield_shield-network
+
+services:
+  blockchain-bootnode:
+    image: ethereum/client-go:alltools-v1.13.14
+    container_name: blockchain-bootnode
+    restart: unless-stopped
+    entrypoint:
+      - bootnode
+      - --nodekey=/blockchain/bootnode.key
+      - --addr=:30301
+      - --verbosity=3
+    volumes:
+      - ./blockchain:/blockchain:ro
+    networks:
+      - blockchain-network
+
+  node-police:
+    image: ethereum/client-go:alltools-v1.13.14
+    container_name: node-police
+    restart: unless-stopped
+    depends_on:
+      - blockchain-bootnode
+    volumes:
+      - ./blockchain:/blockchain:ro
+      - ./.docker-data/geth-police:/data
+    networks:
+      - blockchain-network
+      - shield-network
+    ports:
+      - "8545:8545"
+    entrypoint: sh
+    command:
+      - -c
+      - |
+        if [ ! -d /data/geth ]; then
+          echo "[node-police] Initializing from genesis..."
+          geth init --datadir /data /blockchain/genesis.json
+          rm -rf /data/keystore
+          cp -r /blockchain/keystore /data/keystore
+        fi
+        exec geth \
+          --datadir /data \
+          --networkid 31337 \
+          --port 30303 \
+          --bootnodes "enode://8e7b2b50dc9afcf0c9ff207a2f9d3bb01f1fffb90623ce330eaf5f26bc970c3ebfddabc89c75f05b5006a51f16c3314ee8017001cfd895a94f7609e3db6893b8@blockchain-bootnode:30301" \
+          --http \
+          --http.addr 0.0.0.0 \
+          --http.port 8545 \
+          --http.api eth,net,web3,personal,miner,admin,txpool \
+          --http.corsdomain "*" \
+          --http.vhosts "*" \
+          --mine \
+          --miner.etherbase 0x80de6eF5a945D6Cc1DAd5375E3CeD4DF466e0384 \
+          --miner.gasprice 0 \
+          --unlock 0x80de6eF5a945D6Cc1DAd5375E3CeD4DF466e0384 \
+          --password /blockchain/password.txt \
+          --allow-insecure-unlock \
+          --verbosity 3
+
+  node-court:
+    image: ethereum/client-go:alltools-v1.13.14
+    container_name: node-court
+    restart: unless-stopped
+    depends_on:
+      - blockchain-bootnode
+    volumes:
+      - ./blockchain:/blockchain:ro
+      - ./.docker-data/geth-court:/data
+    networks:
+      - blockchain-network
+      - shield-network
+    ports:
+      - "8546:8545"
+    entrypoint: sh
+    command:
+      - -c
+      - |
+        if [ ! -d /data/geth ]; then
+          echo "[node-court] Initializing from genesis..."
+          geth init --datadir /data /blockchain/genesis.json
+          rm -rf /data/keystore
+          cp -r /blockchain/keystore /data/keystore
+        fi
+        exec geth \
+          --datadir /data \
+          --networkid 31337 \
+          --port 30304 \
+          --bootnodes "enode://8e7b2b50dc9afcf0c9ff207a2f9d3bb01f1fffb90623ce330eaf5f26bc970c3ebfddabc89c75f05b5006a51f16c3314ee8017001cfd895a94f7609e3db6893b8@blockchain-bootnode:30301" \
+          --http \
+          --http.addr 0.0.0.0 \
+          --http.port 8545 \
+          --http.api eth,net,web3,personal,miner,admin,txpool \
+          --http.corsdomain "*" \
+          --http.vhosts "*" \
+          --mine \
+          --miner.etherbase 0x01a08fc1e3c0EB8d2Be2301Ba36761485d1a2B4e \
+          --miner.gasprice 0 \
+          --unlock 0x01a08fc1e3c0EB8d2Be2301Ba36761485d1a2B4e \
+          --password /blockchain/password.txt \
+          --allow-insecure-unlock \
+          --verbosity 3

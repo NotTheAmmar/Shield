@@ -1,0 +1,31 @@
+{
+  "_comment": "SHIELD Private Blockchain — Clique PoA Genesis Block",
+  "_sealers": {
+    "node-police": "0x80de6eF5a945D6Cc1DAd5375E3CeD4DF466e0384",
+    "node-court":  "0x01a08fc1e3c0EB8d2Be2301Ba36761485d1a2B4e"
+  },
+  "config": {
+    "chainId": 31337,
+    "homesteadBlock": 0,
+    "eip150Block": 0,
+    "eip155Block": 0,
+    "eip158Block": 0,
+    "byzantiumBlock": 0,
+    "constantinopleBlock": 0,
+    "petersburgBlock": 0,
+    "istanbulBlock": 0,
+    "berlinBlock": 0,
+    "clique": {
+      "period": 5,
+      "epoch": 30000
+    }
+  },
+  "difficulty": "0x1",
+  "gasLimit": "0x47b760",
+  "extradata": "0x000000000000000000000000000000000000000000000000000000000000000080de6ef5a945d6cc1dad5375e3ced4df466e038401a08fc1e3c0eb8d2be2301ba36761485d1a2b4e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  "alloc": {},
+  "coinbase": "0x0000000000000000000000000000000000000000",
+  "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "nonce": "0x0000000000000042",
+  "timestamp": "0x0"
+}

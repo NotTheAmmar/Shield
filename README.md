@@ -87,7 +87,74 @@ npm run test:comprehensive   # Primary E2E test suite (69 advanced assertions)
 npm run test:tamper          # Overwrite MinIO file directly and prove ImmuDB catches it
 npm run watchdog:local       # Run a local database/ledger integrity cycle
 npm run test:manual          # Run raw shell curl diagnostics
+npm run test:contract        # Run Hardhat Solidity unit tests (no Docker needed)
+npm run test:blockchain      # Run Docker blockchain network integration tests
 ```
+
+## 🔗 Blockchain Network
+
+SHIELD runs a private 3-node Clique Proof-of-Authority (PoA) Ethereum network to anchor evidence hashes on-chain.
+
+### Institutional Signer Model
+
+Each node represents a real-world institution:
+
+| Node | Institution | Role | RPC Port |
+|---|---|---|---|
+| `blockchain-bootnode` | — | Peer discovery relay | — |
+| `node-police` | Police Station | Sealer + transaction signer | `8545` |
+| `node-court` | Court / Judiciary | Sealer + transaction signer | `8546` |
+
+When a police officer uploads a FIR, the `shield-ledger` service submits the anchoring transaction to `node-police`, which signs it with the police institution's Ethereum key. The `registeredBy` field in the `ShieldLedger` contract records the institution's address.
+
+> **Future officer-key integration**: When individual officer private keys are introduced, officers will sign their own transactions. No blockchain infrastructure changes are required \u2014 it is purely an application-layer change.
+
+### Network Topology
+
+```
+blockchain-network (isolated)                  shield-network (shared with app)
+┌────────────────────────────────┐             ┌──────────────────────────────┐
+│  blockchain-bootnode           │             │  shield-ledger               │
+│  node-police ◄─────────────────┼─────────────► node-police (RPC: 8545)     │
+│  node-court  ◄─────────────────┼─────────────► node-court  (RPC: 8546)     │
+└────────────────────────────────┘             └──────────────────────────────┘
+```
+
+### Starting the Blockchain Network
+
+```bash
+# 1. Start the main stack first (required — creates the shield-network bridge)
+docker compose up -d
+
+# 2. Start the blockchain network
+npm run blockchain:up
+# or: docker compose -f docker-compose.blockchain.yml up -d
+
+# 3. Compile contracts and export ABI to shield-ledger/src/abis/
+npx hardhat compile
+
+# 4. Verify the network is running
+npm run test:blockchain
+```
+
+### Stopping the Blockchain Network
+
+```bash
+npm run blockchain:down
+# or: docker compose -f docker-compose.blockchain.yml down
+```
+
+> **Note**: Blockchain chain data is persisted in `.docker-data/geth-*/`. To start fresh, delete those directories before running `blockchain:up`.
+
+### Blockchain Accounts
+
+| Account | Address | Private Key Location |
+|---|---|---|
+| Police Institution | `0x80de6eF5a945D6Cc1DAd5375E3CeD4DF466e0384` | `blockchain/keystore/police-account.json` |
+| Court Institution | `0x01a08fc1e3c0EB8d2Be2301Ba36761485d1a2B4e` | `blockchain/keystore/court-account.json` |
+
+Keystore password: `shield-dev-password-2026` (dev only \u2014 zero-value chain, no real ETH).
+
 
 ## 🚢 Service Ports & Unified Entrypoint
 
