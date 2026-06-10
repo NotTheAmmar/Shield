@@ -72,26 +72,6 @@ This builds fresh images for all services and starts them. The gateway and node 
 npm run stop
 ```
 
-### 4. Production Deployment via Docker Hub
-
-For production environments, the custom microservices of the SHIELD project are automatically compiled and published to **Docker Hub** via our automated CD pipeline. 
-
-The underlying infrastructure databases (PostgreSQL/PostGIS, Immudb, MinIO) and the edge reverse proxy (Nginx) utilize their official, pre-built public images. When starting the stack, Docker Compose automatically fetches these from their official public registries! This ensures you only have to build and maintain the lightweight application images.
-
-To deploy the unified production stack without compiling source code locally:
-
-```bash
-# 1. Set your Docker Hub username
-export DOCKER_USER=your_dockerhub_username
-
-# 2. Spin up the production-ready compose cluster
-docker compose -f docker-compose.prod.yml up -d
-```
-
-This pulls your custom microservice images from Docker Hub, integrates them with the official database nodes, and boots the entire secure network in the background.
-
----
-
 ## 🧪 Testing and Security Simulation Suite
 
 SHIELD includes a centralized testing suite located in the `/tests` folder to verify the functionality of all services, enforce zero-trust constraints, and simulate security attacks.
@@ -108,30 +88,6 @@ npm run test:tamper          # Overwrite MinIO file directly and prove ImmuDB ca
 npm run watchdog:local       # Run a local database/ledger integrity cycle
 npm run test:manual          # Run raw shell curl diagnostics
 ```
-
----
-
-## 🚢 Continuous Integration (GitHub Actions)
-
-SHIELD features automated E2E testing on every push and pull request. The configuration is defined in [.github/workflows/ci.yml](.github/workflows/ci.yml).
-
-The pipeline automatically:
-1. Provisions dependencies across the monorepo.
-2. Instantiates environment files from `.env.example`.
-3. Boots the multi-container Docker Compose stack.
-4. Executes database seeds and the entire 69-assertion functional comprehensive test suite.
-5. Runs forensic tampering simulations.
-6. Gracefully tears down all containers and volumes.
-
----
-
-## ⛓️ EVM Smart Contract Anchor Preparation (Roadmap)
-
-To prepare for future Ethereum Virtual Machine (EVM) anchoring, the repository includes a decentralized ledger design skeleton:
-- **Solidity Smart Contract**: [ShieldLedger.sol](contracts/ShieldLedger.sol) contains the production-grade Solidity code to anchor evidence hashes and UUIDs in an immutable, decentralized manner.
-- **Hardhat Compilation & Local Node**: [hardhat.config.js](hardhat.config.js) defines the development network workspace, ready for Solidity compilation and Ganache/Hardhat node integration.
-
----
 
 ## 🚢 Service Ports & Unified Entrypoint
 
