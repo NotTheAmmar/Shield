@@ -40,6 +40,10 @@ jobs:
         run: |
           npm run seed
 
+      - name: Run Smart Contract Unit Tests
+        run: |
+          npm run test:contract
+
       - name: Run Integration Test Suite
         run: |
           npm run test:comprehensive
@@ -48,7 +52,19 @@ jobs:
         run: |
           npm run test:tamper
 
+      - name: Boot Blockchain Network
+        run: |
+          npm run blockchain:up
+          echo "Waiting 5 seconds for blockchain nodes to stabilize..."
+          sleep 5
+          docker ps -a
+
+      - name: Run Blockchain Integration Tests
+        run: |
+          npm run test:blockchain
+
       - name: Teardown Stack
         if: always()
         run: |
+          npm run blockchain:down || true
           docker compose down -v

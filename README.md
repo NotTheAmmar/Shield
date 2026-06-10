@@ -126,14 +126,10 @@ blockchain-network (isolated)                  shield-network (shared with app)
 # 1. Start the main stack first (required — creates the shield-network bridge)
 docker compose up -d
 
-# 2. Start the blockchain network
+# 2. Start the blockchain network (automatically compiles contracts & exports ABI)
 npm run blockchain:up
-# or: docker compose -f docker-compose.blockchain.yml up -d
 
-# 3. Compile contracts and export ABI to shield-ledger/src/abis/
-npx hardhat compile
-
-# 4. Verify the network is running
+# 3. Verify the network is running
 npm run test:blockchain
 ```
 

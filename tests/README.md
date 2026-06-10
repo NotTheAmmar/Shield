@@ -121,8 +121,7 @@ Validates the live Docker blockchain infrastructure end-to-end.
 **Prerequisites:**
 ```bash
 docker compose up -d                                         # main stack (creates shield-network)
-docker compose -f docker-compose.blockchain.yml up -d        # blockchain stack
-npx hardhat compile                                          # compile + export ABI
+npm run blockchain:up                                        # starts blockchain stack & compiles contracts
 ```
 
 ```bash
