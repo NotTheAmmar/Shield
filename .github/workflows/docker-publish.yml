@@ -50,7 +50,7 @@ jobs:
           file: ./${{ matrix.service }}/Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ steps.meta.outputs.sha_tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/shield:${{ matrix.service }}-latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/shield:${{ matrix.service }}-${{ steps.meta.outputs.sha_tag }}
           cache-from: type=gha,scope=build-${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=build-${{ matrix.service }}

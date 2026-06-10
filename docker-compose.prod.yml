@@ -76,7 +76,7 @@ services:
 
   # ── Custom BFF Gateway (Pushed Custom Image) ──────────────────────────────
   shield-gateway:
-    image: ${DOCKER_USER}/shield-gateway:latest
+    image: ${DOCKER_USER}/shield:shield-gateway-latest
     container_name: shield-gateway
     restart: always
     networks:
@@ -86,7 +86,7 @@ services:
 
   # ── Custom React Frontend Client (Pushed Custom Image) ────────────────────
   shield-frontend:
-    image: ${DOCKER_USER}/shield-frontend:latest
+    image: ${DOCKER_USER}/shield:shield-frontend-latest
     container_name: shield-frontend
     restart: always
     networks:
@@ -100,7 +100,7 @@ services:
 
   # ── Custom Authentication Service (Pushed Custom Image) ───────────────────
   shield-auth:
-    image: ${DOCKER_USER}/shield-auth:latest
+    image: ${DOCKER_USER}/shield:shield-auth-latest
     container_name: shield-auth
     restart: always
     networks:
@@ -122,7 +122,7 @@ services:
 
   # ── Custom Evidence Locker Service (Pushed Custom Image) ──────────────────
   shield-evidence:
-    image: ${DOCKER_USER}/shield-evidence:latest
+    image: ${DOCKER_USER}/shield:shield-evidence-latest
     container_name: shield-evidence
     restart: always
     networks:
@@ -145,7 +145,7 @@ services:
 
   # ── Custom Ledger Interface (Pushed Custom Image) ─────────────────────────
   shield-ledger:
-    image: ${DOCKER_USER}/shield-ledger:latest
+    image: ${DOCKER_USER}/shield:shield-ledger-latest
     container_name: shield-ledger
     restart: always
     networks:
@@ -161,7 +161,7 @@ services:
 
   # ── Custom Integrity Watchdog Daemon (Pushed Custom Image) ─────────────────
   shield-watchdog:
-    image: ${DOCKER_USER}/shield-watchdog:latest
+    image: ${DOCKER_USER}/shield:shield-watchdog-latest
     container_name: shield-watchdog
     restart: unless-stopped
     networks:
