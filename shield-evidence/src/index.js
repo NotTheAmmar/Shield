@@ -24,6 +24,17 @@ app.use(audit);
 // Health check (Public/Unauthenticated)
 app.get('/health', (req, res) => res.json({ status: 'OK', timestamp: new Date() }));
 
+const rateLimit = require('express-rate-limit');
+
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+app.use('/api/', apiLimiter);
+
 // API routes (Protected by JWT)
 const dashboardRoutes = require('./routes/dashboard');
 const auditRoutes = require('./routes/audit');

@@ -23,7 +23,7 @@ const minioClient = new Minio.Client({
     port: 9000,
     useSSL: false,
     accessKey: process.env.MINIO_ROOT_USER || 'shield',       // Attacker obtained these credentials
-    secretKey: process.env.MINIO_ROOT_PASSWORD || 'key_pass'
+    secretKey: process.env.MINIO_ROOT_PASSWORD || 'REDACTED_PW'
 });
 
 const BUCKET = 'evidence';
@@ -157,13 +157,13 @@ async function main() {
     
     // Passwords should be provided via environment variables to avoid GitGuardian alerts
     const login1 = await http('POST', '/api/auth/login', {
-        body: { email: 'admin@police.gov', password: process.env.ADMIN_SEED_PASSWORD_POLICE || 'admin_password_1', role: 'admin' }
+        body: { email: 'admin@police.gov', password: process.env.ADMIN_SEED_PASSWORD_POLICE || '$env:ADMIN_SEED_PASSWORD_POLICE', role: 'admin' }
     });
     if (login1.data?.token) {
         token = login1.data.token;
     } else {
         const login2 = await http('POST', '/api/auth/login', {
-            body: { email: 'admin@shield.gov.in', password: process.env.ADMIN_SEED_PASSWORD_SHIELD || 'admin_password_2', role: 'admin' }
+            body: { email: 'admin@shield.gov.in', password: process.env.ADMIN_SEED_PASSWORD_SHIELD || '$env:ADMIN_SEED_PASSWORD_SHIELD', role: 'admin' }
         });
         if (!login2.data?.token) throw new Error('Cannot login to verify. Try manually in the UI.');
         token = login2.data.token;

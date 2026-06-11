@@ -5,7 +5,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const GATEWAY = 'http://localhost:3001/api';
 const ADMIN_EMAIL = process.env.ADMIN_SEED_EMAIL || 'admin@shield.gov.in';
-const ADMIN_PASSWORD = process.env.ADMIN_SEED_PASSWORD || 'admin_password';
+const REDACTED_PW = process.env.ADMIN_SEED_PASSWORD || 'REDACTED_PW';
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
     return new Promise((resolve, reject) => {
@@ -31,7 +31,7 @@ async function testSuite() {
         const loginRes = await fetchWithTimeout(`${GATEWAY}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD, role: 'Admin' })
+            body: JSON.stringify({ email: ADMIN_EMAIL, password: REDACTED_PW, role: 'Admin' })
         });
         const loginData = await loginRes.json();
         if (!loginRes.ok) throw new Error(`Admin Login failed: ${loginData.error}`);
@@ -48,7 +48,7 @@ async function testSuite() {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminJwt}` },
             body: JSON.stringify({
                 name: 'Detective Test', email: uniqueEmail, employeeId: uniqueId, 
-                role: 'Police Officer', plainPassword: 'secretpassword'
+                role: 'Police Officer', plainPassword: 'REDACTED_PW'
             })
         });
         const createData = await createRes.json();
@@ -65,7 +65,7 @@ async function testSuite() {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminJwt}` },
             body: JSON.stringify({
                 name: 'Judge Test', email: judgeEmail, employeeId: judgeId, 
-                role: 'Judicial Authority', plainPassword: 'secretpassword'
+                role: 'Judicial Authority', plainPassword: 'REDACTED_PW'
             })
         });
         if (!createJudgeRes.ok) throw new Error(`Create Judge failed`);
@@ -76,7 +76,7 @@ async function testSuite() {
         const polLogin = await fetchWithTimeout(`${GATEWAY}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: uniqueEmail, password: 'secretpassword', role: 'Police Officer' })
+            body: JSON.stringify({ email: uniqueEmail, password: 'REDACTED_PW', role: 'Police Officer' })
         });
         if (!polLogin.ok) throw new Error('Police officer login failed!');
         const polJwt = (await polLogin.json()).token;
@@ -85,7 +85,7 @@ async function testSuite() {
         const judgeLogin = await fetchWithTimeout(`${GATEWAY}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: judgeEmail, password: 'secretpassword', role: 'Judicial Authority' })
+            body: JSON.stringify({ email: judgeEmail, password: 'REDACTED_PW', role: 'Judicial Authority' })
         });
         if (!judgeLogin.ok) throw new Error('Judge login failed!');
         const judgeJwt = (await judgeLogin.json()).token;

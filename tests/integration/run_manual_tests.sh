@@ -14,11 +14,11 @@ if [ -f "$ENV_FILE" ]; then
 fi
 
 ADMIN_EMAIL=${ADMIN_SEED_EMAIL:-"admin@shield.gov.in"}
-ADMIN_PASSWORD=${ADMIN_SEED_PASSWORD:-"admin_password"}
+REDACTED_PW=${ADMIN_SEED_PASSWORD:-"REDACTED_PW"}
 
 # Step 1
 echo -en "\n[1] Testing Auth Service: Admin Login... "
-O1=$(curl -s -w "\n%{http_code}" -X POST http://localhost:3001/api/auth/login -H "Content-Type: application/json" -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\",\"role\":\"Admin\"}")
+O1=$(curl -s -w "\n%{http_code}" -X POST http://localhost:3001/api/auth/login -H "Content-Type: application/json" -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$REDACTED_PW\",\"role\":\"Admin\"}")
 BODY=$(echo "$O1" | sed '$d')
 ADMIN_TOKEN=$(echo "$BODY" | grep -o '"token":"[^"]*' | cut -d'"' -f4)
 if [ -z "$ADMIN_TOKEN" ]; then echo "❌ FAILED: $BODY"; rm -f "$TEST_FILE"; exit 1; else echo "✅ JWT Issued"; fi
@@ -26,14 +26,14 @@ if [ -z "$ADMIN_TOKEN" ]; then echo "❌ FAILED: $BODY"; rm -f "$TEST_FILE"; exi
 # Step 2
 echo -en "[2] Testing Admin Service: Create Police Officer... "
 # Use unique email logic precisely
-O2=$(curl -s -w "\n%{http_code}" -X POST http://localhost:3001/api/admin/users -H "Content-Type: application/json" -H "Authorization: Bearer $ADMIN_TOKEN" -d '{"name": "Detective Test","email": "test_'"$(date +%s)"'@police.gov","employeeId": "EMP-'"$(date +%s)"'","role": "Police Officer","plainPassword": "SecurePassword123!"}')
+O2=$(curl -s -w "\n%{http_code}" -X POST http://localhost:3001/api/admin/users -H "Content-Type: application/json" -H "Authorization: Bearer $ADMIN_TOKEN" -d '{"name": "Detective Test","email": "test_'"$(date +%s)"'@police.gov","employeeId": "EMP-'"$(date +%s)"'","role": "Police Officer","plainPassword": "REDACTED_PW"}')
 BODY2=$(echo "$O2" | sed '$d')
 OFFICER_EMAIL=$(echo "$BODY2" | grep -o '"email":"[^"]*' | cut -d'"' -f4)
 if [ -z "$OFFICER_EMAIL" ]; then echo "❌ FAILED: $BODY2"; rm -f "$TEST_FILE"; exit 1; else echo "✅ User Created: $OFFICER_EMAIL"; fi
 
 # Step 3
 echo -en "[3] Testing Auth Service: Login as Officer... "
-O3=$(curl -s -w "\n%{http_code}" -X POST http://localhost:3001/api/auth/login -H "Content-Type: application/json" -d '{"email":"'"$OFFICER_EMAIL"'","password":"SecurePassword123!","role":"Police Officer"}')
+O3=$(curl -s -w "\n%{http_code}" -X POST http://localhost:3001/api/auth/login -H "Content-Type: application/json" -d '{"email":"'"$OFFICER_EMAIL"'","password":"REDACTED_PW","role":"Police Officer"}')
 BODY3=$(echo "$O3" | sed '$d')
 OFFICER_TOKEN=$(echo "$BODY3" | grep -o '"token":"[^"]*' | cut -d'"' -f4)
 if [ -z "$OFFICER_TOKEN" ]; then echo "❌ FAILED: $BODY3"; rm -f "$TEST_FILE"; exit 1; else echo "✅ Officer JWT Issued"; fi

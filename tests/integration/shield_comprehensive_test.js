@@ -12,7 +12,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const GATEWAY = 'http://localhost:3001';
 const ADMIN_EMAIL = process.env.ADMIN_SEED_EMAIL || 'admin@shield.gov.in';
-const ADMIN_PASSWORD = process.env.ADMIN_SEED_PASSWORD || 'admin_password';
+const REDACTED_PW = process.env.ADMIN_SEED_PASSWORD || 'REDACTED_PW';
 const ADMIN_ROLE = 'Admin';
 
 let passCount = 0;
@@ -142,7 +142,7 @@ async function main() {
     // T4: Login with wrong password → 401
     try {
         const r = await http('POST', '/api/auth/login', {
-            body: { email: ADMIN_EMAIL, password: 'wrongpassword', role: ADMIN_ROLE }
+            body: { email: ADMIN_EMAIL, password: 'REDACTED_PW', role: ADMIN_ROLE }
         });
         log('T4: Login with wrong password → 401', r.status === 401,
             `Status: ${r.status}, error: ${r.data?.error}`);
@@ -153,7 +153,7 @@ async function main() {
     // T5: Login with wrong role → 401
     try {
         const r = await http('POST', '/api/auth/login', {
-            body: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD, role: 'Police Officer' }
+            body: { email: ADMIN_EMAIL, password: REDACTED_PW, role: 'Police Officer' }
         });
         log('T5: Login with wrong role → 401', r.status === 401,
             `Status: ${r.status}, error: ${r.data?.error}`);
@@ -165,7 +165,7 @@ async function main() {
     let adminToken = null;
     try {
         const r = await http('POST', '/api/auth/login', {
-            body: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD, role: ADMIN_ROLE }
+            body: { email: ADMIN_EMAIL, password: REDACTED_PW, role: ADMIN_ROLE }
         });
         adminToken = r.data?.token;
         log('T6: Admin login → 200 + JWT', r.status === 200 && !!adminToken && !!r.data?.user,
@@ -986,7 +986,7 @@ async function main() {
         try {
             const r = await http('POST', `/api/admin/users/${officerUserId}/reset-password`, {
                 token: adminToken,
-                body: { plainPassword: 'NewResettedPassword123!' }
+                body: { plainPassword: 'REDACTED_PW' }
             });
             log('T57: Admin Reset User Password → 200', r.status === 200 && r.data?.user?.email !== undefined,
                 `Status: ${r.status}, message: ${r.data?.message}`);
@@ -1002,7 +1002,7 @@ async function main() {
         try {
             // First login with newly reset password
             const loginRes = await http('POST', '/api/auth/login', {
-                body: { email: officerEmail, password: 'NewResettedPassword123!', role: 'Police Officer' }
+                body: { email: officerEmail, password: 'REDACTED_PW', role: 'Police Officer' }
             });
             const setCookies = loginRes.headers.getSetCookie ? loginRes.headers.getSetCookie() : [];
             const parsedCookies = setCookies.map(c => c.split(';')[0]).join('; ');
@@ -1016,8 +1016,8 @@ async function main() {
                 const changeRes = await http('POST', '/api/auth/change-password', {
                     cookies: parsedCookies,
                     body: {
-                        currentPassword: 'NewResettedPassword123!',
-                        newPassword: 'FinalOfficerPassword2026!'
+                        currentPassword: 'REDACTED_PW',
+                        newPassword: 'REDACTED_PW'
                     }
                 });
                 log('T58b: Change Password with HttpOnly session cookie → 200', changeRes.status === 200,
@@ -1025,7 +1025,7 @@ async function main() {
 
                 // Try login again with final password
                 const loginFinal = await http('POST', '/api/auth/login', {
-                    body: { email: officerEmail, password: 'FinalOfficerPassword2026!', role: 'Police Officer' }
+                    body: { email: officerEmail, password: 'REDACTED_PW', role: 'Police Officer' }
                 });
                 log('T58c: Login with final updated password → 200', loginFinal.status === 200,
                     `Status: ${loginFinal.status}, mustChangePassword: ${loginFinal.data?.user?.mustChangePassword}`);
@@ -1042,7 +1042,7 @@ async function main() {
     if (officerEmail) {
         try {
             const loginRes = await http('POST', '/api/auth/login', {
-                body: { email: officerEmail, password: 'FinalOfficerPassword2026!', role: 'Police Officer' }
+                body: { email: officerEmail, password: 'REDACTED_PW', role: 'Police Officer' }
             });
             const setCookies = loginRes.headers.getSetCookie ? loginRes.headers.getSetCookie() : [];
             const parsedCookies = setCookies.map(c => c.split(';')[0]).join('; ');
@@ -1063,7 +1063,7 @@ async function main() {
     if (officerEmail) {
         try {
             const loginRes = await http('POST', '/api/auth/login', {
-                body: { email: officerEmail, password: 'FinalOfficerPassword2026!', role: 'Police Officer' }
+                body: { email: officerEmail, password: 'REDACTED_PW', role: 'Police Officer' }
             });
             const setCookies = loginRes.headers.getSetCookie ? loginRes.headers.getSetCookie() : [];
             const parsedCookies = setCookies.map(c => c.split(';')[0]).join('; ');
