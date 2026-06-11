@@ -12,7 +12,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const GATEWAY = 'http://localhost:3001';
 const ADMIN_EMAIL = process.env.ADMIN_SEED_EMAIL || 'admin@shield.gov.in';
-const ADMIN_PASSWORD = process.env.ADMIN_SEED_PASSWORD || 'admin@123';
+const ADMIN_PASSWORD = process.env.ADMIN_SEED_PASSWORD || 'admin_password';
 const ADMIN_ROLE = 'Admin';
 
 let passCount = 0;

@@ -5,7 +5,7 @@ echo "TEST SECRET EVIDENCE PAYLOAD" > test_evidence.txt
 
 # Step 1
 echo -en "\n[1] Testing Auth Service: Admin Login... "
-O1=$(curl -s -w "\n%{http_code}" -X POST http://localhost:3001/api/auth/login -H "Content-Type: application/json" -d '{"email":"admin@police.gov","password":"Sh13ld@Pr0duct10n2026!","role":"Admin"}')
+O1=$(curl -s -w "\n%{http_code}" -X POST http://localhost:3001/api/auth/login -H "Content-Type: application/json" -d '{"email":"admin@police.gov","password":"admin_password","role":"Admin"}')
 BODY=$(echo "$O1" | sed '$d')
 ADMIN_TOKEN=$(echo "$BODY" | grep -o '"token":"[^"]*' | cut -d'"' -f4)
 if [ -z "$ADMIN_TOKEN" ]; then echo "❌ FAILED: $BODY"; exit 1; else echo "✅ JWT Issued"; fi

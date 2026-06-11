@@ -27,7 +27,7 @@ async function testSuite() {
         const loginRes = await fetchWithTimeout(`${GATEWAY}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: 'admin@police.gov', password: 'Sh13ld@Pr0duct10n2026!', role: 'Admin' })
+            body: JSON.stringify({ email: 'admin@police.gov', password: 'admin_password', role: 'Admin' })
         });
         const loginData = await loginRes.json();
         if (!loginRes.ok) throw new Error(`Admin Login failed: ${loginData.error}`);

@@ -21,8 +21,18 @@ app.get('/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date() });
 });
 
-// Native routing
 const auth = require('./middleware/auth');
+const rateLimit = require('express-rate-limit');
+
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+app.use('/api/', apiLimiter);
+
 app.use('/api/auth', authRouter);
 app.use('/api/admin', auth, adminRouter);
 

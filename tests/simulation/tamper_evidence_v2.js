@@ -154,14 +154,16 @@ async function main() {
     console.log('\n[5] Logging into SHIELD to run integrity verification...');
     // Try both credential sets
     let token;
+    
+    // Passwords should be provided via environment variables to avoid GitGuardian alerts
     const login1 = await http('POST', '/api/auth/login', {
-        body: { email: 'admin@police.gov', password: 'Sh13ld@Pr0duct10n2026!', role: 'admin' }
+        body: { email: 'admin@police.gov', password: process.env.ADMIN_SEED_PASSWORD_POLICE || 'admin_password_1', role: 'admin' }
     });
     if (login1.data?.token) {
         token = login1.data.token;
     } else {
         const login2 = await http('POST', '/api/auth/login', {
-            body: { email: 'admin@shield.gov.in', password: 'admin@123', role: 'admin' }
+            body: { email: 'admin@shield.gov.in', password: process.env.ADMIN_SEED_PASSWORD_SHIELD || 'admin_password_2', role: 'admin' }
         });
         if (!login2.data?.token) throw new Error('Cannot login to verify. Try manually in the UI.');
         token = login2.data.token;

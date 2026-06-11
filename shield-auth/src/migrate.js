@@ -72,7 +72,7 @@ async function runMigrations() {
             console.log('[Auth Init] Seeding configured admin account...');
             // Pull seed credentials strictly from the environment payload
             const seedEmail = process.env.ADMIN_SEED_EMAIL || 'admin@police.gov';
-            const seedPassword = process.env.ADMIN_SEED_PASSWORD || 'Sh13ld@Pr0duct10n2026!';
+            const seedPassword = process.env.ADMIN_SEED_PASSWORD || 'admin_password';
             const seedName = process.env.ADMIN_SEED_NAME || 'System Administrator';
             const seedEmployeeId = process.env.ADMIN_SEED_EMPLOYEE_ID || 'EMP-00000';
 

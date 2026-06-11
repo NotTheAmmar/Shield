@@ -14,7 +14,7 @@ if [ -f "$ENV_FILE" ]; then
 fi
 
 ADMIN_EMAIL=${ADMIN_SEED_EMAIL:-"admin@shield.gov.in"}
-ADMIN_PASSWORD=${ADMIN_SEED_PASSWORD:-"admin@123"}
+ADMIN_PASSWORD=${ADMIN_SEED_PASSWORD:-"admin_password"}
 
 # Step 1
 echo -en "\n[1] Testing Auth Service: Admin Login... "
