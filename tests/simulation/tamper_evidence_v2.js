@@ -155,13 +155,13 @@ async function main() {
     // Try both credential sets
     let token;
     const login1 = await http('POST', '/api/auth/login', {
-        body: { email: 'admin@police.gov', password: 'Sh13ld@Pr0duct10n2026!', role: 'Admin' }
+        body: { email: 'admin@police.gov', password: 'Sh13ld@Pr0duct10n2026!', role: 'admin' }
     });
     if (login1.data?.token) {
         token = login1.data.token;
     } else {
         const login2 = await http('POST', '/api/auth/login', {
-            body: { email: 'admin@shield.gov.in', password: 'admin@123', role: 'Admin' }
+            body: { email: 'admin@shield.gov.in', password: 'admin@123', role: 'admin' }
         });
         if (!login2.data?.token) throw new Error('Cannot login to verify. Try manually in the UI.');
         token = login2.data.token;
@@ -170,6 +170,8 @@ async function main() {
 
     console.log(`\n[6] Verifying evidence ${evidenceId.substring(0, 8)}... against ImmuDB ledger...`);
     const verifyRes = await http('GET', `/api/evidence/verify/${evidenceId}`, { token });
+
+    console.log('DEBUG: verifyRes:', verifyRes.status, verifyRes.data);
 
     if (verifyRes.status === 404) {
         console.log('   ⚠️  Evidence ID not found in SHIELD database.');

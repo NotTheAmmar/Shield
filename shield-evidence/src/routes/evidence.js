@@ -223,6 +223,14 @@ router.get('/verify/:id', async (req, res) => {
             [id, result, actorId]
         );
 
+        if (result === 'TAMPERED') {
+            await pool.query(
+                `INSERT INTO evidence_forensic_log (evidence_id, flags, details, actor)
+                 VALUES ($1, $2, $3, $4)`,
+                [id, ['INTEGRITY_COMPROMISED'], JSON.stringify({ liveHash, truthHash, message: 'Hash mismatch detected during verification' }), actorId]
+            );
+        }
+
         // 6. Return result
         res.json({ status: result });
 

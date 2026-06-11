@@ -59,6 +59,8 @@ async function runMigrations() {
         try {
             await pool.query('SELECT 1'); // Test connection
             
+            await pool.query('CREATE EXTENSION IF NOT EXISTS postgis;');
+
             // Inline Database Table Definitions for Evidence tracking
             await pool.query(`
                 CREATE TABLE IF NOT EXISTS fir (
