@@ -2,11 +2,12 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const pool = require('../db');
 const requireRoles = require('../middleware/rbac');
+const { generateWallet } = require('../cryptoUtils');
 
 const router = express.Router();
 
 // GET /api/admin/users
-router.get('/users', requireRoles(['Admin']), async (req, res) => {
+router.get('/users', requireRoles(['admin', 'Admin']), async (req, res) => {
     try {
         const { search, role, status } = req.query;
         const conditions = [];
@@ -45,7 +46,7 @@ router.get('/users', requireRoles(['Admin']), async (req, res) => {
 });
 
 // GET /api/admin/users/:id
-router.get('/users/:id', requireRoles(['Admin']), async (req, res) => {
+router.get('/users/:id', requireRoles(['admin', 'Admin']), async (req, res) => {
     try {
         const { rows } = await pool.query(
             `SELECT id, email, name, employee_id, role, status, created_at,
@@ -62,7 +63,7 @@ router.get('/users/:id', requireRoles(['Admin']), async (req, res) => {
 });
 
 // POST /api/admin/users
-router.post('/users', requireRoles(['Admin']), async (req, res) => {
+router.post('/users', requireRoles(['admin', 'Admin']), async (req, res) => {
     const { name, email, employeeId, role, plainPassword, designation, station } = req.body;
 
     if (!name || !email || !employeeId || !role || !plainPassword) {
@@ -72,11 +73,14 @@ router.post('/users', requireRoles(['Admin']), async (req, res) => {
     try {
         const passwordHash = await bcrypt.hash(plainPassword, 10);
         
+        // Generate secure random Ethereum wallet and instantly encrypt the private key
+        const walletInfo = generateWallet();
+        
         const { rows } = await pool.query(`
-            INSERT INTO users (email, password_hash, name, employee_id, role, designation, station)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING id, email, name, employee_id, role, status, created_at, designation, station
-        `, [email, passwordHash, name, employeeId, role, designation || null, station || null]);
+            INSERT INTO users (email, password_hash, name, employee_id, role, designation, station, blockchain_address, encrypted_private_key)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING id, email, name, employee_id, role, status, created_at, designation, station, blockchain_address
+        `, [email, passwordHash, name, employeeId, role, designation || null, station || null, walletInfo.address, walletInfo.encryptedPrivateKey]);
 
         // Log USER_CREATED event
         pool.query(
@@ -96,7 +100,7 @@ router.post('/users', requireRoles(['Admin']), async (req, res) => {
 });
 
 // PATCH /api/admin/users/:id
-router.patch('/users/:id', requireRoles(['Admin']), async (req, res) => {
+router.patch('/users/:id', requireRoles(['admin', 'Admin']), async (req, res) => {
     const { id } = req.params;
     const { role, status } = req.body;
 
@@ -143,7 +147,7 @@ router.patch('/users/:id', requireRoles(['Admin']), async (req, res) => {
 });
 
 // POST /api/admin/users/:id/reset-password
-router.post('/users/:id/reset-password', requireRoles(['Admin']), async (req, res) => {
+router.post('/users/:id/reset-password', requireRoles(['admin', 'Admin']), async (req, res) => {
     const { id } = req.params;
     const { plainPassword } = req.body;
 

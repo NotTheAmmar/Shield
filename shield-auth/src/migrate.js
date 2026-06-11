@@ -43,6 +43,12 @@ async function runMigrations() {
             await pool.query(`
                 ALTER TABLE users ADD COLUMN IF NOT EXISTS station VARCHAR(100);
             `);
+            await pool.query(`
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS blockchain_address VARCHAR(255);
+            `);
+            await pool.query(`
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS encrypted_private_key VARCHAR(500);
+            `);
 
             await pool.query(`
                 CREATE TABLE IF NOT EXISTS api_audit_log (
