@@ -4,12 +4,15 @@ import { authAPI } from '../services/api';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  // Reset back to null
   const [user, setUser] = useState(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [tempPassword, setTempPassword] = useState(null);
+  
+  // Reset back to true
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Validate identity implicitly by having the backend inspect the HttpOnly cookie
+  // Remove the comments so the app talks to the backend again
   useEffect(() => {
     let mounted = true;
     const hydrateIdentity = async () => {
@@ -26,6 +29,9 @@ export function AuthProvider({ children }) {
     return () => { mounted = false; };
   }, []);
 
+  // ... keep login, logout, etc. below here ...
+
+  // ... keep login, logout, etc. below here ...
   const login = useCallback(async ({ email, password, role }) => {
     const data = await authAPI.login({ email, password, role });
     setUser(data.user); // The HttpOnly dual-cookies are automatically set by the browser

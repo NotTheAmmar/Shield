@@ -135,7 +135,34 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-
+{/* Digital Identity Card (Issue #43) */}
+        <div className="card" style={{ marginBottom: '20px' }}>
+          <div className="card-header">
+            <h2>Digital Identity</h2>
+          </div>
+          <div className="card-body">
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>System Role</div>
+              <div style={{ fontWeight: 500, textTransform: 'capitalize' }}>{role.replace('_', ' ')}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Blockchain Address</div>
+              <div style={{ 
+                fontFamily: 'monospace', 
+                fontSize: '13px', 
+                background: 'var(--bg-page)', 
+                padding: '8px', 
+                borderRadius: '4px', 
+                border: '1px solid var(--border)', 
+                marginTop: '4px', 
+                wordBreak: 'break-all' 
+              }}>
+                {user.blockchain_address}
+              </div>
+            </div>
+          </div>
+        </div>
+        
         {/* Quick Actions */}
         <div className="card">
           <div className="card-header">
