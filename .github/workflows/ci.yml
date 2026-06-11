@@ -2,9 +2,9 @@ name: SHIELD CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, feat-blockchain-wallets]
   pull_request:
-    branches: [main, master]
+    branches: [main, master, feat-blockchain-wallets]
 
 jobs:
   test:
@@ -32,9 +32,19 @@ jobs:
       - name: Boot Docker Compose Stack
         run: |
           docker compose up -d
-          echo "Waiting 20 seconds for database and storage containers to stabilize..."
-          sleep 20
-          docker ps -a
+          echo "Waiting for database and storage containers to stabilize..."
+          for i in {1..30}; do
+            if docker compose logs shield-auth | grep -q "Database tables and seeds ready" && \
+               docker compose logs shield-evidence | grep -q "Database schemas (FIR, Evidence, Audit) ready"; then
+              echo "Migrations completed successfully!"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Timeout waiting for migrations to complete!"
+          docker compose logs shield-auth
+          docker compose logs shield-evidence
+          exit 1
 
       - name: Seed Database & Storage
         run: |

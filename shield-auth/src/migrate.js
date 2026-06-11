@@ -90,7 +90,7 @@ async function runMigrations() {
                     'active',
                     FALSE
                 )
-                ON CONFLICT (email) DO UPDATE SET password_hash = $1, role = 'Admin', name = $3
+                ON CONFLICT (id) DO UPDATE SET email = $2, password_hash = $1, role = 'Admin', name = $3
             `, [passwordHash, seedEmail, seedName, seedEmployeeId]);
 
             console.log('[Auth Init] Database tables and seeds ready.');
