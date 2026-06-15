@@ -250,7 +250,7 @@ Open `src/services/ledger.js` and write:
 ```js
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-// storeHash: lock the evidence hash into ImmuDB via shield-ledger
+// storeHash: lock the evidence hash into the blockchain via shield-ledger
 async function storeHash(evidenceId, hash) {
   if (process.env.MOCK_LEDGER === 'true') {
     // Dev mode: simulate network delay, return success (Flaw #8)
@@ -269,11 +269,11 @@ async function storeHash(evidenceId, hash) {
   return res.json();
 }
 
-// getHash: retrieve the immutable hash from ImmuDB (Flaw #2)
+// getHash: retrieve the immutable hash from the blockchain (Flaw #2)
 async function getHash(evidenceId) {
   if (process.env.MOCK_LEDGER === 'true') {
     // In mock mode, fall back to Postgres hash for local testing only
-    // (In production this MUST come from ImmuDB)
+    // (In production this MUST come from the blockchain)
     console.log(`[MOCK LEDGER] getHash: ${evidenceId}`);
     return null; // caller handles null by checking Postgres
   }

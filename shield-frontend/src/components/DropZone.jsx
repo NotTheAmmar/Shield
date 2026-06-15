@@ -8,7 +8,7 @@ function formatBytes(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function DropZone({ onFiles, accept, multiple = false, files = [] }) {
+export default function DropZone({ onFiles, accept, multiple = false, files = [], onRemove }) {
   const { getRootProps, getInputProps, isDragActive, isDragAccept, isDragReject } = useDropzone({
     onDrop: (accepted) => {
       if (accepted.length) onFiles(accepted);
@@ -45,6 +45,32 @@ export default function DropZone({ onFiles, accept, multiple = false, files = []
               <File size={14} style={{ flexShrink: 0, color: 'var(--text-muted)' }} />
               <span className="dropzone-file-name">{f.name}</span>
               <span className="dropzone-file-size">{formatBytes(f.size)}</span>
+              {onRemove && (
+                <button
+                  type="button"
+                  onClick={() => onRemove(i)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 4,
+                    margin: 0,
+                    cursor: 'pointer',
+                    color: 'var(--crimson)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginLeft: 'auto',
+                    borderRadius: '4px',
+                    transition: 'background 0.2s',
+                  }}
+                  title="Remove file"
+                  data-testid={`remove-file-${i}`}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
           ))}
         </div>

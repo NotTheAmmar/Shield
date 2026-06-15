@@ -1,6 +1,6 @@
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-async function storeHash(evidenceId, hash) {
+async function storeHash(evidenceId, hash, privateKey) {
     if (process.env.MOCK_LEDGER === 'true') {
         await sleep(50);
         console.log(`[MOCK LEDGER] storeHash: ${evidenceId} → ${hash}`);
@@ -10,7 +10,7 @@ async function storeHash(evidenceId, hash) {
     const res = await fetch(`${process.env.LEDGER_URL}/api/ledger/store`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ evidenceId, hash }),
+        body: JSON.stringify({ evidenceId, hash, privateKey }),
     });
 
     if (!res.ok) throw new Error(`Ledger store failed: ${res.status}`);
@@ -24,6 +24,7 @@ async function getHash(evidenceId) {
     }
 
     const res = await fetch(`${process.env.LEDGER_URL}/api/ledger/${evidenceId}`);
+    if (res.status === 404) return null;
     if (!res.ok) throw new Error(`Ledger get failed: ${res.status}`);
     const data = await res.json();
     return data.hash;

@@ -119,6 +119,32 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {/* Digital Identity Card — shown for any user who has a blockchain address */}
+      {user?.blockchainAddress && (
+        <div className="card" style={{ marginBottom: '20px' }}>
+          <div className="card-header">
+            <h2>Digital Identity</h2>
+          </div>
+          <div className="card-body">
+            <div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Blockchain Address</div>
+              <div style={{
+                fontFamily: 'monospace',
+                fontSize: '13px',
+                background: 'var(--bg-page)',
+                padding: '8px',
+                borderRadius: '4px',
+                border: '1px solid var(--border)',
+                marginTop: '4px',
+                wordBreak: 'break-all'
+              }}>
+                {user.blockchainAddress}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 20, alignItems: 'start' }}>
         {/* Recent Activity */}
         <div className="card">

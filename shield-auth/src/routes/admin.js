@@ -33,7 +33,7 @@ router.get('/users', requireRoles(['Admin']), async (req, res) => {
 
         const { rows } = await pool.query(
             `SELECT id, email, name, employee_id, role, status, created_at,
-                    designation, station, must_change_password
+                    designation, station, must_change_password, blockchain_address
              FROM users ${where} ORDER BY created_at DESC`,
             values
         );
@@ -49,7 +49,7 @@ router.get('/users/:id', requireRoles(['Admin']), async (req, res) => {
     try {
         const { rows } = await pool.query(
             `SELECT id, email, name, employee_id, role, status, created_at,
-                    designation, station, must_change_password
+                    designation, station, must_change_password, blockchain_address
              FROM users WHERE id = $1`,
             [req.params.id]
         );
@@ -72,17 +72,21 @@ router.post('/users', requireRoles(['Admin']), async (req, res) => {
     try {
         const passwordHash = await bcrypt.hash(plainPassword, 10);
         
+        const { generateWallet, encryptPrivateKey } = require('../crypto');
+        const wallet = generateWallet();
+        const encryptedKey = encryptPrivateKey(wallet.privateKey);
+        
         const { rows } = await pool.query(`
-            INSERT INTO users (email, password_hash, name, employee_id, role, designation, station)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING id, email, name, employee_id, role, status, created_at, designation, station
-        `, [email, passwordHash, name, employeeId, role, designation || null, station || null]);
+            INSERT INTO users (email, password_hash, name, employee_id, role, designation, station, blockchain_address, encrypted_private_key)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING id, email, name, employee_id, role, status, created_at, designation, station, blockchain_address
+        `, [email, passwordHash, name, employeeId, role, designation || null, station || null, wallet.address, encryptedKey]);
 
         // Log USER_CREATED event
         pool.query(
-            `INSERT INTO api_audit_log (user_id, user_name, user_role, user_employee_id, method, endpoint, ip_address, status_code)
-             VALUES ($1, $2, $3, $4, 'USER_CREATED', '/api/admin/users', $5, 201)`,
-            [req.user.id, req.user.name, req.user.role, req.user.employeeId, req.ip || '0.0.0.0']
+            `INSERT INTO api_audit_log (user_id, user_name, user_role, user_employee_id, method, endpoint, ip_address, status_code, target_label)
+             VALUES ($1, $2, $3, $4, 'USER_CREATED', '/api/admin/users', $5, 201, $6)`,
+            [req.user.id, req.user.name, req.user.role, req.user.employeeId, req.ip || '0.0.0.0', `Created user: ${name} (${employeeId})`]
         ).catch(() => {});
 
         res.status(201).json({ message: 'User created successfully', user: rows[0] });
@@ -130,9 +134,9 @@ router.patch('/users/:id', requireRoles(['Admin']), async (req, res) => {
 
         // Log USER_UPDATED event
         pool.query(
-            `INSERT INTO api_audit_log (user_id, user_name, user_role, user_employee_id, method, endpoint, ip_address, status_code)
-             VALUES ($1, $2, $3, $4, 'USER_UPDATED', $5, $6, 200)`,
-            [req.user.id, req.user.name, req.user.role, req.user.employeeId, `/api/admin/users/${id}`, req.ip || '0.0.0.0']
+            `INSERT INTO api_audit_log (user_id, user_name, user_role, user_employee_id, method, endpoint, ip_address, status_code, target_label)
+             VALUES ($1, $2, $3, $4, 'USER_UPDATED', $5, $6, 200, $7)`,
+            [req.user.id, req.user.name, req.user.role, req.user.employeeId, `/api/admin/users/${id}`, req.ip || '0.0.0.0', `Updated user: ${rows[0].name} (${rows[0].employee_id})`]
         ).catch(() => {});
 
         res.json({ message: 'User updated successfully', user: rows[0] });
@@ -157,16 +161,16 @@ router.post('/users/:id/reset-password', requireRoles(['Admin']), async (req, re
         const { rows } = await pool.query(`
             UPDATE users SET password_hash = $1, must_change_password = TRUE
             WHERE id = $2
-            RETURNING id, email
+            RETURNING id, email, name, employee_id
         `, [passwordHash, id]);
 
         if (!rows.length) return res.status(404).json({ error: 'User not found' });
 
         // Log PASSWORD_RESET event
         pool.query(
-            `INSERT INTO api_audit_log (user_id, user_name, user_role, user_employee_id, method, endpoint, ip_address, status_code)
-             VALUES ($1, $2, $3, $4, 'PASSWORD_RESET', $5, $6, 200)`,
-            [req.user.id, req.user.name, req.user.role, req.user.employeeId, `/api/admin/users/${id}/reset-password`, req.ip || '0.0.0.0']
+            `INSERT INTO api_audit_log (user_id, user_name, user_role, user_employee_id, method, endpoint, ip_address, status_code, target_label)
+             VALUES ($1, $2, $3, $4, 'PASSWORD_RESET', $5, $6, 200, $7)`,
+            [req.user.id, req.user.name, req.user.role, req.user.employeeId, `/api/admin/users/${id}/reset-password`, req.ip || '0.0.0.0', `Password reset for: ${rows[0].name} (${rows[0].employee_id})`]
         ).catch(() => {});
 
         res.json({ message: 'Password reset successfully', user: rows[0] });

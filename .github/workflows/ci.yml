@@ -28,6 +28,31 @@ jobs:
       - name: Initialize Environment Variables
         run: |
           cp .env.example .env
+          sed -i '/BLOCKCHAIN_DEPLOYER_PRIVATE_KEY=/d' .env
+          PRIVATE_KEY=$(node -e "const {ethers}=require('ethers'),fs=require('fs'); ethers.Wallet.fromEncryptedJson(fs.readFileSync('./blockchain/keystore/police-account.json','utf8'), fs.readFileSync('./blockchain/password.txt','utf8').trim()).then(w=>console.log(w.privateKey))")
+          echo "BLOCKCHAIN_DEPLOYER_PRIVATE_KEY=$PRIVATE_KEY" >> .env
+
+      - name: Create Shared Docker Network
+        run: |
+          docker network create \
+            --label "com.docker.compose.network=shield-network" \
+            --label "com.docker.compose.project=shield" \
+            --label "com.docker.compose.version=2" \
+            shield_shield-network || true
+
+      - name: Boot Blockchain Network
+        run: |
+          npm run blockchain:up
+          echo "Waiting 5 seconds for blockchain nodes to stabilize..."
+          sleep 5
+          docker ps -a
+
+      - name: Deploy Smart Contract
+        run: |
+          DEPLOYED_ADDR=$(npx hardhat run scripts/deploy.js --network localnet | grep -oE "0x[0-9a-fA-F]{40}")
+          sed -i '/BLOCKCHAIN_CONTRACT_ADDRESS=/d' .env
+          echo "BLOCKCHAIN_CONTRACT_ADDRESS=$DEPLOYED_ADDR" >> .env
+          echo "Deployed contract to $DEPLOYED_ADDR"
 
       - name: Boot Docker Compose Stack
         run: |
@@ -51,13 +76,6 @@ jobs:
       - name: Run Evidence Tampering Simulation
         run: |
           npm run test:tamper
-
-      - name: Boot Blockchain Network
-        run: |
-          npm run blockchain:up
-          echo "Waiting 5 seconds for blockchain nodes to stabilize..."
-          sleep 5
-          docker ps -a
 
       - name: Run Blockchain Integration Tests
         run: |
