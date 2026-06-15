@@ -80,9 +80,9 @@ module.exports = {
       url: "http://127.0.0.1:8545",
       chainId: 31337,
       gasPrice: 0,           // geth runs with --miner.gasprice 0; no gas cost on this chain
-      accounts: process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY
+      accounts: (process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY && /^0x[0-9a-fA-F]{64}$/.test(process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY))
         ? [process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY]
-        : (() => { throw new Error("BLOCKCHAIN_DEPLOYER_PRIVATE_KEY is not set in .env — see .env.example for instructions"); })()
+        : ["0x0000000000000000000000000000000000000000000000000000000000000001"] // dummy fallback for validation when not deploying
     },
     // Future deployment to Ethereum Sepolia Testnet
     sepolia: {
