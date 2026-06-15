@@ -49,7 +49,7 @@ npm run test:tamper
 ```
 
 ### 4. Integrity Watchdog Local Scan
-Triggers a local sweep of the integrity watchdog scan to cross-verify Postgres evidence hashes with the ImmuDB ledger, logging a forensic status audit:
+Triggers a local sweep of the integrity watchdog scan to cross-verify Postgres evidence hashes with the blockchain ledger, logging a forensic status audit:
 ```bash
 npm run watchdog:local
 ```

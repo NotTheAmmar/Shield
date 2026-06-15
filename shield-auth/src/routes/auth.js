@@ -47,7 +47,8 @@ router.post('/login', async (req, res) => {
             email: user.email,
             role: user.role,
             name: user.name,
-            employeeId: user.employee_id
+            employeeId: user.employee_id,
+            blockchainAddress: user.blockchain_address
         };
 
         const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });
@@ -94,7 +95,8 @@ router.post('/refresh', async (req, res) => {
             email: decoded.email,
             role: decoded.role,
             name: decoded.name,
-            employeeId: decoded.employeeId
+            employeeId: decoded.employeeId,
+            blockchainAddress: decoded.blockchainAddress
         };
         
         const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });

@@ -7,7 +7,7 @@ By generating cryptographic hash values (SHA-256) at the exact time of submissio
 ## 📖 Documentation
 
 - [Architecture & Monorepo Structure](STRUCTURE.md): Learn how our 7 microservices connect.
-- [Database & Storage Architecture](DATABASE.md): Understand PostgreSQL/PostGIS, Immudb Ledger, and MinIO details.
+- [Database & Storage Architecture](DATABASE.md): Understand PostgreSQL/PostGIS, Blockchain Ledger, and MinIO details.
 - [Contributing Guidelines](CONTRIBUTING.md): Please read this before opening a Pull Request!
 
 ---
@@ -49,13 +49,13 @@ Copy the example environment file and fill in any required development secrets:
 cp .env.example .env
 ```
 
-Ensure that variables such as `IMMUDB_USER` are set (it defaults to `immudb` for the primary system admin) before proceeding.
+Ensure that variables are set before proceeding.
 
 *(Note: Do not commit your `.env` file. It is ignored by Git.)*
 
 ### 3. Running the Project locally
 
-We use Docker Compose to orchestrate the infrastructure (PostgreSQL, MinIO, Immudb) and the Node.js application services.
+We use Docker Compose to orchestrate the infrastructure (PostgreSQL, MinIO, Blockchain) and the Node.js application services.
 
 **To start the entire cluster in development mode:**
 
@@ -84,7 +84,7 @@ Ensure that the Docker stack is running (`docker compose up`) before executing t
 ```bash
 npm run seed                 # Wipe and populate mock PG & MinIO data
 npm run test:comprehensive   # Primary E2E test suite (69 advanced assertions)
-npm run test:tamper          # Overwrite MinIO file directly and prove ImmuDB catches it
+npm run test:tamper          # Overwrite MinIO file directly and prove blockchain catches it
 npm run watchdog:local       # Run a local database/ledger integrity cycle
 npm run test:manual          # Run raw shell curl diagnostics
 npm run test:contract        # Run Hardhat Solidity unit tests (no Docker needed)
@@ -167,12 +167,12 @@ Alternatively, you can access the individual microservices and databases directl
 - API Gateway (BFF): `http://localhost:3001`
 - Auth Service: `http://localhost:4000`
 - Evidence Service: `http://localhost:4001`
-- Ledger Service (Immudb Node Wrapper): `http://localhost:4002`
+- Ledger Service (Blockchain Node Wrapper): `http://localhost:4002`
 
 **Infrastructure & Consoles:**
 - PostgreSQL Database (`db-users`): `5432`
 - MinIO Object Store (`minio-store`): `9000` (Console Web UI at `http://localhost:9001`)
-- Immudb Ledger Database (`db-ledger`): `3322` (Web Console at `http://localhost:8080`)
+
 
 ## Contributors
 * Ammar Rangwala

@@ -1,6 +1,6 @@
 /**
  * SHIELD Integrity Watchdog — Automated Scheduler
- * Runs inside Docker, verifies ALL evidence integrity against the ImmuDB ledger
+ * Runs inside Docker, verifies ALL evidence integrity against the blockchain ledger
  * every INTERVAL_MINUTES (default: 30 minutes).
  */
 

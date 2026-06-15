@@ -47,7 +47,7 @@ This service requires critical secrets configured in its environment:
 ## 📦 API Gateway Endpoints (`/api/evidence`)
 
 - **`POST /upload`**: Streams multipart file data, computes SHA-256 hash on-the-fly, saves payload to MinIO under an anonymous UUID, writes case records to PostgreSQL, and calls Ledger Service to seal the evidence hash.
-- **`GET /verify/:id`**: Recomputes the SHA-256 hash of the target MinIO file and compares it against the immutable record in Immudb to evaluate system integrity.
+- **`GET /verify/:id`**: Recomputes the SHA-256 hash of the target MinIO file and compares it against the immutable record in the blockchain to evaluate system integrity.
 - **`GET /download/:id`**: Issues a temporary, presigned HTTP download URL directly to the client's browser (zero-trust, Admin-blocked).
 - **`GET /`**: List all tracked evidence records.
 - **`GET /:id`**: Fetch a single evidence descriptor.
