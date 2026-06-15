@@ -72,7 +72,23 @@ Fill in the required variables. The table below explains each one:
 | `JWT_SECRET` | Generate: `openssl rand -base64 32` |
 | `MASTER_KEY` | Generate: `openssl rand -base64 32` |
 | `BLOCKCHAIN_ENCRYPTION_KEY` | Generate: `openssl rand -base64 32` *(must be exactly 32 bytes / 44 base64 chars)* |
+| `BLOCKCHAIN_DEPLOYER_PRIVATE_KEY` | Extract from keystore — see command below |
 | `BLOCKCHAIN_CONTRACT_ADDRESS` | Set this **after Step 5** (smart contract deployment) |
+
+To extract `BLOCKCHAIN_DEPLOYER_PRIVATE_KEY`, run this once after cloning:
+
+```bash
+node -e "
+const { ethers } = require('ethers');
+const fs = require('fs');
+ethers.Wallet.fromEncryptedJson(
+  fs.readFileSync('./blockchain/keystore/police-account.json', 'utf8'),
+  fs.readFileSync('./blockchain/password.txt', 'utf8').trim()
+).then(w => console.log('BLOCKCHAIN_DEPLOYER_PRIVATE_KEY=' + w.privateKey));
+"
+```
+
+Copy the printed value into your `.env`.
 
 > [!IMPORTANT]
 > **These three variables are fixed — copy them exactly from `.env.example`, do NOT change them:**
@@ -97,11 +113,15 @@ Both compose files (`docker-compose.yml` and `docker-compose.blockchain.yml`) co
 Create it once with:
 
 ```bash
-docker network create shield_shield-network
+docker network create \
+  --label "com.docker.compose.network=shield-network" \
+  --label "com.docker.compose.project=shield" \
+  --label "com.docker.compose.version=2" \
+  shield_shield-network
 ```
 
 > [!NOTE]
-> You only need to run this **once**. If you later run `docker compose down` (without `--volumes`), Docker preserves the network. Only a full `docker network rm shield_shield-network` or a Docker restart removes it, in which case you must re-run this command.
+> The labels are required — Docker Compose checks them and refuses to use an unlabelled network. You only need to run this **once per machine**. The network persists across `docker compose down` restarts. Only `docker network rm shield_shield-network` (or a full Docker reset) removes it.
 
 ---
 
@@ -300,8 +320,12 @@ docker compose -f docker-compose.blockchain.yml down
 # 2. Delete all persistent data
 rm -rf .docker-data/
 
-# 3. Ensure the shared network still exists (recreate if needed)
-docker network create shield_shield-network 2>/dev/null || true
+# 3. Recreate the shared network with the required Compose labels
+docker network create \
+  --label "com.docker.compose.network=shield-network" \
+  --label "com.docker.compose.project=shield" \
+  --label "com.docker.compose.version=2" \
+  shield_shield-network
 
 # 4. Start blockchain first, then deploy contract
 docker compose -f docker-compose.blockchain.yml up -d
@@ -334,7 +358,7 @@ docker compose up -d --build
 
 | Command | Description |
 |---------|-------------|
-| `docker network create shield_shield-network` | Create the shared network (run once before anything else) |
+| `docker network create --label "com.docker.compose.network=shield-network" --label "com.docker.compose.project=shield" --label "com.docker.compose.version=2" shield_shield-network` | Create the shared network (once per machine, before anything else) |
 | `docker network rm shield_shield-network` | Remove it (only if doing a full tear-down) |
 
 ### Blockchain Stack
