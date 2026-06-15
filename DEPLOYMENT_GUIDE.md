@@ -8,13 +8,14 @@ This guide walks you through starting the entire SHIELD stack from a fresh clone
 
 1. [Prerequisites](#1-prerequisites)
 2. [First-Time Setup](#2-first-time-setup)
-3. [Starting the Blockchain Network](#3-starting-the-blockchain-network)
-4. [Deploying the Smart Contract](#4-deploying-the-smart-contract)
-5. [Starting the Application Stack](#5-starting-the-application-stack)
-6. [Verifying the System](#6-verifying-the-system)
-7. [Resetting & Restarting](#7-resetting--restarting)
-8. [Running Tests](#8-running-tests)
-9. [Command Reference](#9-command-reference)
+3. [Create the Shared Docker Network](#3-create-the-shared-docker-network)
+4. [Starting the Blockchain Network](#4-starting-the-blockchain-network)
+5. [Deploying the Smart Contract](#5-deploying-the-smart-contract)
+6. [Starting the Application Stack](#6-starting-the-application-stack)
+7. [Verifying the System](#7-verifying-the-system)
+8. [Resetting & Restarting](#8-resetting--restarting)
+9. [Running Tests](#9-running-tests)
+10. [Command Reference](#10-command-reference)
 
 ---
 
@@ -29,11 +30,11 @@ Make sure the following tools are installed and available in your `PATH`:
 | npm | v9+ | `npm --version` |
 
 > [!NOTE]
-> The project uses two separate Docker Compose files:
-> - `docker-compose.blockchain.yml` — The private EVM blockchain network (Geth nodes)
+> SHIELD uses **two separate Docker Compose files** that share one Docker network:
+> - `docker-compose.blockchain.yml` — The private EVM blockchain (Geth nodes)
 > - `docker-compose.yml` — The full application stack (databases, services, frontend)
 >
-> They share a Docker network called `shield_shield-network`. **The blockchain must be started before the app stack.**
+> Because these files are separate, the shared network (`shield_shield-network`) must be **created manually** before starting either compose file. See Step 3.
 
 ---
 
@@ -49,75 +50,75 @@ npm install        # installs Hardhat and root tools
 
 ### 2b. Configure Environment Variables
 
-Copy the example file and fill in your values:
+Copy the example file:
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and set the required variables:
+Fill in the required variables. The table below explains each one:
 
-```env
-# Database
-POSTGRES_USER=shield
-POSTGRES_PASSWORD=your_secure_password
-POSTGRES_DB=shield_db
-
-# MinIO Object Storage
-MINIO_ROOT_USER=shield
-MINIO_ROOT_PASSWORD=your_secure_password
-
-# Admin seed account (created automatically on first startup)
-ADMIN_SEED_EMAIL=admin@shield.gov.in
-ADMIN_SEED_PASSWORD=YourSecureAdminPassword!
-ADMIN_SEED_NAME="System Administrator"
-ADMIN_SEED_EMPLOYEE_ID=EMP-00000
-
-# Auth & Encryption — generate with: openssl rand -base64 32
-JWT_SECRET=<run: openssl rand -base64 32>
-MASTER_KEY=<run: openssl rand -base64 32>
-
-# AES-256-GCM key for encrypting officer blockchain private keys
-# Must be exactly 32 bytes (44 base64 chars). Generate with: openssl rand -base64 32
-BLOCKCHAIN_ENCRYPTION_KEY=<run: openssl rand -base64 32>
-
-# Blockchain — set AFTER deploying the contract (Step 4)
-BLOCKCHAIN_CONTRACT_ADDRESS=0x...
-```
+| Variable | How to set it |
+|----------|--------------|
+| `POSTGRES_USER` | Any username, e.g. `shield` |
+| `POSTGRES_PASSWORD` | Any secure password |
+| `POSTGRES_DB` | Any database name, e.g. `shield_db` |
+| `MINIO_ROOT_USER` | Any username |
+| `MINIO_ROOT_PASSWORD` | Any secure password |
+| `ADMIN_SEED_EMAIL` | The email of the auto-created admin account |
+| `ADMIN_SEED_PASSWORD` | The password for the admin account |
+| `ADMIN_SEED_NAME` | Display name, e.g. `"System Administrator"` |
+| `ADMIN_SEED_EMPLOYEE_ID` | Employee ID, e.g. `EMP-00000` |
+| `JWT_SECRET` | Generate: `openssl rand -base64 32` |
+| `MASTER_KEY` | Generate: `openssl rand -base64 32` |
+| `BLOCKCHAIN_ENCRYPTION_KEY` | Generate: `openssl rand -base64 32` *(must be exactly 32 bytes / 44 base64 chars)* |
+| `BLOCKCHAIN_CONTRACT_ADDRESS` | Set this **after Step 5** (smart contract deployment) |
 
 > [!IMPORTANT]
-> `BLOCKCHAIN_ENCRYPTION_KEY` must be exactly 32 bytes (44 base64 characters). It is used to encrypt every officer's Ethereum private key. **Keep this secret and back it up** — losing it makes all stored keys unrecoverable.
+> **These three variables are fixed — copy them exactly from `.env.example`, do NOT change them:**
+>
+> ```env
+> BLOCKCHAIN_POLICE_ADDRESS=0x80de6eF5a945D6Cc1DAd5375E3CeD4DF466e0384
+> BLOCKCHAIN_COURT_ADDRESS=0x01a08fc1e3c0EB8d2Be2301Ba36761485d1a2B4e
+> BLOCKCHAIN_CHAIN_ID=31337
+> ```
+>
+> These are the Ethereum addresses of the two pre-configured blockchain nodes (`node-police` and `node-court`). They are defined by the keystore files inside `blockchain/keystore/` and are baked into the Clique PoA genesis block (`blockchain/genesis.json`). They will never change unless you regenerate the keystore from scratch.
+
+> [!CAUTION]
+> `BLOCKCHAIN_ENCRYPTION_KEY` must be exactly 32 bytes (44 base64 characters). It encrypts every officer's Ethereum private key stored in the database. **Back this up** — losing it makes all stored private keys unrecoverable and breaks evidence uploads.
 
 ---
 
-## 3. Starting the Blockchain Network
+## 3. Create the Shared Docker Network
 
-The private EVM blockchain consists of a bootnode and two mining nodes (`node-police`, `node-court`). It runs independently from the application stack.
+Both compose files (`docker-compose.yml` and `docker-compose.blockchain.yml`) communicate over a shared Docker network named `shield_shield-network`. Because the blockchain compose declares it as `external: true`, this network must exist **before** either compose file is started.
 
-### Start the blockchain
+Create it once with:
+
+```bash
+docker network create shield_shield-network
+```
+
+> [!NOTE]
+> You only need to run this **once**. If you later run `docker compose down` (without `--volumes`), Docker preserves the network. Only a full `docker network rm shield_shield-network` or a Docker restart removes it, in which case you must re-run this command.
+
+---
+
+## 4. Starting the Blockchain Network
+
+With the shared network in place, start the three blockchain containers:
 
 ```bash
 docker compose -f docker-compose.blockchain.yml up -d
 ```
 
-Or using the npm shorthand (also compiles the contract):
-
-```bash
-npm run blockchain:up
-```
-
-### Verify it's running
-
-```bash
-docker compose -f docker-compose.blockchain.yml ps
-```
-
-You should see three containers running:
+This starts:
 - `blockchain-bootnode` — peer discovery
-- `node-police` — primary mining node, RPC exposed on `localhost:8545`
-- `node-court` — secondary mining node, RPC exposed on `localhost:8546`
+- `node-police` — primary mining/sealing node, RPC on `localhost:8545`
+- `node-court` — secondary mining/sealing node, RPC on `localhost:8546`
 
-### Check connectivity
+### Verify the chain is running
 
 ```bash
 curl -s -X POST http://localhost:8545 \
@@ -125,68 +126,65 @@ curl -s -X POST http://localhost:8545 \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 ```
 
-A valid response with an incrementing block number confirms the chain is mining.
+A response containing a non-`null` `result` value confirms the chain is producing blocks.
 
 ---
 
-## 4. Deploying the Smart Contract
+## 5. Deploying the Smart Contract
 
-> [!NOTE]
-> Skip this step if you are using the pre-deployed contract address (`0x110dc3e9304dd982F565aDa1343F746898941181`) which is already baked into the genesis block. Only re-deploy if you modify `contracts/ShieldLedger.sol`.
+The `ShieldLedger` smart contract must be compiled and deployed to the blockchain **before** the application services start.
 
-### Compile the contract
+### Compile
 
 ```bash
 npx hardhat compile
 ```
 
-This compiles `ShieldLedger.sol` and automatically exports the ABI to `shield-ledger/src/abis/ShieldLedger.json`.
+This compiles `contracts/ShieldLedger.sol` and automatically exports the ABI to `shield-ledger/src/abis/ShieldLedger.json`.
 
-### Deploy to the local blockchain
+### Deploy to the private chain
 
 ```bash
 npx hardhat run scripts/deploy.js --network localnet
 ```
 
-The output will print the new contract address:
+The script will print the deployed contract address:
 ```
 ShieldLedger deployed to: 0x...
 ```
 
-### Update your .env
+### Update `.env`
+
+Set `BLOCKCHAIN_CONTRACT_ADDRESS` to the address printed above:
 
 ```env
 BLOCKCHAIN_CONTRACT_ADDRESS=0x<address-from-above>
 ```
 
-### Run contract tests (optional)
-
-```bash
-npm run test:contract
-```
+> [!NOTE]
+> Unlike the police/court addresses, `BLOCKCHAIN_CONTRACT_ADDRESS` **changes every time you deploy**. If you reset the blockchain (Step 8), you must redeploy and update this value again before restarting the app stack.
 
 ---
 
-## 5. Starting the Application Stack
-
-The application stack requires the blockchain to already be running (Step 3).
-
-### Start everything
+## 6. Starting the Application Stack
 
 ```bash
 docker compose up -d --build
 ```
 
-This starts all services in order:
-- `db-users` — PostgreSQL (user accounts)
-- `minio-store` — Object storage (evidence files)
-- `shield-auth` — Authentication & user management (port 4000)
-- `shield-evidence` — Evidence upload & verification (port 4001)
-- `shield-ledger` — Blockchain bridge (port 4002)
-- `shield-watchdog` — Periodic integrity scanner
-- `shield-gateway` — API gateway / reverse proxy (port 3001)
-- `shield-frontend` — React web interface (port 3000)
-- `nginx` — Edge reverse proxy (port 80)
+This starts all services:
+
+| Container | Role | Port |
+|-----------|------|------|
+| `db-users` | PostgreSQL (users, FIRs, audit log) | 5432 |
+| `minio-store` | Object storage (evidence files) | 9000 / 9001 |
+| `shield-auth` | Authentication & user management | 4000 |
+| `shield-evidence` | Evidence upload & verification | 4001 |
+| `shield-ledger` | Blockchain bridge | 4002 |
+| `shield-watchdog` | Periodic integrity scanner | — |
+| `shield-gateway` | API gateway / reverse proxy | 3001 |
+| `shield-frontend` | React web interface | 3000 |
+| `nginx` | Edge reverse proxy | 80 |
 
 ### Verify all services are up
 
@@ -194,51 +192,34 @@ This starts all services in order:
 docker compose ps
 ```
 
-All containers should show `Up`. Check logs for any errors:
-
-```bash
-docker compose logs --tail=20 shield-auth shield-ledger shield-evidence
-```
-
 ### Access the application
 
-- **Web UI**: http://localhost (via nginx) or http://localhost:3000 (direct)
-- **API Gateway**: http://localhost:3001
-- **MinIO Console**: http://localhost:9001
+| URL | What it is |
+|-----|-----------|
+| http://localhost | Web UI (via nginx, recommended) |
+| http://localhost:3000 | Web UI (direct Vite dev server) |
+| http://localhost:3001 | API Gateway |
+| http://localhost:9001 | MinIO console (file storage admin) |
 
-Default admin credentials (set in `.env`):
-- Email: `ADMIN_SEED_EMAIL`
-- Password: `ADMIN_SEED_PASSWORD`
+Log in with the `ADMIN_SEED_EMAIL` and `ADMIN_SEED_PASSWORD` you set in `.env`.
 
 ---
 
-## 6. Verifying the System
+## 7. Verifying the System
 
-### Run the comprehensive integration test suite
+Run the full integration test suite:
 
 ```bash
 node tests/integration/shield_comprehensive_test.js
 ```
 
-All 69 tests should pass if both the blockchain and application stack are running correctly.
-
-### Manually test the ledger
-
-```bash
-# Store a hash
-curl -X POST http://localhost:4002/api/ledger/store \
-  -H "Content-Type: application/json" \
-  -d '{"evidenceId":"test-123","hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","privateKey":"0x<officer-private-key>"}'
-
-# Retrieve it
-curl http://localhost:4002/api/ledger/test-123
-```
+All 69 tests should pass if both the blockchain network and application stack are running correctly.
 
 ---
 
-## 7. Resetting & Restarting
+## 8. Resetting & Restarting
 
-### Restart a specific service (e.g., after a config change)
+### Restart a single application service
 
 ```bash
 docker compose restart shield-ledger
@@ -246,7 +227,7 @@ docker compose restart shield-auth
 docker compose restart shield-evidence
 ```
 
-### Restart the entire application stack (without losing data)
+### Restart the entire application stack (preserves all data)
 
 ```bash
 docker compose down
@@ -260,75 +241,86 @@ docker compose -f docker-compose.blockchain.yml restart node-police
 docker compose -f docker-compose.blockchain.yml restart node-court
 ```
 
-### Stop the entire blockchain network
-
-```bash
-docker compose -f docker-compose.blockchain.yml down
-```
-
 ---
 
-### Resetting the Database (⚠ Destructive)
+### Reset the Application Database ⚠️ Destructive
 
-This will **permanently delete all users, FIRs, evidence records, and audit logs**. The database volume is stored in `.docker-data/postgres/`.
+This permanently deletes all users, FIRs, evidence records, and audit logs. Chain-of-custody data on the blockchain is **not** affected.
 
 ```bash
 # 1. Stop the app stack
 docker compose down
 
-# 2. Delete the database volume
+# 2. Delete the Postgres data volume
 rm -rf .docker-data/postgres
 
-# 3. Restart — the schema and admin seed will be recreated automatically
+# 3. Restart — schema and admin seed account are recreated automatically
 docker compose up -d
 ```
 
 ---
 
-### Resetting the Blockchain (⚠ Destructive)
+### Reset the Blockchain ⚠️ Destructive
 
-This will **permanently delete all on-chain transaction history**. The chain state is stored in `.docker-data/geth-police/` and `.docker-data/geth-court/`.
+This permanently deletes all on-chain transaction history. Any evidence hashes anchored on-chain will be lost.
 
 > [!CAUTION]
-> If you reset the blockchain, **any evidence hashes already anchored on-chain are lost**. Evidence verification against the old chain will fail. Only reset during development.
+> After resetting the blockchain, you must **re-deploy the smart contract** (Step 5) and **update `BLOCKCHAIN_CONTRACT_ADDRESS`** in your `.env` before restarting the app stack. Evidence that was verified against the old chain will fail re-verification.
 
 ```bash
-# 1. Stop the blockchain network
+# 1. Stop the blockchain
 docker compose -f docker-compose.blockchain.yml down
 
-# 2. Delete the blockchain data directories
+# 2. Delete the chain state for both nodes
 rm -rf .docker-data/geth-police
 rm -rf .docker-data/geth-court
 
-# 3. Restart — nodes will re-initialize from genesis.json
+# 3. Restart — nodes re-initialize from genesis.json automatically
 docker compose -f docker-compose.blockchain.yml up -d
+
+# 4. Re-deploy the contract and update BLOCKCHAIN_CONTRACT_ADDRESS in .env
+npx hardhat run scripts/deploy.js --network localnet
+
+# 5. Restart the app stack to pick up the new contract address
+docker compose down
+docker compose up -d
 ```
 
-### Full Reset (Database + Blockchain + MinIO)
+---
+
+### Full Reset (Everything) ⚠️ Destructive
+
+Wipes the database, blockchain, and all uploaded evidence files.
 
 ```bash
-# Stop everything
+# 1. Stop everything
 docker compose down
 docker compose -f docker-compose.blockchain.yml down
 
-# Delete all persistent data
+# 2. Delete all persistent data
 rm -rf .docker-data/
 
-# Restart blockchain first, then app stack
+# 3. Ensure the shared network still exists (recreate if needed)
+docker network create shield_shield-network 2>/dev/null || true
+
+# 4. Start blockchain first, then deploy contract
 docker compose -f docker-compose.blockchain.yml up -d
-# Wait ~5 seconds for nodes to initialize, then:
+npx hardhat run scripts/deploy.js --network localnet
+# → Copy the printed address and set it in .env as BLOCKCHAIN_CONTRACT_ADDRESS
+
+# 5. Start the application stack
 docker compose up -d --build
 ```
 
 ---
 
-## 8. Running Tests
+## 9. Running Tests
 
 | Command | Description |
 |---------|-------------|
 | `npm run test:comprehensive` | Full end-to-end integration suite (69 tests) |
 | `npm run test:integration` | Alternate integration test set |
-| `npm run test:contract` | Solidity unit tests (Hardhat) |
+| `npm run test:contract` | Solidity unit tests (Hardhat in-process EVM) |
 | `npm run test:blockchain` | Blockchain network connectivity tests |
 | `npm run test:tamper` | Evidence tampering simulation |
 | `npm run test:manual` | Manual API tests via bash script |
@@ -336,7 +328,26 @@ docker compose up -d --build
 
 ---
 
-## 9. Command Reference
+## 10. Command Reference
+
+### Shared Network
+
+| Command | Description |
+|---------|-------------|
+| `docker network create shield_shield-network` | Create the shared network (run once before anything else) |
+| `docker network rm shield_shield-network` | Remove it (only if doing a full tear-down) |
+
+### Blockchain Stack
+
+| Command | Description |
+|---------|-------------|
+| `docker compose -f docker-compose.blockchain.yml up -d` | Start the blockchain network |
+| `docker compose -f docker-compose.blockchain.yml down` | Stop the blockchain network |
+| `docker compose -f docker-compose.blockchain.yml ps` | Check node status |
+| `docker compose -f docker-compose.blockchain.yml logs -f node-police` | Tail police node logs |
+| `npx hardhat compile` | Compile contracts + export ABI |
+| `npx hardhat run scripts/deploy.js --network localnet` | Deploy contract to private chain |
+| `npm run test:contract` | Run Solidity unit tests |
 
 ### Application Stack
 
@@ -347,26 +358,8 @@ docker compose up -d --build
 | `docker compose down` | Stop all services (preserve data) |
 | `docker compose ps` | Check service status |
 | `docker compose logs -f <service>` | Tail logs for a service |
-| `docker compose restart <service>` | Restart a specific service |
-| `docker compose exec db-users psql -U shield -d shield_db` | Open a database shell |
-
-### Blockchain Network
-
-| Command | Description |
-|---------|-------------|
-| `npm run blockchain:up` | Compile contracts + start blockchain network |
-| `docker compose -f docker-compose.blockchain.yml up -d` | Start blockchain only |
-| `docker compose -f docker-compose.blockchain.yml down` | Stop blockchain |
-| `docker compose -f docker-compose.blockchain.yml ps` | Check blockchain node status |
-| `docker compose -f docker-compose.blockchain.yml logs -f node-police` | Tail police node logs |
-
-### Contract Development
-
-| Command | Description |
-|---------|-------------|
-| `npx hardhat compile` | Compile Solidity contracts + export ABI |
-| `npx hardhat run scripts/deploy.js --network localnet` | Deploy to private chain |
-| `npx hardhat test` | Run Solidity unit tests |
+| `docker compose restart <service>` | Restart a single service |
+| `docker compose exec db-users psql -U shield -d shield_db` | Open a PostgreSQL shell |
 
 ### Key Generation
 
@@ -380,25 +373,37 @@ openssl rand -base64 32
 ## Architecture Overview
 
 ```
-Internet → nginx (port 80)
-              ↓
-       shield-gateway (port 3001)
-         ↙        ↘
-shield-auth    shield-evidence
-(port 4000)      (port 4001)
-    ↓               ↓
- db-users       minio-store
-(PostgreSQL)     (S3 storage)
-                    ↓
-             shield-ledger (port 4002)
-                    ↓
-          Private EVM Blockchain
-            ┌─────────────┐
-            │ node-police │ ← shield-ledger connects here
-            │ node-court  │ ← secondary mining node
-            │  bootnode   │ ← peer discovery
-            └─────────────┘
+                   Internet
+                      │
+                  nginx (:80)
+                      │
+            shield-gateway (:3001)
+           ┌──────────┴──────────┐
+       shield-auth          shield-evidence
+       (:4000)                  (:4001)
+           │                      │
+        db-users             minio-store
+      (PostgreSQL)           (S3 storage)
+                                  │
+                          shield-ledger (:4002)
+                                  │
+                    Private EVM Blockchain
+               ┌──────────────────────────┐
+               │  blockchain-bootnode      │  ← peer discovery
+               │  node-police  (:8545)     │  ← shield-ledger connects here
+               │  node-court   (:8546)     │  ← secondary sealing node
+               └──────────────────────────┘
 
-shield-watchdog — periodically verifies all evidence hashes against the chain
-shield-frontend — React UI served on port 3000
+shield-watchdog  — periodically verifies all evidence hashes against the chain
+shield-frontend  — React UI served on port 3000
+```
+
+### Correct Startup Order (First Time)
+
+```
+1. docker network create shield_shield-network
+2. docker compose -f docker-compose.blockchain.yml up -d
+3. npx hardhat compile && npx hardhat run scripts/deploy.js --network localnet
+4. (set BLOCKCHAIN_CONTRACT_ADDRESS in .env)
+5. docker compose up -d --build
 ```
