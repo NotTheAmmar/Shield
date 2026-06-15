@@ -7,12 +7,22 @@ const CONFIG = {
   'admin':             { className: 'badge-admin',    Icon: Settings,label: 'admin'              },
 };
 
+const ROLE_MAP = {
+  'police_officer': 'police_officer',
+  'Police Officer': 'police_officer',
+  'judicial_authority': 'judicial_authority',
+  'Judicial Authority': 'judicial_authority',
+  'admin': 'admin',
+  'Admin': 'admin'
+};
+
 export default function RoleBadge({ role }) {
-  const cfg = CONFIG[role];
+  const normalized = ROLE_MAP[role] || role?.toLowerCase();
+  const cfg = CONFIG[normalized];
   if (!cfg) return null;
   const { className, Icon, label } = cfg;
   return (
-    <span className={`badge ${className}`} data-testid={`role-badge-${role}`}>
+    <span className={`badge ${className}`} data-testid={`role-badge-${normalized}`}>
       <Icon size={10} />
       {label}
     </span>

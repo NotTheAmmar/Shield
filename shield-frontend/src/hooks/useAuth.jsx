@@ -47,8 +47,17 @@ export function AuthProvider({ children }) {
     setTempPassword(null);
   }, []);
 
+  const ROLE_MAP = {
+    'police_officer': 'police_officer',
+    'Police Officer': 'police_officer',
+    'judicial_authority': 'judicial_authority',
+    'Judicial Authority': 'judicial_authority',
+    'admin': 'admin',
+    'Admin': 'admin'
+  };
+
   const isAuthenticated = Boolean(user);
-  const role = user?.role || null;
+  const role = ROLE_MAP[user?.role] || user?.role?.toLowerCase() || null;
 
   const hasRole = useCallback((roles) => {
     if (!role) return false;

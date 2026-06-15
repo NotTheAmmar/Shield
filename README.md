@@ -57,19 +57,33 @@ Ensure that variables are set before proceeding.
 
 We use Docker Compose to orchestrate the infrastructure (PostgreSQL, MinIO, Blockchain) and the Node.js application services.
 
+For a step-by-step walk-through of starting a fresh system, deploying the smart contract, and launching the services, please refer to the comprehensive [Deployment & Setup Guide](DEPLOYMENT_GUIDE.md).
+
 **To start the entire cluster in development mode:**
 
-```bash
-docker compose build --no-cache
-docker compose up
-```
-
-This builds fresh images for all services and starts them. The gateway and node microservices will reload on file changes automatically.
+1. Create the shared network:
+   ```bash
+   docker network create --label "com.docker.compose.network=shield-network" --label "com.docker.compose.project=shield" --label "com.docker.compose.version=2" shield_shield-network
+   ```
+2. Start the blockchain:
+   ```bash
+   docker compose -f docker-compose.blockchain.yml up -d
+   ```
+3. Deploy the smart contract:
+   ```bash
+   npx hardhat compile
+   npx hardhat run scripts/deploy.js --network localnet
+   ```
+4. Copy the printed contract address into your `.env` as `BLOCKCHAIN_CONTRACT_ADDRESS`.
+5. Start the application stack:
+   ```bash
+   docker compose up -d --build
+   ```
 
 **To stop the cluster:**
 
 ```bash
-npm run stop
+npm run stop && npm run blockchain:down
 ```
 
 ## 🧪 Testing and Security Simulation Suite
@@ -79,7 +93,7 @@ SHIELD includes a centralized testing suite located in the `/tests` folder to ve
 For a detailed breakdown of the testing strategy, E2E assertions, and architecture, refer to the [Testing Documentation](tests/README.md).
 
 ### Quick Runners
-Ensure that the Docker stack is running (`docker compose up`) before executing these scripts.
+Ensure that the Docker stack is running before executing these scripts.
 
 ```bash
 npm run seed                 # Wipe and populate mock PG & MinIO data
@@ -95,19 +109,13 @@ npm run test:blockchain      # Run Docker blockchain network integration tests
 
 SHIELD runs a private 3-node Clique Proof-of-Authority (PoA) Ethereum network to anchor evidence hashes on-chain.
 
-### Institutional Signer Model
+### Officer-Level Signing Model
 
-Each node represents a real-world institution:
+SHIELD uses a per-user cryptographic signature model to guarantee zero-trust chain of custody:
 
-| Node | Institution | Role | RPC Port |
-|---|---|---|---|
-| `blockchain-bootnode` | — | Peer discovery relay | — |
-| `node-police` | Police Station | Sealer + transaction signer | `8545` |
-| `node-court` | Court / Judiciary | Sealer + transaction signer | `8546` |
-
-When a police officer uploads a FIR, the `shield-ledger` service submits the anchoring transaction to `node-police`, which signs it with the police institution's Ethereum key. The `registeredBy` field in the `ShieldLedger` contract records the institution's address.
-
-> **Future officer-key integration**: When individual officer private keys are introduced, officers will sign their own transactions. No blockchain infrastructure changes are required \u2014 it is purely an application-layer change.
+- **Key Automation**: When an administrator provisions a new officer, the system auto-generates a unique Ethereum wallet and encrypts its private key using AES-256-GCM under the `BLOCKCHAIN_ENCRYPTION_KEY`.
+- **Client-Side Signing**: When an officer uploads evidence, the backend retrieves and decrypts their key, initializing an `ethers.Wallet` to sign transactions client-side before forwarding them to the ledger.
+- **On-Chain Identity**: The `registeredBy` field in the `ShieldLedger` smart contract stores the unique public address of the specific officer who registered the evidence.
 
 ### Network Topology
 
@@ -122,15 +130,10 @@ blockchain-network (isolated)                  shield-network (shared with app)
 
 ### Starting the Blockchain Network
 
+Refer to [Deployment & Setup Guide](DEPLOYMENT_GUIDE.md) for full setup details. Alternatively, start it directly with:
+
 ```bash
-# 1. Start the main stack first (required — creates the shield-network bridge)
-docker compose up -d
-
-# 2. Start the blockchain network (automatically compiles contracts & exports ABI)
 npm run blockchain:up
-
-# 3. Verify the network is running
-npm run test:blockchain
 ```
 
 ### Stopping the Blockchain Network
@@ -149,7 +152,7 @@ npm run blockchain:down
 | Police Institution | `0x80de6eF5a945D6Cc1DAd5375E3CeD4DF466e0384` | `blockchain/keystore/police-account.json` |
 | Court Institution | `0x01a08fc1e3c0EB8d2Be2301Ba36761485d1a2B4e` | `blockchain/keystore/court-account.json` |
 
-Keystore password: `shield-dev-password-2026` (dev only \u2014 zero-value chain, no real ETH).
+Keystore password: `shield-dev-password-2026` (dev only — zero-value chain, no real ETH).
 
 
 ## 🚢 Service Ports & Unified Entrypoint

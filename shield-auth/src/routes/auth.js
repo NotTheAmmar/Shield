@@ -14,13 +14,15 @@ router.post('/login', async (req, res) => {
 
     try {
         const { rows } = await pool.query(
-            'SELECT * FROM users WHERE LOWER(email) = LOWER($1) AND role = $2',
-            [email, role]
+            'SELECT * FROM users WHERE LOWER(email) = LOWER($1)',
+            [email]
         );
 
         const user = rows[0];
 
-        if (!user) {
+        const normalizeRole = (r) => r ? r.toLowerCase().replace(/[\s_]/g, '') : '';
+
+        if (!user || normalizeRole(user.role) !== normalizeRole(role)) {
             return res.status(401).json({ error: 'Invalid credentials or incorrect role selected.' });
         }
 
