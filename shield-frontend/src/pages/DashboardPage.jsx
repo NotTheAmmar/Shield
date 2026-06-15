@@ -119,17 +119,13 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Digital Identity Card — shown for officers and judicial users who have a blockchain address */}
-      {(role === 'police_officer' || role === 'judicial_authority') && user?.blockchainAddress && (
+      {/* Digital Identity Card — shown for any user who has a blockchain address */}
+      {user?.blockchainAddress && (
         <div className="card" style={{ marginBottom: '20px' }}>
           <div className="card-header">
             <h2>Digital Identity</h2>
           </div>
           <div className="card-body">
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>System Role</div>
-              <div style={{ fontWeight: 500, textTransform: 'capitalize' }}>{role.replace('_', ' ')}</div>
-            </div>
             <div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Blockchain Address</div>
               <div style={{

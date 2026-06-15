@@ -72,6 +72,7 @@ async function runMigrations() {
             await pool.query(`ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_name TEXT;`);
             await pool.query(`ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_role TEXT;`);
             await pool.query(`ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_employee_id TEXT;`);
+            await pool.query(`ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS target_label TEXT;`);
 
             console.log('[Auth Init] Seeding configured admin account...');
             // Pull seed credentials strictly from the environment payload

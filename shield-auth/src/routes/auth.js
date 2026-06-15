@@ -237,14 +237,14 @@ router.get('/audit', async (req, res) => {
                 al.user_role,
                 al.user_employee_id,
                 al.accessed_at as timestamp,
-                CASE al.method
+                COALESCE(al.target_label, CASE al.method
                     WHEN 'LOGIN' THEN 'User logged in'
                     WHEN 'LOGOUT' THEN 'User logged out'
                     WHEN 'USER_CREATED' THEN 'New user account created'
                     WHEN 'USER_UPDATED' THEN 'User account updated'
                     WHEN 'PASSWORD_RESET' THEN 'Password was reset by admin'
                     ELSE al.method
-                END as "targetLabel",
+                END) as "targetLabel",
                 NULL as "targetId",
                 'auth' as "targetType"
              FROM api_audit_log al

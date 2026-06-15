@@ -24,6 +24,7 @@ async function getHash(evidenceId) {
     }
 
     const res = await fetch(`${process.env.LEDGER_URL}/api/ledger/${evidenceId}`);
+    if (res.status === 404) return null;
     if (!res.ok) throw new Error(`Ledger get failed: ${res.status}`);
     const data = await res.json();
     return data.hash;

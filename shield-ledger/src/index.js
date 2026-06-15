@@ -82,8 +82,11 @@ app.get('/api/ledger/:evidenceId', async (req, res) => {
             timestamp: Number(blockTimestamp), // Convert BigInt to JS Number
         });
     } catch (err) {
-        // Contract reverts if record is not found (blockTimestamp == 0)
-        if (err.message.includes("Evidence record not found") || err.message.includes("revert")) {
+        // Contract reverts if record is not found (blockTimestamp == 0) or if the contract has no code yet (decoding fails)
+        if (err.message.includes("Evidence record not found") || 
+            err.message.includes("revert") || 
+            err.code === 'BAD_DATA' || 
+            err.message.includes("could not decode result data")) {
             return res.status(404).json({ error: 'Hash not found in ledger' });
         }
         console.error(`[Ledger] Get error: ${err.message}`);

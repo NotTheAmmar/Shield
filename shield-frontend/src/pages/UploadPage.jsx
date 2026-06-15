@@ -196,6 +196,7 @@ function UploadFirTab() {
           accept={{ 'application/pdf': ['.pdf'], 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'] }}
           multiple={false}
           files={files}
+          onRemove={(index) => setFiles(prev => prev.filter((_, idx) => idx !== index))}
         />
       </div>
 
@@ -312,7 +313,12 @@ function UploadEvidenceTab({ searchParams }) {
 
       <div className="form-group">
         <label className="form-label">Evidence Files <span style={{ color: 'var(--crimson)' }}>*</span></label>
-        <DropZone onFiles={handleFiles} multiple files={files} />
+        <DropZone
+          onFiles={handleFiles}
+          multiple
+          files={files}
+          onRemove={(index) => setFiles(prev => prev.filter((_, idx) => idx !== index))}
+        />
       </div>
 
       {files.length > 0 && (
