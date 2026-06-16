@@ -29,8 +29,18 @@ async function runMigrations() {
                   role                 VARCHAR(50)  NOT NULL,
                   status               VARCHAR(20)  DEFAULT 'active',
                   must_change_password BOOLEAN      DEFAULT TRUE,
-                  created_at           TIMESTAMPTZ  DEFAULT NOW()
+                  created_at           TIMESTAMPTZ  DEFAULT NOW(),
+                  blockchain_address   VARCHAR(42),
+                  encrypted_private_key TEXT
                 );
+            `);
+
+            // Idempotent migration: add columns if they don't exist yet (for existing DBs)
+            await pool.query(`
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS blockchain_address VARCHAR(42);
+            `);
+            await pool.query(`
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS encrypted_private_key TEXT;
             `);
 
             // Idempotent migration: add column if it doesn't exist yet (for existing DBs)
@@ -68,6 +78,7 @@ async function runMigrations() {
             await pool.query(`ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_name TEXT;`);
             await pool.query(`ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_role TEXT;`);
             await pool.query(`ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_employee_id TEXT;`);
+            await pool.query(`ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS target_label TEXT;`);
 
             console.log('[Auth Init] Seeding configured admin account...');
             // Pull seed credentials strictly from the environment payload
@@ -92,6 +103,19 @@ async function runMigrations() {
                 )
                 ON CONFLICT (id) DO UPDATE SET email = $2, password_hash = $1, role = 'Admin', name = $3
             `, [passwordHash, seedEmail, seedName, seedEmployeeId]);
+
+            if (process.env.BLOCKCHAIN_ENCRYPTION_KEY) {
+                const { generateWallet, encryptPrivateKey } = require('./crypto');
+                const { rows: check } = await pool.query(
+                    'SELECT blockchain_address FROM users WHERE id = $1', ['00000000-0000-0000-0000-000000000000']);
+                if (!check[0]?.blockchain_address) {
+                    const wallet = generateWallet();
+                    const encKey = encryptPrivateKey(wallet.privateKey);
+                    await pool.query('UPDATE users SET blockchain_address = $1, encrypted_private_key = $2 WHERE id = $3',
+                        [wallet.address, encKey, '00000000-0000-0000-0000-000000000000']);
+                    console.log(`[Auth Init] Admin blockchain address: ${wallet.address}`);
+                }
+            }
 
             console.log('[Auth Init] Database tables and seeds ready.');
             return; // Success — exit the retry loop

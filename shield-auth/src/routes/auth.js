@@ -34,6 +34,8 @@ router.post('/login', async (req, res) => {
 
         const user = rows[0];
 
+
+
         if (!user || normalizeRole(user.role) !== normalizeRole(role)) {
             return res.status(401).json({ error: 'Invalid credentials or incorrect role selected.' });
         }
@@ -62,7 +64,8 @@ router.post('/login', async (req, res) => {
             email: user.email,
             role: normalizeRole(user.role),
             name: user.name,
-            employeeId: user.employee_id
+            employeeId: user.employee_id,
+            blockchainAddress: user.blockchain_address
         };
 
         const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });
@@ -109,7 +112,8 @@ router.post('/refresh', async (req, res) => {
             email: decoded.email,
             role: normalizeRole(decoded.role),
             name: decoded.name,
-            employeeId: decoded.employeeId
+            employeeId: decoded.employeeId,
+            blockchainAddress: decoded.blockchainAddress
         };
         
         const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });
@@ -248,14 +252,14 @@ router.get('/audit', async (req, res) => {
                 al.user_role,
                 al.user_employee_id,
                 al.accessed_at as timestamp,
-                CASE al.method
+                COALESCE(al.target_label, CASE al.method
                     WHEN 'LOGIN' THEN 'User logged in'
                     WHEN 'LOGOUT' THEN 'User logged out'
                     WHEN 'USER_CREATED' THEN 'New user account created'
                     WHEN 'USER_UPDATED' THEN 'User account updated'
                     WHEN 'PASSWORD_RESET' THEN 'Password was reset by admin'
                     ELSE al.method
-                END as "targetLabel",
+                END) as "targetLabel",
                 NULL as "targetId",
                 'auth' as "targetType"
              FROM api_audit_log al

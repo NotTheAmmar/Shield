@@ -6,7 +6,7 @@
  * compromised server, insider threat) and tampers with evidence files
  * WITHOUT ever touching the SHIELD API.
  *
- * The script then demonstrates that SHIELD's ImmuDB-backed integrity
+ * The script then demonstrates that SHIELD's EVM blockchain-backed integrity
  * verification catches the tampering despite the API being bypassed entirely.
  *
  * Usage:
@@ -142,11 +142,7 @@ async function main() {
 
     // ═══════════════════════════════════════════════════════════
     //  PHASE 2: THE DETECTION (Using SHIELD API to verify)
-    // ═══════════════════════════════════════════════════════════
-    console.log('\n╔══════════════════════════════════════════════╗');
-    console.log('║  PHASE 2: THE DETECTION                     ║');
-    console.log('║  (SHIELD verification via ImmuDB ledger)     ║');
-    console.log('╚══════════════════════════════════════════════╝');
+    console.log('║  (SHIELD verification via blockchain ledger) ║');
 
     // Extract the evidence UUID from the object key (strip extension)
     const evidenceId = target.name.replace(/\.[^/.]+$/, '');
@@ -170,15 +166,13 @@ async function main() {
     }
     console.log('   ✅ Logged in for verification');
 
-    console.log(`\n[6] Verifying evidence ${evidenceId.substring(0, 8)}... against ImmuDB ledger...`);
+    console.log(`\n[6] Verifying evidence ${evidenceId.substring(0, 8)}...`);
     const verifyRes = await http('GET', `/api/evidence/verify/${evidenceId}`, { token });
 
     console.log('DEBUG: verifyRes:', verifyRes.status, verifyRes.data);
 
     if (verifyRes.status === 404) {
         console.log('   ⚠️  Evidence ID not found in SHIELD database.');
-        console.log('   This object may not be tracked evidence. Try another file.');
-        return;
     }
 
     const status = verifyRes.data.status;
@@ -190,7 +184,7 @@ async function main() {
     if (status === 'TAMPERED') {
         console.log('  🚨 RESULT: TAMPERED');
         console.log('');
-        console.log('  The ImmuDB immutable ledger stored the original SHA-256');
+        console.log('  The blockchain immutable ledger stored the original SHA-256');
         console.log('  hash at the time of upload. When verification ran, it');
         console.log('  recomputed the hash from the current MinIO file and found');
         console.log('  a MISMATCH — proving the file was altered after upload.');

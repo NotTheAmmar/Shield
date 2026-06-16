@@ -14,7 +14,7 @@ assignees: ""
 
 ## ⛓️ Architectural Alignment
 * **Primary Target Service**: <!-- Select: shield-auth, shield-evidence, shield-gateway, shield-ledger, shield-watchdog, shield-frontend, contracts, or global config -->
-* **Integrity Guarantee Impact**: <!-- Describe how this affects SHA-256 evidence hashing, Immudb ledgers, or EVM smart contract preparing anchors. -->
+* **Integrity Guarantee Impact**: <!-- Describe how this affects SHA-256 evidence hashing, EVM blockchain verification, or MinIO storage arrays. -->
 
 ## 🚀 Proposed Solution
 <!-- A detailed explanation of your planned technical design or implementation flow. -->

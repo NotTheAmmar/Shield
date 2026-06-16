@@ -31,20 +31,6 @@ services:
     volumes:
       - ./.docker-data/postgres:/var/lib/postgresql/data
 
-  db-ledger:
-    image: codenotary/immudb:latest
-    container_name: db-ledger
-    networks:
-      - shield-network
-    environment:
-      IMMUDB_ADMIN_PASSWORD: ${IMMUDB_ADMIN_PASSWORD}
-    ports:
-      - "8080:8080"
-    expose:
-      - "3322"
-    volumes:
-      - immudb-data:/var/lib/immudb
-
   minio-store:
     image: minio/minio
     container_name: minio-store
@@ -128,6 +114,7 @@ services:
       ADMIN_SEED_NAME: ${ADMIN_SEED_NAME}
       ADMIN_SEED_EMPLOYEE_ID: ${ADMIN_SEED_EMPLOYEE_ID}
       PRIVATE_KEY_ENCRYPTION_SECRET: ${PRIVATE_KEY_ENCRYPTION_SECRET}
+      BLOCKCHAIN_ENCRYPTION_KEY: ${BLOCKCHAIN_ENCRYPTION_KEY}
     depends_on:
       - db-users
 
@@ -158,6 +145,7 @@ services:
       DB_NAME: ${POSTGRES_DB}
       MASTER_KEY: ${MASTER_KEY}
       JWT_SECRET: ${JWT_SECRET}
+      BLOCKCHAIN_ENCRYPTION_KEY: ${BLOCKCHAIN_ENCRYPTION_KEY}
     depends_on:
       - minio-store
       - shield-ledger
@@ -180,11 +168,8 @@ services:
     expose:
       - "4002"
     environment:
-      IMMUDB_HOST: db-ledger
-      IMMUDB_USER: ${IMMUDB_USER}
-      IMMUDB_ADMIN_PASSWORD: ${IMMUDB_ADMIN_PASSWORD}
-    depends_on:
-      - db-ledger
+      BLOCKCHAIN_RPC_URL: http://node-police:8545
+      BLOCKCHAIN_CONTRACT_ADDRESS: ${BLOCKCHAIN_CONTRACT_ADDRESS}
 
   shield-watchdog:
     build: ./shield-watchdog
@@ -199,5 +184,3 @@ services:
       - shield-evidence
       - shield-ledger
 
-volumes:
-  immudb-data:

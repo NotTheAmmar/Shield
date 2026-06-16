@@ -1,0 +1,801 @@
+﻿
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.8 [39m[90mC:/PERSONAL SPCE/Shield-main/shield-frontend[39m
+
+ [32m✓[39m src/tests/services/api.test.js[2m > [22mAPI Service — correct HTTP methods and paths[2m > [22mauthAPI.login calls POST /auth/login with credentials[32m 10[2mms[22m[39m
+ [32m✓[39m src/tests/services/api.test.js[2m > [22mAPI Service — correct HTTP methods and paths[2m > [22mauthAPI.logout calls POST /auth/logout[32m 1[2mms[22m[39m
+ [32m✓[39m src/tests/services/api.test.js[2m > [22mAPI Service — correct HTTP methods and paths[2m > [22mdashboardAPI.getStats calls GET /dashboard/stats[32m 1[2mms[22m[39m
+ [31m×[39m src/tests/services/api.test.js[2m > [22mAPI Service — correct HTTP methods and paths[2m > [22mfirAPI.list calls GET /firs with params[32m 18[2mms[22m[39m
+[31m   → expected "vi.fn()" to be called with arguments: [ '/firs', …(1) ][90m
+
+Received:
+
+[1m  1st vi.fn() call:
+
+[22m[33m@@ -1,7 +1,7 @@[90m
+[2m  [[22m
+[32m-   "/firs",[90m
+[31m+   "/fir/list",[90m
+[2m    {[22m
+[2m      "params": {[22m
+[2m        "limit": 25,[22m
+[2m        "page": 1,[22m
+[2m      },[22m
+[31m[90m
+
+Number of calls: [1m1[22m
+[31m[39m
+ [31m×[39m src/tests/services/api.test.js[2m > [22mAPI Service — correct HTTP methods and paths[2m > [22mfirAPI.get calls GET /firs/:id[32m 3[2mms[22m[39m
+[31m   → expected "vi.fn()" to be called with arguments: [ '/firs/fir_001' ][90m
+
+Received:
+
+[1m  1st vi.fn() call:
+
+[22m[2m  [[22m
+[32m-   "/firs/fir_001",[90m
+[31m+   "/fir/fir_001",[90m
+[2m  ][22m
+[31m[90m
+
+Number of calls: [1m1[22m
+[31m[39m
+ [31m×[39m src/tests/services/api.test.js[2m > [22mAPI Service — correct HTTP methods and paths[2m > [22mfirAPI.verify calls POST /firs/:id/verify[32m 2[2mms[22m[39m
+[31m   → expected "vi.fn()" to be called with arguments: [ '/firs/fir_001/verify' ][90m
+
+Number of calls: [1m0[22m
+[31m[39m
+ [31m×[39m src/tests/services/api.test.js[2m > [22mAPI Service — correct HTTP methods and paths[2m > [22mfirAPI.downloadUrl returns correct URL string[32m 6[2mms[22m[39m
+[31m   → expected '/api/fir/fir_001/download' to be '/api/firs/fir_001/download' // Object.is equality[39m
+ [32m✓[39m src/tests/services/api.test.js[2m > [22mAPI Service — correct HTTP methods and paths[2m > [22mevidenceAPI.list calls GET /evidence with params[32m 2[2mms[22m[39m
+ [32m✓[39m src/tests/services/api.test.js[2m > [22mAPI Service — correct HTTP methods and paths[2m > [22mevidenceAPI.get calls GET /evidence/:id[32m 1[2mms[22m[39m
+ [31m×[39m src/tests/services/api.test.js[2m > [22mAPI Service — correct HTTP methods and paths[2m > [22mevidenceAPI.verify calls POST /evidence/:id/verify[32m 2[2mms[22m[39m
+[31m   → expected "vi.fn()" to be called with arguments: [ '/evidence/ev_101/verify' ][90m
+
+Number of calls: [1m0[22m
+[31m[39m
+ [31m×[39m src/tests/services/api.test.js[2m > [22mAPI Service — correct HTTP methods and paths[2m > [22mevidenceAPI.downloadUrl returns correct URL string[32m 2[2mms[22m[39m
+[31m   → expected '/api/evidence/download/ev_101' to be '/api/evidence/ev_101/download' // Object.is equality[39m
+ [32m✓[39m src/tests/services/api.test.js[2m > [22mAPI Service — correct HTTP methods and paths[2m > [22mauditAPI.list calls GET /audit with params[32m 1[2mms[22m[39m
+ [32m✓[39m src/tests/services/api.test.js[2m > [22mAPI Service — correct HTTP methods and paths[2m > [22madminAPI.listUsers calls GET /admin/users with params[32m 1[2mms[22m[39m
+ [32m✓[39m src/tests/services/api.test.js[2m > [22mAPI Service — correct HTTP methods and paths[2m > [22madminAPI.createUser calls POST /admin/users[32m 1[2mms[22m[39m
+ [32m✓[39m src/tests/services/api.test.js[2m > [22mAPI Service — correct HTTP methods and paths[2m > [22madminAPI.updateUser calls PATCH /admin/users/:id[32m 1[2mms[22m[39m
+ [32m✓[39m src/tests/hooks/useAuth.test.jsx[2m > [22museAuth[2m > [22mstarts unauthenticated when no token in localStorage[32m 41[2mms[22m[39m
+ [31m×[39m src/tests/hooks/useAuth.test.jsx[2m > [22museAuth[2m > [22mrestores session from localStorage on mount[32m 40[2mms[22m[39m
+[31m   → expected false to be true // Object.is equality[39m
+ [31m×[39m src/tests/hooks/useAuth.test.jsx[2m > [22museAuth[2m > [22mlogin stores token and user, sets isAuthenticated=true[32m 46[2mms[22m[39m
+[31m   → expected null to be 'mock.eyJ1c2VySWQiOiJ1c3JfMDAxIiwicm9s…' // Object.is equality[39m
+ [31m×[39m src/tests/hooks/useAuth.test.jsx[2m > [22museAuth[2m > [22mlogout clears token, user, and isAuthenticated[32m 7[2mms[22m[39m
+[31m   → expected 'mock.eyJ1c2VySWQiOiJ1c3JfMDAxIiwicm9s…' to be null[39m
+ [31m×[39m src/tests/hooks/useAuth.test.jsx[2m > [22museAuth[2m > [22mhasRole returns true for matching role[32m 56[2mms[22m[39m
+[31m   → expected false to be true // Object.is equality[39m
+ [31m×[39m src/tests/hooks/useAuth.test.jsx[2m > [22museAuth[2m > [22mclears expired token on mount[32m 4[2mms[22m[39m
+[31m   → expected 'mock.eyJ1c2VySWQiOiJ1c3JfMDAxIiwicm9s…' to be null[39m
+ [32m✓[39m src/tests/hooks/useAuth.test.jsx[2m > [22museAuth[2m > [22mthrows when used outside AuthProvider[32m 46[2mms[22m[39m
+ [32m✓[39m src/tests/components/NavBar.test.jsx[2m > [22mNavBar[2m > [22mreturns null when not authenticated[32m 50[2mms[22m[39m
+ [32m✓[39m src/tests/components/NavBar.test.jsx[2m > [22mNavBar[2m > [22mshows Dashboard link for all roles[32m 112[2mms[22m[39m
+ [32m✓[39m src/tests/components/NavBar.test.jsx[2m > [22mNavBar[2m > [22mshows Upload link only for police_officer[32m 41[2mms[22m[39m
+ [32m✓[39m src/tests/components/NavBar.test.jsx[2m > [22mNavBar[2m > [22mhides Upload link for judicial_authority[32m 25[2mms[22m[39m
+ [32m✓[39m src/tests/components/NavBar.test.jsx[2m > [22mNavBar[2m > [22mshows Audit Log only for judicial_authority[32m 20[2mms[22m[39m
+ [32m✓[39m src/tests/components/StatusBadge.test.jsx[2m > [22mStatusBadge[2m > [22mrenders Verified badge with correct class and text[32m 73[2mms[22m[39m
+ [32m✓[39m src/tests/components/StatusBadge.test.jsx[2m > [22mStatusBadge[2m > [22mrenders Pending badge with correct class and text[32m 13[2mms[22m[39m
+ [32m✓[39m src/tests/components/StatCard.test.jsx[2m > [22mStatCard[2m > [22mrenders value and label[32m 108[2mms[22m[39m
+ [32m✓[39m src/tests/components/StatCard.test.jsx[2m > [22mStatCard[2m > [22mrenders icon when provided[32m 24[2mms[22m[39m
+ [32m✓[39m src/tests/components/StatCard.test.jsx[2m > [22mStatCard[2m > [22mrenders em dash when value is undefined[32m 7[2mms[22m[39m
+ [32m✓[39m src/tests/components/StatCard.test.jsx[2m > [22mStatCard[2m > [22mapplies custom accent color via CSS variable[32m 11[2mms[22m[39m
+ [32m✓[39m src/tests/components/StatusBadge.test.jsx[2m > [22mStatusBadge[2m > [22mrenders Tampered badge with correct class and text[32m 12[2mms[22m[39m
+ [32m✓[39m src/tests/components/StatusBadge.test.jsx[2m > [22mStatusBadge[2m > [22mfalls back to pending for unknown status[32m 27[2mms[22m[39m
+ [32m✓[39m src/tests/hooks/useTheme.test.jsx[2m > [22museTheme[2m > [22mdefaults to light mode when no localStorage and no system preference[32m 33[2mms[22m[39m
+ [32m✓[39m src/tests/hooks/useTheme.test.jsx[2m > [22museTheme[2m > [22mtoggles from light to dark[32m 9[2mms[22m[39m
+ [32m✓[39m src/tests/hooks/useTheme.test.jsx[2m > [22museTheme[2m > [22mtoggles back from dark to light[32m 6[2mms[22m[39m
+ [32m✓[39m src/tests/hooks/useTheme.test.jsx[2m > [22museTheme[2m > [22mpersists theme to localStorage[32m 20[2mms[22m[39m
+ [32m✓[39m src/tests/hooks/useTheme.test.jsx[2m > [22museTheme[2m > [22mrestores theme from localStorage[32m 10[2mms[22m[39m
+ [32m✓[39m src/tests/hooks/useTheme.test.jsx[2m > [22museTheme[2m > [22mthrows when used outside ThemeProvider[32m 25[2mms[22m[39m
+ [32m✓[39m src/tests/components/HashDisplay.test.jsx[2m > [22mHashDisplay[2m > [22mrenders the full hash by default[32m 143[2mms[22m[39m
+ [32m✓[39m src/tests/components/HashDisplay.test.jsx[2m > [22mHashDisplay[2m > [22mtruncates the hash when truncate=true[32m 17[2mms[22m[39m
+ [32m✓[39m src/tests/components/HashDisplay.test.jsx[2m > [22mHashDisplay[2m > [22mrenders custom label[32m 12[2mms[22m[39m
+ [32m✓[39m src/tests/components/HashDisplay.test.jsx[2m > [22mHashDisplay[2m > [22mrenders nothing when hash is null[32m 4[2mms[22m[39m
+ [32m✓[39m src/tests/components/HashDisplay.test.jsx[2m > [22mHashDisplay[2m > [22mcalls clipboard.writeText on copy button click[32m 35[2mms[22m[39m
+ [32m✓[39m src/tests/components/ProtectedRoute.test.jsx[2m > [22mProtectedRoute[2m > [22mredirects unauthenticated user to /login[32m 96[2mms[22m[39m
+ [32m✓[39m src/tests/components/ProtectedRoute.test.jsx[2m > [22mProtectedRoute[2m > [22mredirects authenticated user with wrong role to /[32m 10[2mms[22m[39m
+ [32m✓[39m src/tests/components/ProtectedRoute.test.jsx[2m > [22mProtectedRoute[2m > [22mrenders children for authenticated user with correct role[32m 6[2mms[22m[39m
+ [32m✓[39m src/tests/components/ProtectedRoute.test.jsx[2m > [22mProtectedRoute[2m > [22mrenders children when no roles restriction given and authenticated[32m 6[2mms[22m[39m
+ [32m✓[39m src/tests/pages/LoginPage.test.jsx[2m > [22mLoginPage[2m > [22mrenders all form fields[33m 624[2mms[22m[39m
+ [32m✓[39m src/tests/pages/LoginPage.test.jsx[2m > [22mLoginPage[2m > [22mrenders role dropdown with all three roles[32m 29[2mms[22m[39m
+ [32m✓[39m src/tests/components/NavBar.test.jsx[2m > [22mNavBar[2m > [22mhides Audit Log for police_officer[32m 22[2mms[22m[39m
+ [32m✓[39m src/tests/components/NavBar.test.jsx[2m > [22mNavBar[2m > [22mshows User Management only for admin[32m 11[2mms[22m[39m
+ [32m✓[39m src/tests/components/NavBar.test.jsx[2m > [22mNavBar[2m > [22mhides FIR Registry and Evidence Vault for admin[32m 11[2mms[22m[39m
+ [32m✓[39m src/tests/components/NavBar.test.jsx[2m > [22mNavBar[2m > [22mopens user dropdown on button click[33m 377[2mms[22m[39m
+ [32m✓[39m src/tests/pages/UploadPage.test.jsx[2m > [22mUploadPage[2m > [22mrenders both tabs[32m 205[2mms[22m[39m
+ [32m✓[39m src/tests/pages/UploadPage.test.jsx[2m > [22mUploadPage[2m > [22mshows FIR tab content by default[32m 79[2mms[22m[39m
+ [32m✓[39m src/tests/pages/LoginPage.test.jsx[2m > [22mLoginPage[2m > [22mshows error when submitting with empty fields[32m 100[2mms[22m[39m
+ [32m✓[39m src/tests/pages/LoginPage.test.jsx[2m > [22mLoginPage[2m > [22mcalls login with form values on valid submission[32m 78[2mms[22m[39m
+ [32m✓[39m src/tests/pages/LoginPage.test.jsx[2m > [22mLoginPage[2m > [22mshows server error message on login failure[32m 71[2mms[22m[39m
+ [32m✓[39m src/tests/pages/LoginPage.test.jsx[2m > [22mLoginPage[2m > [22mtoggles password visibility[32m 20[2mms[22m[39m
+ [32m✓[39m src/tests/pages/UploadPage.test.jsx[2m > [22mUploadPage[2m > [22mswitches to Evidence tab on click[32m 91[2mms[22m[39m
+ [32m✓[39m src/tests/pages/UploadPage.test.jsx[2m > [22mUploadPage[2m > [22mshows validation error when submitting FIR tab without FIR number[32m 42[2mms[22m[39m
+ [32m✓[39m src/tests/pages/UploadPage.test.jsx[2m > [22mUploadPage[2m > [22mshows validation error when submitting without a file[32m 33[2mms[22m[39m
+ [31m×[39m src/tests/pages/DashboardPage.test.jsx[2m > [22mDashboardPage[2m > [22mshows police officer stat cards (FIRs Uploaded, Evidence Files, Verified, Pending)[33m 1167[2mms[22m[39m
+[31m   → Unable to find an element with the text: FIRs Uploaded. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"page-header"[31m
+    [36m>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"page-header-left"[31m
+      [36m>[31m
+        [36m<h1>[31m
+          [0mDashboard[0m
+        [36m</h1>[31m
+        [36m<p[31m
+          [33mclass[31m=[32m"page-subtitle"[31m
+        [36m>[31m
+          [0mWelcome back, Rajesh[0m
+        [36m</p>[31m
+      [36m</div>[31m
+    [36m</div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"stat-cards-grid"[31m
+    [36m/>[31m
+    [36m<div[31m
+      [33mstyle[31m=[32m"display: grid; grid-template-columns: 1fr 280px; gap: 20px; align-items: start;"[31m
+    [36m>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"card"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"card-header"[31m
+        [36m>[31m
+          [36m<h2>[31m
+            [0mRecent Activity[0m
+          [36m</h2>[31m
+        [36m</div>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"card-body"[31m
+          [33mstyle[31m=[32m"padding: 0px 20px;"[31m
+        [36m>[31m
+          [36m<p[31m
+            [33mstyle[31m=[32m"color: var(--text-muted); font-size: 13px; padding: 20px 0px;"[31m
+          [36m>[31m
+            [0mNo recent activity.[0m
+          [36m</p>[31m
+        [36m</div>[31m
+      [36m</div>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"card"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"card-header"[31m
+        [36m>[31m
+          [36m<h2>[31m
+            [0mQuick Actions[0m
+          [36m</h2>[31m
+        [36m</div>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"card-body"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"quick-action-bar"[31m
+            [33mstyle[31m=[32m"flex-direction: column;"[31m
+          [36m>[31m
+            [36m<a[31m
+              [33mclass[31m=[32m"btn btn-primary btn-full"[31m
+              [33mhref[31m=[32m"/upload"[31m
+            [36m>[31m
+              [36m<svg[31m
+                [33mclass[31m=[32m"lucide lucide-upload"[31m
+                [33mfill[31m=[32m"none"[31m
+                [33mheight[31m=[32m"14"[31m
+                [33mstroke[31m=[32m"currentColor"[31m
+                [33mstroke-linecap[31m=[32m"round"[31m
+                [33mstroke-linejoin[31m=[32m"round"[31m
+                [33mstroke-width[31m=[32m"2"[31m
+                [33mviewBox[31m=[32m"0 0 24 24"[31m
+                [33mwidth[31m=[32m"14"[31m
+                [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+              [36m>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"[31m
+                [36m/>[31m
+                [36m<polyline[31m
+                  [33mpoints[31m=[32m"17 8 12 3 7 8"[31m
+                [36m/>[31m
+                [36m<line[31m
+                  [33mx1[31m=[32m"12"[31m
+                  [33mx2[31m=[32m"12"[31m
+                  [33my1[31m=[32m"3"[31m
+                  [33my2[31m=[32m"15"[31m
+                [36m/>[31m
+              [36m</svg>[31m
+              [0m Upload FIR / Evidence[0m
+            [36m</a>[31m
+            [36m<a[31m
+              [33mclass[31m=[32m"btn btn-secondary btn-full"[31m
+              [33mhref[31m=[32m"/fir"[31m
+            [36m>[31m
+              [36m<svg[31m
+                [33mclass[31m=[32m"lucide lucide-file-text"[31m
+                [33mfill[31m=[32m"none"[31m
+                [33mheight[31m=[32m"14"[31m
+                [33mstroke[31m=[32m"currentColor"[31m
+                [33mstroke-linecap[31m=[32m"round"[31m
+                [33mstroke-linejoin[31m=[32m"round"[31m
+                [33mstroke-width[31m=[32m"2"[31m
+                [33mviewBox[31m=[32m"0 0 24 24"[31m
+                [33mwidth[31m=[32m"14"[31m
+                [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+              [36m>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M14 2v4a2 2 0 0 0 2 2h4"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M10 9H8"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M16 13H8"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M16 17H8"[31m
+                [36m/>[31m
+              [36m</svg>[31m
+              [0m Browse FIR Registry[0m
+            [36m</a>[31m
+            [36m<a[31m
+              [33mclass[31m=[32m"btn btn-secondary btn-full"[31m
+              [33mhref[31m=[32m"/vault"[31m
+            [36m>[31m
+              [36m<svg[31m
+                [33mclass[31m=[32m"lucide lucide-archive"[31m
+                [33mfill[31m=[32m"none"[31m
+                [33mheight[31m=[32m"14"[31m
+                [33mstroke[31m=[32m"currentColor"[31m
+                [33mstroke-linecap[31m=[32m"round"[31m
+                [33mstroke-linejoin[31m=[32m"round"[31m
+                [33mstroke-width[31m=[32m"2"[31m
+                [33mviewBox[31m=[32m"0 0 24 24"[31m
+                [33mwidth[31m=[32m"14"[31m
+                [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+              [36m>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"5"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"20"[31m
+                  [33mx[31m=[32m"2"[31m
+                  [33my[31m=[32m"3"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M10 12h4"[31m
+                [36m/>[31m
+              [36m</svg>[31m
+              [0m Evidence Vault[0m
+            [36m</a>[31m
+          [36m</div>[31m
+        [36m</div>[31m
+      [36m</div>[31m
+    [36m</div>[31m
+  [36m</div>[31m
+[36m</body>[31m
+
+Ignored nodes: comments, script, style
+[36m<html>[31m
+  [36m<head />[31m
+  [36m<body>[31m
+    [36m<div>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"page-header"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"page-header-left"[31m
+        [36m>[31m
+          [36m<h1>[31m
+            [0mDashboard[0m
+          [36m</h1>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"page-subtitle"[31m
+          [36m>[31m
+            [0mWelcome back, Rajesh[0m
+          [36m</p>[31m
+        [36m</div>[31m
+      [36m</div>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"stat-cards-grid"[31m
+      [36m/>[31m
+      [36m<div[31m
+        [33mstyle[31m=[32m"display: grid; grid-template-columns: 1fr 280px; gap: 20px; align-items: start;"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"card"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"card-header"[31m
+          [36m>[31m
+            [36m<h2>[31m
+              [0mRecent Activity[0m
+            [36m</h2>[31m
+          [36m</div>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"card-body"[31m
+            [33mstyle[31m=[32m"padding: 0px 20px;"[31m
+          [36m>[31m
+            [36m<p[31m
+              [33mstyle[31m=[32m"color: var(--text-muted); font-size: 13px; padding: 20px 0px;"[31m
+            [36m>[31m
+              [0mNo recent activity.[0m
+            [36m</p>[31m
+          [36m</div>[31m
+        [36m</div>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"card"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"card-header"[31m
+          [36m>[31m
+            [36m<h2>[31m
+              [0mQuick Actions[0m
+            [36m</h2>[31m
+          [36m</div>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"card-body"[31m
+          [36m>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"quick-action-bar"[31m
+              [33mstyle[31m=[32m"flex-direction: column;"[31m
+            [36m>[31m
+              [36m<a[31m
+                [33mclass[31m=[32m"btn btn-primary btn-full"[31m
+                [33mhref[31m=[32m"/upload"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33mclass[31m=[32m"lucide lucide-upload"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"14"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"14"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"[31m
+                  [36m/>[31m
+                  [36m<polyline[31m
+                    [33mpoints[31m=[32m"17 8 12 3 7 8"[31m
+                  [36m/>[31m
+                  [36m<line[31m
+                    [33mx1[31m=[32m"12"[31m
+                    [33mx2[31m=[32m"12"[31m
+                    [33my1[31m=[32m"3"[31m
+                    [33my2[31m=[32m"15"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+                [0m Upload FIR / Evidence[0m
+              [36m</a>[31m
+              [36m<a[31m
+                [33mclass[31m=[32m"btn btn-secondary btn-full"[31m
+                [33mhref[31m=[32m"/fir"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33mclass[31m=[32m"lucide lucide-file-text"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"14"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"14"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M14 2v4a2 2 0 0 0 2 2h4"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M10 9H8"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M16 13H8"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M16 17H8"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+                [0m Browse FIR Registry[0m
+              [36m</a>[31m
+              [36m<a[31m
+                [33mclass[31m=[32m"btn btn-secondary btn-full"[31m
+                [33mhref[31m=[32m"/vault"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33mclass[31m=[32m"lucide lucide-archive"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"14"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"14"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<rect[31m
+                    [33mheight[31m=[32m"5"[31m
+                    [33mrx[31m=[32m"1"[31m
+                    [33mwidth[31m=[32m"20"[31m
+                    [33mx[31m=[32m"2"[31m
+                    [33my[31m=[32m"3"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M10 12h4"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+                [0m Evidence Vault[0m
+              [36m</a>[31m
+            [36m</div>[31m
+          [36m</div>[31m
+        [36m</div>[31m
+      [36m</div>[31m
+    [36m</div>[31m
+  [36m</body>[31m
+[36m</html>[31m[39m
+ [31m×[39m src/tests/pages/DashboardPage.test.jsx[2m > [22mDashboardPage[2m > [22mshows judicial stat cards (Total FIRs, Total Evidence, Verified Integrity, Tamper Alerts)[33m 1033[2mms[22m[39m
+[31m   → Unable to find an element with the text: Total FIRs in System. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"page-header"[31m
+    [36m>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"page-header-left"[31m
+      [36m>[31m
+        [36m<h1>[31m
+          [0mDashboard[0m
+        [36m</h1>[31m
+        [36m<p[31m
+          [33mclass[31m=[32m"page-subtitle"[31m
+        [36m>[31m
+          [0mWelcome back, Priya[0m
+        [36m</p>[31m
+      [36m</div>[31m
+    [36m</div>[31m
+    [36m<div[31m
+      [33mclass[31m=[32m"stat-cards-grid"[31m
+    [36m/>[31m
+    [36m<div[31m
+      [33mstyle[31m=[32m"display: grid; grid-template-columns: 1fr 280px; gap: 20px; align-items: start;"[31m
+    [36m>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"card"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"card-header"[31m
+        [36m>[31m
+          [36m<h2>[31m
+            [0mRecent Activity[0m
+          [36m</h2>[31m
+        [36m</div>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"card-body"[31m
+          [33mstyle[31m=[32m"padding: 0px 20px;"[31m
+        [36m>[31m
+          [36m<p[31m
+            [33mstyle[31m=[32m"color: var(--text-muted); font-size: 13px; padding: 20px 0px;"[31m
+          [36m>[31m
+            [0mNo recent activity.[0m
+          [36m</p>[31m
+        [36m</div>[31m
+      [36m</div>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"card"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"card-header"[31m
+        [36m>[31m
+          [36m<h2>[31m
+            [0mQuick Actions[0m
+          [36m</h2>[31m
+        [36m</div>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"card-body"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"quick-action-bar"[31m
+            [33mstyle[31m=[32m"flex-direction: column;"[31m
+          [36m>[31m
+            [36m<a[31m
+              [33mclass[31m=[32m"btn btn-primary btn-full"[31m
+              [33mhref[31m=[32m"/fir"[31m
+            [36m>[31m
+              [36m<svg[31m
+                [33mclass[31m=[32m"lucide lucide-file-text"[31m
+                [33mfill[31m=[32m"none"[31m
+                [33mheight[31m=[32m"14"[31m
+                [33mstroke[31m=[32m"currentColor"[31m
+                [33mstroke-linecap[31m=[32m"round"[31m
+                [33mstroke-linejoin[31m=[32m"round"[31m
+                [33mstroke-width[31m=[32m"2"[31m
+                [33mviewBox[31m=[32m"0 0 24 24"[31m
+                [33mwidth[31m=[32m"14"[31m
+                [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+              [36m>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M14 2v4a2 2 0 0 0 2 2h4"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M10 9H8"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M16 13H8"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M16 17H8"[31m
+                [36m/>[31m
+              [36m</svg>[31m
+              [0m Browse FIR Registry[0m
+            [36m</a>[31m
+            [36m<a[31m
+              [33mclass[31m=[32m"btn btn-secondary btn-full"[31m
+              [33mhref[31m=[32m"/vault"[31m
+            [36m>[31m
+              [36m<svg[31m
+                [33mclass[31m=[32m"lucide lucide-archive"[31m
+                [33mfill[31m=[32m"none"[31m
+                [33mheight[31m=[32m"14"[31m
+                [33mstroke[31m=[32m"currentColor"[31m
+                [33mstroke-linecap[31m=[32m"round"[31m
+                [33mstroke-linejoin[31m=[32m"round"[31m
+                [33mstroke-width[31m=[32m"2"[31m
+                [33mviewBox[31m=[32m"0 0 24 24"[31m
+                [33mwidth[31m=[32m"14"[31m
+                [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+              [36m>[31m
+                [36m<rect[31m
+                  [33mheight[31m=[32m"5"[31m
+                  [33mrx[31m=[32m"1"[31m
+                  [33mwidth[31m=[32m"20"[31m
+                  [33mx[31m=[32m"2"[31m
+                  [33my[31m=[32m"3"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M10 12h4"[31m
+                [36m/>[31m
+              [36m</svg>[31m
+              [0m Evidence Vault[0m
+            [36m</a>[31m
+            [36m<a[31m
+              [33mclass[31m=[32m"btn btn-secondary btn-full"[31m
+              [33mhref[31m=[32m"/audit"[31m
+            [36m>[31m
+              [36m<svg[31m
+                [33mclass[31m=[32m"lucide lucide-book-open"[31m
+                [33mfill[31m=[32m"none"[31m
+                [33mheight[31m=[32m"14"[31m
+                [33mstroke[31m=[32m"currentColor"[31m
+                [33mstroke-linecap[31m=[32m"round"[31m
+                [33mstroke-linejoin[31m=[32m"round"[31m
+                [33mstroke-width[31m=[32m"2"[31m
+                [33mviewBox[31m=[32m"0 0 24 24"[31m
+                [33mwidth[31m=[32m"14"[31m
+                [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+              [36m>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M12 7v14"[31m
+                [36m/>[31m
+                [36m<path[31m
+                  [33md[31m=[32m"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"[31m
+                [36m/>[31m
+              [36m</svg>[31m
+              [0m Audit Log[0m
+            [36m</a>[31m
+          [36m</div>[31m
+        [36m</div>[31m
+      [36m</div>[31m
+    [36m</div>[31m
+  [36m</div>[31m
+[36m</body>[31m
+
+Ignored nodes: comments, script, style
+[36m<html>[31m
+  [36m<head />[31m
+  [36m<body>[31m
+    [36m<div>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"page-header"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"page-header-left"[31m
+        [36m>[31m
+          [36m<h1>[31m
+            [0mDashboard[0m
+          [36m</h1>[31m
+          [36m<p[31m
+            [33mclass[31m=[32m"page-subtitle"[31m
+          [36m>[31m
+            [0mWelcome back, Priya[0m
+          [36m</p>[31m
+        [36m</div>[31m
+      [36m</div>[31m
+      [36m<div[31m
+        [33mclass[31m=[32m"stat-cards-grid"[31m
+      [36m/>[31m
+      [36m<div[31m
+        [33mstyle[31m=[32m"display: grid; grid-template-columns: 1fr 280px; gap: 20px; align-items: start;"[31m
+      [36m>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"card"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"card-header"[31m
+          [36m>[31m
+            [36m<h2>[31m
+              [0mRecent Activity[0m
+            [36m</h2>[31m
+          [36m</div>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"card-body"[31m
+            [33mstyle[31m=[32m"padding: 0px 20px;"[31m
+          [36m>[31m
+            [36m<p[31m
+              [33mstyle[31m=[32m"color: var(--text-muted); font-size: 13px; padding: 20px 0px;"[31m
+            [36m>[31m
+              [0mNo recent activity.[0m
+            [36m</p>[31m
+          [36m</div>[31m
+        [36m</div>[31m
+        [36m<div[31m
+          [33mclass[31m=[32m"card"[31m
+        [36m>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"card-header"[31m
+          [36m>[31m
+            [36m<h2>[31m
+              [0mQuick Actions[0m
+            [36m</h2>[31m
+          [36m</div>[31m
+          [36m<div[31m
+            [33mclass[31m=[32m"card-body"[31m
+          [36m>[31m
+            [36m<div[31m
+              [33mclass[31m=[32m"quick-action-bar"[31m
+              [33mstyle[31m=[32m"flex-direction: column;"[31m
+            [36m>[31m
+              [36m<a[31m
+                [33mclass[31m=[32m"btn btn-primary btn-full"[31m
+                [33mhref[31m=[32m"/fir"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33mclass[31m=[32m"lucide lucide-file-text"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"14"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"14"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M14 2v4a2 2 0 0 0 2 2h4"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M10 9H8"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M16 13H8"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M16 17H8"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+                [0m Browse FIR Registry[0m
+              [36m</a>[31m
+              [36m<a[31m
+                [33mclass[31m=[32m"btn btn-secondary btn-full"[31m
+                [33mhref[31m=[32m"/vault"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33mclass[31m=[32m"lucide lucide-archive"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"14"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"14"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<rect[31m
+                    [33mheight[31m=[32m"5"[31m
+                    [33mrx[31m=[32m"1"[31m
+                    [33mwidth[31m=[32m"20"[31m
+                    [33mx[31m=[32m"2"[31m
+                    [33my[31m=[32m"3"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M10 12h4"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+                [0m Evidence Vault[0m
+              [36m</a>[31m
+              [36m<a[31m
+                [33mclass[31m=[32m"btn btn-secondary btn-full"[31m
+                [33mhref[31m=[32m"/audit"[31m
+              [36m>[31m
+                [36m<svg[31m
+                  [33mclass[31m=[32m"lucide lucide-book-open"[31m
+                  [33mfill[31m=[32m"none"[31m
+                  [33mheight[31m=[32m"14"[31m
+                  [33mstroke[31m=[32m"currentColor"[31m
+                  [33mstroke-linecap[31m=[32m"round"[31m
+                  [33mstroke-linejoin[31m=[32m"round"[31m
+                  [33mstroke-width[31m=[32m"2"[31m
+                  [33mviewBox[31m=[32m"0 0 24 24"[31m
+                  [33mwidth[31m=[32m"14"[31m
+                  [33mxmlns[31m=[32m"http://www.w3.org/2000/svg"[31m
+                [36m>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M12 7v14"[31m
+                  [36m/>[31m
+                  [36m<path[31m
+                    [33md[31m=[32m"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"[31m
+                  [36m/>[31m
+                [36m</svg>[31m
+                [0m Audit Log[0m
+              [36m</a>[31m
+            [36m</div>[31m
+          [36m</div>[31m
+        [36m</div>[31m
+      [36m</div>[31m
+    [36m</div>[31m
+  [36m</body>[31m
+[36m</html>[31m[39m
+ [31m×[39m src/tests/pages/DashboardPage.test.jsx[2m > [22mDashboardPage[2m > [22mshows admin stat cards (Total Users, Active Users, Deactivated Users, Logins)[32m 12[2mms[22m[39m
+[31m   → [vitest] No "adminAPI" export is defined on the "../../services/api" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+[39m
+ [32m✓[39m src/tests/pages/DashboardPage.test.jsx[2m > [22mDashboardPage[2m > [22mshows Upload quick action for police officer[32m 13[2mms[22m[39m
+ [31m×[39m src/tests/pages/DashboardPage.test.jsx[2m > [22mDashboardPage[2m > [22mshows Manage Users quick action for admin[32m 13[2mms[22m[39m
+[31m   → [vitest] No "adminAPI" export is defined on the "../../services/api" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+[39m
+ [32m✓[39m src/tests/components/RoleBadge.test.jsx[2m > [22mRoleBadge[2m > [22mrenders Police Officer badge[32m 28[2mms[22m[39m
+ [32m✓[39m src/tests/components/RoleBadge.test.jsx[2m > [22mRoleBadge[2m > [22mrenders Judicial Authority badge[32m 3[2mms[22m[39m
+ [32m✓[39m src/tests/components/RoleBadge.test.jsx[2m > [22mRoleBadge[2m > [22mrenders Admin badge[32m 3[2mms[22m[39m
+ [32m✓[39m src/tests/components/RoleBadge.test.jsx[2m > [22mRoleBadge[2m > [22mrenders nothing for unknown role[32m 2[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m9 passed[39m[22m[90m (12)[39m
+[2m      Tests [22m [1m[31m15 failed[39m[22m[2m | [22m[1m[32m59 passed[39m[22m[90m (74)[39m
+[2m   Start at [22m 18:49:18
+[2m   Duration [22m 9.52s[2m (transform 3.61s, setup 6.09s, import 10.45s, tests 5.41s, environment 49.87s)[22m
+

@@ -75,9 +75,14 @@ module.exports = {
     },
     // Private SHIELD Docker blockchain network (node-police RPC)
     // Start with: docker compose -f docker-compose.blockchain.yml up -d
+    // Requires BLOCKCHAIN_DEPLOYER_PRIVATE_KEY in .env (police node account key)
     localnet: {
       url: "http://127.0.0.1:8545",
       chainId: 31337,
+      gasPrice: 0,           // geth runs with --miner.gasprice 0; no gas cost on this chain
+      accounts: (process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY && /^0x[0-9a-fA-F]{64}$/.test(process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY))
+        ? [process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY]
+        : ["0x0000000000000000000000000000000000000000000000000000000000000001"] // dummy fallback for validation when not deploying
     },
     // Future deployment to Ethereum Sepolia Testnet
     sepolia: {

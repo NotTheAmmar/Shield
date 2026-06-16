@@ -207,7 +207,7 @@ export default function EvidenceDetailPage() {
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <HashDisplay hash={ev.hash} label="SHA-256 Hash" />
               <div className="detail-row">
-                <span className="detail-row-label">ImmuDB Transaction ID</span>
+                <span className="detail-row-label">Blockchain Transaction ID</span>
                 <span className="detail-row-value" style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{ev.ledgerTxId}</span>
               </div>
               <div className="detail-row">
@@ -218,7 +218,7 @@ export default function EvidenceDetailPage() {
               {verifyState === 'LOADING' && (
                 <div className="alert alert-info">
                   <span className="spinner" style={{ width: 14, height: 14, marginRight: 8 }} />
-                  Verifying cryptographic footprint with ImmuDB ledger...
+                  Verifying cryptographic footprint with blockchain ledger...
                 </div>
               )}
               {verifyState === 'VERIFIED' && (

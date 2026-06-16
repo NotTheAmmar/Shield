@@ -57,7 +57,7 @@ echo -en "[6] Testing Security: Cryptographic Verification... "
 O6=$(curl -s -w "\n%{http_code}" -X GET http://localhost:3001/api/evidence/verify/$EVIDENCE_ID -H "Authorization: Bearer $OFFICER_TOKEN")
 BODY6=$(echo "$O6" | sed '$d')
 STATUS=$(echo "$BODY6" | grep -o '"status":"[^"]*' | cut -d'"' -f4)
-if [ "$STATUS" != "OK" ]; then echo "❌ FAILED: $BODY6"; rm -f "$TEST_FILE"; exit 1; else echo "✅ Hash Match ImmuDB vs MinIO = 1.0 (OK)"; fi
+if [ "$STATUS" != "OK" ]; then echo "❌ FAILED: $BODY6"; rm -f "$TEST_FILE"; exit 1; else echo "✅ Cryptographic Verification Successful"; fi
 
 # Step 7
 echo -en "[7] Testing Telemetry: Dashboard Stats... "

@@ -295,6 +295,7 @@ function UserDetailPanel({ userId, onClose, onToggleStatus, togglingId }) {
                   ['Designation', user.designation || '—'],
                   ['Station / Court', user.station || '—'],
                   ['Account Created', fmtDateTime(user.created_at)],
+                  ['Blockchain Address', user.blockchain_address || '—'],
                 ].map(([label, val]) => (
                   <div key={label} style={{ padding: 12, background: 'var(--bg-page)', borderRadius: 8, border: '1px solid var(--border)' }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>{label}</div>

@@ -137,8 +137,15 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
                 try {
                     await client.query('BEGIN');
 
-                    // Lock hash into ImmuDB via shield-ledger (Flaw #1)
-                    const ledgerResult = await ledger.storeHash(evidenceId, hash);
+                    // Lock hash into blockchain via shield-ledger (Flaw #1)
+                    let privateKey = null;
+                    const userRes = await client.query('SELECT encrypted_private_key FROM users WHERE id = $1', [userId]);
+                    const encryptedPrivateKey = userRes.rows[0]?.encrypted_private_key;
+                    if (encryptedPrivateKey) {
+                        const { decryptPrivateKey } = require('../crypto');
+                        privateKey = decryptPrivateKey(encryptedPrivateKey);
+                    }
+                    const ledgerResult = await ledger.storeHash(evidenceId, hash, privateKey);
                     const ledgerTxId = ledgerResult?.txId || null;
                     const ledgerTimestamp = ledgerTxId ? new Date().toISOString() : null;
 
