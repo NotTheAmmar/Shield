@@ -1017,15 +1017,15 @@ async function main() {
                     cookies: parsedCookies,
                     body: {
                         currentPassword: 'REDACTED_PW',
-                        newPassword: 'REDACTED_PW'
+                        newPassword: 'REDACTED_PW_NEW'
                     }
                 });
                 log('T58b: Change Password with HttpOnly session cookie → 200', changeRes.status === 200,
-                    `Status: ${changeRes.status}, message: ${changeRes.data?.message}`);
+                    `Status: ${changeRes.status}, message: ${changeRes.data?.message || changeRes.data?.error}`);
 
                 // Try login again with final password
                 const loginFinal = await http('POST', '/api/auth/login', {
-                    body: { email: officerEmail, password: 'REDACTED_PW', role: 'Police Officer' }
+                    body: { email: officerEmail, password: 'REDACTED_PW_NEW', role: 'Police Officer' }
                 });
                 log('T58c: Login with final updated password → 200', loginFinal.status === 200,
                     `Status: ${loginFinal.status}, mustChangePassword: ${loginFinal.data?.user?.mustChangePassword}`);
@@ -1042,7 +1042,7 @@ async function main() {
     if (officerEmail) {
         try {
             const loginRes = await http('POST', '/api/auth/login', {
-                body: { email: officerEmail, password: 'REDACTED_PW', role: 'Police Officer' }
+                body: { email: officerEmail, password: 'REDACTED_PW_NEW', role: 'Police Officer' }
             });
             const setCookies = loginRes.headers.getSetCookie ? loginRes.headers.getSetCookie() : [];
             const parsedCookies = setCookies.map(c => c.split(';')[0]).join('; ');
@@ -1063,7 +1063,7 @@ async function main() {
     if (officerEmail) {
         try {
             const loginRes = await http('POST', '/api/auth/login', {
-                body: { email: officerEmail, password: 'REDACTED_PW', role: 'Police Officer' }
+                body: { email: officerEmail, password: 'REDACTED_PW_NEW', role: 'Police Officer' }
             });
             const setCookies = loginRes.headers.getSetCookie ? loginRes.headers.getSetCookie() : [];
             const parsedCookies = setCookies.map(c => c.split(';')[0]).join('; ');

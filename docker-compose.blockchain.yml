@@ -63,6 +63,7 @@ services:
           --unlock 0x80de6eF5a945D6Cc1DAd5375E3CeD4DF466e0384 \
           --password /blockchain/password.txt \
           --allow-insecure-unlock \
+          --ipcdisable \
           --verbosity 3
 
   node-court:
@@ -106,4 +107,5 @@ services:
           --unlock 0x01a08fc1e3c0EB8d2Be2301Ba36761485d1a2B4e \
           --password /blockchain/password.txt \
           --allow-insecure-unlock \
+          --ipcdisable \
           --verbosity 3

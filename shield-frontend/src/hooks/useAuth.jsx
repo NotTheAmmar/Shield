@@ -47,13 +47,24 @@ export function AuthProvider({ children }) {
     setTempPassword(null);
   }, []);
 
+  const ROLE_MAP = {
+    'police_officer': 'police_officer',
+    'Police Officer': 'police_officer',
+    'judicial_authority': 'judicial_authority',
+    'Judicial Authority': 'judicial_authority',
+    'admin': 'admin',
+    'Admin': 'admin'
+  };
+
+  const normalizeRole = (r) => ROLE_MAP[r] || r?.toLowerCase() || '';
+
   const isAuthenticated = Boolean(user);
-  const role = user?.role || null;
+  const role = user?.role ? normalizeRole(user.role) : null;
 
   const hasRole = useCallback((roles) => {
     if (!role) return false;
     const allowed = Array.isArray(roles) ? roles : [roles];
-    return allowed.includes(role);
+    return allowed.map(normalizeRole).includes(role);
   }, [role]);
 
   return (

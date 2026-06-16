@@ -14,7 +14,7 @@ app.set('trust proxy', 1);
 
 const cookieParser = require('cookie-parser');
 app.use(cors({ origin: true, credentials: true })); // Locally allow Gateway proxy
-app.use(express.json());
+app.use(express.json({ verify: (req, res, buf) => { console.log("[RAW BODY RECEIVED]:", buf.toString()); } }));
 app.use(cookieParser());
 
 app.get('/health', (req, res) => {

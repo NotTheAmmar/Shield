@@ -3,6 +3,17 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
 
+const ROLE_MAP = {
+  'police_officer': 'police_officer',
+  'Police Officer': 'police_officer',
+  'judicial_authority': 'judicial_authority',
+  'Judicial Authority': 'judicial_authority',
+  'admin': 'admin',
+  'Admin': 'admin'
+};
+
+const normalizeRole = (role) => ROLE_MAP[role] || role?.toLowerCase();
+
 const router = express.Router();
 
 router.post('/login', async (req, res) => {
@@ -14,17 +25,21 @@ router.post('/login', async (req, res) => {
 
     try {
         const { rows } = await pool.query(
-            'SELECT * FROM users WHERE LOWER(email) = LOWER($1) AND role = $2',
-            [email, role]
+            'SELECT * FROM users WHERE LOWER(email) = LOWER($1)',
+            [email]
         );
+
+        console.log(`[AUTH DEBUG] Login attempt: email=${email}, role=${role}`);
+        console.log(`[AUTH DEBUG] User found: ${rows.length > 0}`);
 
         const user = rows[0];
 
-        if (!user) {
+        if (!user || normalizeRole(user.role) !== normalizeRole(role)) {
             return res.status(401).json({ error: 'Invalid credentials or incorrect role selected.' });
         }
 
         const isValidPassword = await bcrypt.compare(password, user.password_hash);
+        console.log(`[AUTH DEBUG] Password valid: ${isValidPassword}`);
 
         if (!isValidPassword) {
             return res.status(401).json({ error: 'Invalid credentials or incorrect role selected.' });
@@ -45,7 +60,7 @@ router.post('/login', async (req, res) => {
         const payload = {
             id: user.id,
             email: user.email,
-            role: user.role,
+            role: normalizeRole(user.role),
             name: user.name,
             employeeId: user.employee_id
         };
@@ -92,7 +107,7 @@ router.post('/refresh', async (req, res) => {
         const payload = {
             id: decoded.id,
             email: decoded.email,
-            role: decoded.role,
+            role: normalizeRole(decoded.role),
             name: decoded.name,
             employeeId: decoded.employeeId
         };
@@ -201,7 +216,7 @@ router.get('/audit', async (req, res) => {
         return res.status(401).json({ error: 'Invalid token' });
     }
 
-    if (!['Admin', 'Judicial Authority'].includes(caller.role)) {
+    if (!['admin', 'judicial_authority'].includes(normalizeRole(caller.role))) {
         return res.status(403).json({ error: 'Forbidden' });
     }
 

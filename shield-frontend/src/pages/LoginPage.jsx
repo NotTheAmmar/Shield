@@ -10,13 +10,15 @@ const ROLES = [
 ];
 
 export default function LoginPage() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ email: '', password: '', role: 'police_officer' });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  console.log('[DEBUG LoginPage] Rendering:', { isAuthenticated, user });
 
   if (isAuthenticated) return <Navigate to="/" replace />;
 

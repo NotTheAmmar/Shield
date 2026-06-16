@@ -1,12 +1,12 @@
-# Blockchain Wallet Integration Feature
+    # Blockchain Wallet Integration Feature
 
-## Feature Overview
-This feature upgrades the SHIELD user account database and signup routine. Blockchains identify users through a public address and a secret private key. Our backend now automatically creates these digital keys for every new officer profile upon registration via the admin portal.
+    ## Feature Overview
+    This feature upgrades the SHIELD user account database and signup routine. Blockchains identify users through a public address and a secret private key. Our backend now automatically creates these digital keys for every new officer profile upon registration via the admin portal.
 
-### Benefits
-- **Immutable Chain of Custody:** Helps keep track of precisely "who did what and when" on the ledger.
-- **Seamless UX:** Officers do not need to install confusing crypto browser extensions (like MetaMask). They log in normally, and the backend safely handles their unique signature stamps.
-- **Non-repudiation:** Transactions are cryptographically signed by unique, user-level signature keys instead of a single global master key.
+    ### Benefits
+    - **Immutable Chain of Custody:** Helps keep track of precisely "who did what and when" on the ledger.
+    - **Seamless UX:** Officers do not need to install confusing crypto browser extensions (like MetaMask). They log in normally, and the backend safely handles their unique signature stamps.
+    - **Non-repudiation:** Transactions are cryptographically signed by unique, user-level signature keys instead of a single global master key.
 
 ## How It Works
 1. **Database Schema Update:** Two new columns were added to the PostgreSQL `users` table: `blockchain_address` and `encrypted_private_key`.

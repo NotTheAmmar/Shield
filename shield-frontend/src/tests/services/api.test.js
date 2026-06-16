@@ -64,26 +64,26 @@ describe('API Service — correct HTTP methods and paths', () => {
     expect(mockClient.get).toHaveBeenCalledWith('/dashboard/stats');
   });
 
-  it('firAPI.list calls GET /firs with params', async () => {
+  it('firAPI.list calls GET /fir/list with params', async () => {
     mockClient.get.mockResolvedValue({ data: [], pagination: {} });
     await firAPI.list({ page: 1, limit: 25 });
-    expect(mockClient.get).toHaveBeenCalledWith('/firs', { params: { page: 1, limit: 25 } });
+    expect(mockClient.get).toHaveBeenCalledWith('/fir/list', { params: { page: 1, limit: 25 } });
   });
 
-  it('firAPI.get calls GET /firs/:id', async () => {
+  it('firAPI.get calls GET /fir/:id', async () => {
     mockClient.get.mockResolvedValue({ id: 'fir_001' });
     await firAPI.get('fir_001');
-    expect(mockClient.get).toHaveBeenCalledWith('/firs/fir_001');
+    expect(mockClient.get).toHaveBeenCalledWith('/fir/fir_001');
   });
 
-  it('firAPI.verify calls POST /firs/:id/verify', async () => {
-    mockClient.post.mockResolvedValue({ match: true });
+  it('firAPI.verify calls GET /evidence/verify/:id', async () => {
+    mockClient.get.mockResolvedValue({ match: true });
     await firAPI.verify('fir_001');
-    expect(mockClient.post).toHaveBeenCalledWith('/firs/fir_001/verify');
+    expect(mockClient.get).toHaveBeenCalledWith('/evidence/verify/fir_001');
   });
 
   it('firAPI.downloadUrl returns correct URL string', () => {
-    expect(firAPI.downloadUrl('fir_001')).toBe('/api/firs/fir_001/download');
+    expect(firAPI.downloadUrl('fir_001')).toBe('/api/fir/fir_001/download');
   });
 
   it('evidenceAPI.list calls GET /evidence with params', async () => {
@@ -98,14 +98,14 @@ describe('API Service — correct HTTP methods and paths', () => {
     expect(mockClient.get).toHaveBeenCalledWith('/evidence/ev_101');
   });
 
-  it('evidenceAPI.verify calls POST /evidence/:id/verify', async () => {
-    mockClient.post.mockResolvedValue({ match: true });
+  it('evidenceAPI.verify calls GET /evidence/verify/:id', async () => {
+    mockClient.get.mockResolvedValue({ match: true });
     await evidenceAPI.verify('ev_101');
-    expect(mockClient.post).toHaveBeenCalledWith('/evidence/ev_101/verify');
+    expect(mockClient.get).toHaveBeenCalledWith('/evidence/verify/ev_101');
   });
 
   it('evidenceAPI.downloadUrl returns correct URL string', () => {
-    expect(evidenceAPI.downloadUrl('ev_101')).toBe('/api/evidence/ev_101/download');
+    expect(evidenceAPI.downloadUrl('ev_101')).toBe('/api/evidence/download/ev_101');
   });
 
   it('auditAPI.list calls GET /audit with params', async () => {
