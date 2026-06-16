@@ -39,7 +39,6 @@ router.post('/login', async (req, res) => {
         }
 
         const isValidPassword = await bcrypt.compare(password, user.password_hash);
-        console.log(`[AUTH DEBUG] Password valid: ${isValidPassword}`);
 
         if (!isValidPassword) {
             return res.status(401).json({ error: 'Invalid credentials or incorrect role selected.' });
