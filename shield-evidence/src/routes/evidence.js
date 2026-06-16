@@ -138,12 +138,19 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
                     await client.query('BEGIN');
 
                     // Lock hash into blockchain via shield-ledger (Flaw #1)
+                    // Best-effort: try to use the user's personal key for signing.
+                    // Falls back to institutional signer if key is unavailable or
+                    // encrypted with a different algorithm (CBC vs GCM mismatch).
                     let privateKey = null;
-                    const userRes = await client.query('SELECT encrypted_private_key FROM users WHERE id = $1', [userId]);
-                    const encryptedPrivateKey = userRes.rows[0]?.encrypted_private_key;
-                    if (encryptedPrivateKey) {
-                        const { decryptPrivateKey } = require('../crypto');
-                        privateKey = decryptPrivateKey(encryptedPrivateKey);
+                    try {
+                        const userRes = await client.query('SELECT encrypted_private_key FROM users WHERE id = $1', [userId]);
+                        const encryptedPrivateKey = userRes.rows[0]?.encrypted_private_key;
+                        if (encryptedPrivateKey) {
+                            const { decryptPrivateKey } = require('../crypto');
+                            privateKey = decryptPrivateKey(encryptedPrivateKey);
+                        }
+                    } catch (keyErr) {
+                        console.warn(`[Upload] Could not decrypt user private key (using institutional signer): ${keyErr.message}`);
                     }
                     const ledgerResult = await ledger.storeHash(evidenceId, hash, privateKey);
                     const ledgerTxId = ledgerResult?.txId || null;
