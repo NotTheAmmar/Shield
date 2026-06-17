@@ -564,8 +564,9 @@ async function main() {
                     file: { _file: true, filename: 'crime_scene_photo.txt', contentType: 'text/plain', data: testContent }
                 }
             });
-            evidenceId = r.data?.id;
-            uploadHash = r.data?.sha256_hash;
+            const firstFile = r.data?.files?.[0];
+            evidenceId = firstFile?.id;
+            uploadHash = firstFile?.sha256_hash;
             if (r.status !== 201) console.log("T30 ERROR PAYLOAD:", r.data, "STATUS:", r.status);
             log('T30: Upload evidence → 201', r.status === 201 && !!evidenceId && !!uploadHash,
                 `Status: ${r.status}, id: ${evidenceId}, hash: ${uploadHash?.substring(0, 16)}...`);
@@ -595,7 +596,7 @@ async function main() {
                     file: { _file: true, filename: 'witness_statement.pdf', contentType: 'application/pdf', data: `PDF evidence ${Date.now()}` }
                 }
             });
-            evidence2Id = r.data?.id;
+            evidence2Id = r.data?.files?.[0]?.id;
             log('T31: Upload 2nd evidence to same FIR → 201', r.status === 201 && !!evidence2Id,
                 `Status: ${r.status}, id: ${evidence2Id}`);
         } catch (e) {
