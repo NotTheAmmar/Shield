@@ -234,6 +234,14 @@ router.get('/verify/:id', async (req, res) => {
             [id, result, actorId]
         );
 
+        // Circuit Breaker: Terminal Failure State
+        if (result === 'TAMPERED' && record.source_id) {
+            await pool.query(
+                `UPDATE evidence_source SET certificate_status = 'FAILED_VERIFICATION' WHERE id = $1`,
+                [record.source_id]
+            );
+        }
+
         // 6. Return result
         res.json({ status: result });
 
@@ -357,7 +365,7 @@ router.post('/internal/verify-batch', express.json(), internalNetworkGuard, requ
 // ─────────────────────────────────────────────
 // GET /api/evidence
 // ─────────────────────────────────────────────
-router.get('/', requireRoles(['Police Officer', 'Judicial Authority']), async (req, res) => {
+router.get('/', requireRoles(['Police Officer', 'Judicial Authority', 'Forensic Expert', 'Admin']), async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 25));
@@ -453,7 +461,7 @@ router.get('/', requireRoles(['Police Officer', 'Judicial Authority']), async (r
 // ─────────────────────────────────────────────
 // GET /api/evidence/:id
 // ─────────────────────────────────────────────
-router.get('/:id', requireRoles(['Police Officer', 'Judicial Authority', 'Admin']), async (req, res) => {
+router.get('/:id', requireRoles(['Police Officer', 'Judicial Authority', 'Admin', 'Forensic Expert']), async (req, res) => {
     try {
         const { rows } = await pool.query(
             `SELECT 

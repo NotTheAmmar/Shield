@@ -361,8 +361,14 @@ function UploadEvidenceTab({ searchParams }) {
             </select>
           </div>
           <div className="form-group">
-            <label className="form-label" htmlFor="ownershipStatus">Ownership Status</label>
-            <input id="ownershipStatus" name="ownershipStatus" className="form-input" placeholder="e.g. Victim's phone, Public CCTV" value={sourceData.ownershipStatus} onChange={handleSourceChange} />
+            <label className="form-label" htmlFor="ownershipStatus">Ownership Status <span style={{ color: 'var(--crimson)' }}>*</span></label>
+            <select id="ownershipStatus" name="ownershipStatus" className="form-select" value={sourceData.ownershipStatus} onChange={handleSourceChange} required>
+              <option value="">— Select Status —</option>
+              <option value="Owned">Owned</option>
+              <option value="Maintained">Maintained</option>
+              <option value="Managed">Managed</option>
+              <option value="Operated">Operated</option>
+            </select>
           </div>
         </div>
 

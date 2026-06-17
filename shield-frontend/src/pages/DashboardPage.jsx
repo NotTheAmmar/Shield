@@ -60,7 +60,7 @@ export default function DashboardPage() {
   const [adminStats, setAdminStats] = useState(null);
 
   useEffect(() => {
-    if (role === 'police_officer' || role === 'judicial_authority') {
+    if (role === 'police_officer' || role === 'judicial_authority' || role === 'forensic_expert') {
       dashboardAPI.getStats().then((data) => {
         if (data) {
           setStats(data.stats);
@@ -102,7 +102,7 @@ export default function DashboardPage() {
       />
 
       <div className="stat-cards-grid">
-        {(role === 'police_officer' || role === 'judicial_authority') && stats && (
+        {(role === 'police_officer' || role === 'judicial_authority' || role === 'forensic_expert') && stats && (
           <>
             <StatCard label="Total FIRs in System" value={stats.totalFirs} icon={FileText} accent="var(--navy-700)" />
             <StatCard label="Total Evidence Files" value={stats.totalEvidence} icon={Archive} accent="var(--navy-700)" />
@@ -192,6 +192,16 @@ export default function DashboardPage() {
                   </Link>
                   <Link to="/audit" className="btn btn-secondary btn-full">
                     <BookOpen size={14} /> Audit Log
+                  </Link>
+                </>
+              )}
+              {role === 'forensic_expert' && (
+                <>
+                  <Link to="/vault" className="btn btn-primary btn-full">
+                    <Archive size={14} /> Evidence Vault
+                  </Link>
+                  <Link to="/fir" className="btn btn-secondary btn-full">
+                    <FileText size={14} /> Browse FIR Registry
                   </Link>
                 </>
               )}

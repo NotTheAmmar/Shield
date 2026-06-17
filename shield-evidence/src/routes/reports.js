@@ -22,7 +22,7 @@ const router = express.Router();
 // ── GET /api/reports/chain-of-custody/:evidenceId ─────────────
 
 router.get('/chain-of-custody/:evidenceId',
-    requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']),
+    requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin', 'Forensic Expert']),
     async (req, res) => {
         try {
             const data = await getChainOfCustody(req.params.evidenceId);
@@ -38,7 +38,7 @@ router.get('/chain-of-custody/:evidenceId',
 // ── GET /api/reports/metadata/:evidenceId ─────────────────────
 
 router.get('/metadata/:evidenceId',
-    requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']),
+    requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin', 'Forensic Expert']),
     async (req, res) => {
         try {
             const { rows: metaRows } = await pool.query(
@@ -71,7 +71,7 @@ router.get('/metadata/:evidenceId',
 // ── POST /api/reports/chain-of-custody/:evidenceId/pdf ────────
 
 router.post('/chain-of-custody/:evidenceId/pdf',
-    requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']),
+    requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin', 'Forensic Expert']),
     async (req, res) => {
         try {
             const evidenceId = req.params.evidenceId;
@@ -97,7 +97,7 @@ router.post('/chain-of-custody/:evidenceId/pdf',
 // ── GET /api/reports/status/:jobId ────────────────────────────
 
 router.get('/status/:jobId',
-    requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']),
+    requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin', 'Forensic Expert']),
     async (req, res) => {
         try {
             const { rows: [job] } = await pool.query(
@@ -126,7 +126,7 @@ router.get('/status/:jobId',
 // Browser never touches the internal minio-store hostname
 
 router.get('/download/:jobId',
-    requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin']),
+    requireRoles(['Police Officer', 'Super Admin', 'Judicial Authority', 'Admin', 'Forensic Expert']),
     async (req, res) => {
         try {
             const { rows: [job] } = await pool.query(

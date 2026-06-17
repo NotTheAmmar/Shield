@@ -5,7 +5,7 @@ const requireRoles = require('../middleware/rbac');
 const router = express.Router();
 
 // GET /api/dashboard/stats
-router.get('/stats', requireRoles(['Police Officer', 'Judicial Authority']), async (req, res) => {
+router.get('/stats', requireRoles(['Police Officer', 'Judicial Authority', 'Forensic Expert']), async (req, res) => {
     try {
         const firsCount = await pool.query('SELECT COUNT(*) FROM fir');
         const evidenceCount = await pool.query('SELECT COUNT(*) FROM evidence');

@@ -154,6 +154,7 @@ export const reportsAPI = {
 
 export const certificateAPI = {
   downloadUrl: (sourceId) => `/api/evidence-source/${sourceId}/certificate`,
+  signedCertificateUrl: (sourceId) => `/api/evidence-source/${sourceId}/signed-certificate`,
   uploadSigned: (sourceId, formData) => apiClient.post(`/evidence-source/${sourceId}/upload-signed-certificate`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),

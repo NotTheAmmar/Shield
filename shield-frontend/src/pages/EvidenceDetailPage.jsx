@@ -216,9 +216,9 @@ export default function EvidenceDetailPage() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <p style={{ fontSize: 13, margin: 0, color: 'var(--text-secondary)' }}>Certificate is fully signed and legally admissible.</p>
                         {ev.signedCertFilePath && (
-                           <button className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }}>
+                           <a href={certificateAPI.signedCertificateUrl(ev.sourceId)} target="_blank" rel="noreferrer" className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }}>
                              <FileText size={14} /> View Completed PDF
-                           </button>
+                           </a>
                         )}
                       </div>
                     )}
