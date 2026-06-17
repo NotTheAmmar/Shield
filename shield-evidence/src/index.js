@@ -6,6 +6,7 @@ const auth = require('./middleware/auth');
 const audit = require('./middleware/audit');
 const evidenceRoutes = require('./routes/evidence');
 const firRoutes = require('./routes/fir');
+const certificateRoutes = require('./routes/certificate');
 const pool = require('./db');
 
 const app = express();
@@ -34,6 +35,7 @@ app.use('/api/fir', auth, firRoutes);
 app.use('/api/dashboard', auth, dashboardRoutes);
 app.use('/api/audit', auth, auditRoutes);
 app.use('/api/reports', auth, reportRoutes);
+app.use('/api/evidence-source', auth, certificateRoutes);
 
 // Process-level monitors to catch fatal crashes that evade the Express event loop
 process.on('uncaughtException', (err) => {

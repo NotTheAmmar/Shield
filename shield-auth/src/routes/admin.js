@@ -33,7 +33,7 @@ router.get('/users', requireRoles(['Admin']), async (req, res) => {
 
         const { rows } = await pool.query(
             `SELECT id, email, name, employee_id, role, status, created_at,
-                    designation, station, must_change_password, blockchain_address
+                    designation, station, parentage_name, must_change_password, blockchain_address
              FROM users ${where} ORDER BY created_at DESC`,
             values
         );
@@ -49,7 +49,7 @@ router.get('/users/:id', requireRoles(['Admin']), async (req, res) => {
     try {
         const { rows } = await pool.query(
             `SELECT id, email, name, employee_id, role, status, created_at,
-                    designation, station, must_change_password, blockchain_address
+                    designation, station, parentage_name, must_change_password, blockchain_address
              FROM users WHERE id = $1`,
             [req.params.id]
         );
@@ -63,7 +63,7 @@ router.get('/users/:id', requireRoles(['Admin']), async (req, res) => {
 
 // POST /api/admin/users
 router.post('/users', requireRoles(['Admin']), async (req, res) => {
-    const { name, email, employeeId, role, plainPassword, designation, station } = req.body;
+    const { name, email, employeeId, role, plainPassword, designation, station, parentageName } = req.body;
 
     if (!name || !email || !employeeId || !role || !plainPassword) {
         return res.status(400).json({ error: 'All fields are required' });
@@ -77,10 +77,10 @@ router.post('/users', requireRoles(['Admin']), async (req, res) => {
         const encryptedKey = encryptPrivateKey(wallet.privateKey);
         
         const { rows } = await pool.query(`
-            INSERT INTO users (email, password_hash, name, employee_id, role, designation, station, blockchain_address, encrypted_private_key)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            RETURNING id, email, name, employee_id, role, status, created_at, designation, station, blockchain_address
-        `, [email, passwordHash, name, employeeId, role, designation || null, station || null, wallet.address, encryptedKey]);
+            INSERT INTO users (email, password_hash, name, employee_id, role, designation, station, parentage_name, blockchain_address, encrypted_private_key)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING id, email, name, employee_id, role, status, created_at, designation, station, parentage_name, blockchain_address
+        `, [email, passwordHash, name, employeeId, role, designation || null, station || null, parentageName || null, wallet.address, encryptedKey]);
 
         // Log USER_CREATED event
         pool.query(

@@ -32,7 +32,7 @@ function generateEmployeeId() {
 
 function CreateUserModal({ onClose, onCreated }) {
   const [form, setForm] = useState({
-    name: '', email: '', role: 'police_officer',
+    name: '', parentageName: '', email: '', role: 'police_officer',
     employeeId: generateEmployeeId(), designation: '', station: '',
     plainPassword: generatePassword(),
   });
@@ -71,9 +71,15 @@ function CreateUserModal({ onClose, onCreated }) {
           <div className="modal-body">
             {error && <div className="alert alert-error">{error}</div>}
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="u-name">Full Name *</label>
-              <input id="u-name" name="name" className="form-input" value={form.name} onChange={handleChange} placeholder="Rajesh Kumar" required />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="form-group">
+                <label className="form-label" htmlFor="u-name">Full Name *</label>
+                <input id="u-name" name="name" className="form-input" value={form.name} onChange={handleChange} placeholder="Rajesh Kumar" required />
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="u-parentageName">Parentage/Spouse Name</label>
+                <input id="u-parentageName" name="parentageName" className="form-input" value={form.parentageName} onChange={handleChange} placeholder="S/O Mahesh Kumar" />
+              </div>
             </div>
 
             <div className="form-group">
@@ -86,6 +92,7 @@ function CreateUserModal({ onClose, onCreated }) {
               <select id="u-role" name="role" className="form-select" value={form.role} onChange={handleChange}>
                 <option value="Police Officer">Police Officer</option>
                 <option value="Judicial Authority">Judicial Authority</option>
+                <option value="Forensic Expert">Forensic Expert</option>
                 <option value="Admin">Administrator</option>
               </select>
             </div>
@@ -292,6 +299,7 @@ function UserDetailPanel({ userId, onClose, onToggleStatus, togglingId }) {
                 {[
                   ['Employee ID', user.employee_id],
                   ['Email Address', user.email],
+                  ['Parentage/Spouse Name', user.parentage_name || '—'],
                   ['Designation', user.designation || '—'],
                   ['Station / Court', user.station || '—'],
                   ['Account Created', fmtDateTime(user.created_at)],
@@ -544,6 +552,7 @@ export default function AdminUsersPage() {
           <option value="">All Roles</option>
           <option value="Police Officer">Police Officer</option>
           <option value="Judicial Authority">Judicial Authority</option>
+          <option value="Forensic Expert">Forensic Expert</option>
           <option value="Admin">Admin</option>
         </select>
         <select

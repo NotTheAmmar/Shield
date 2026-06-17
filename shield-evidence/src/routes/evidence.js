@@ -35,8 +35,6 @@ const internalNetworkGuard = (req, res, next) => {
 // POST /api/evidence/upload
 // ─────────────────────────────────────────────
 router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
-
-    // ── Idempotent response lock (Flaw #25) ───────────────────────────
     let responseSent = false;
     const send = (status, body) => {
         if (!responseSent) {
@@ -45,59 +43,69 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
         }
     };
 
-    // ── Get User ID from mockAuth middleware ──────────────────────────
     const userId = req.user.id;
-
-    // ── Pre-generate UUID before any I/O (Flaw #12) ──────────────────
-    const evidenceId = crypto.randomUUID();
-
-    // ── Mutable state captured during busboy events ───────────────────
-    let fir_id, capturedFilename, capturedMime;
+    let fir_id;
     let capturedCategory = 'other', capturedDescription = '';
-    let fileSize = 0;
-    let fileProcessed = false;   // Flaw #22 — multi-file guard
+    let sourceData = null;
+    let sourceIdPromise = null;
+    const uploadPromises = [];
+    let filesCount = 0;
 
-    // ── Busboy init with file size limit (Flaw #18) ───────────────────
     const bb = busboy({
         headers: req.headers,
-        limits: { fileSize: 500 * 1024 * 1024 },  // 500 MB hard cap
+        limits: { fileSize: 500 * 1024 * 1024 },
     });
 
-    // ── Capture text fields first (Flaw #16) ──────────────────────────
     bb.on('field', (name, val) => {
         if (name === 'fir_id') fir_id = val;
         if (name === 'category') capturedCategory = val;
         if (name === 'description') capturedDescription = val;
+        if (name === 'sourceData') {
+            try {
+                sourceData = JSON.parse(val);
+                // Validate required fields
+                if (!sourceData.sourceType || !sourceData.deviceChain || sourceData.lawfulControl === undefined || sourceData.properOperation === undefined) {
+                    return send(400, { error: 'Missing mandatory Section 63 fields in sourceData' });
+                }
+                
+                sourceIdPromise = pool.query(`
+                    INSERT INTO evidence_source (source_type, make, model, serial_number, identifiers, device_chain, lawful_control, proper_operation, ownership_status)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                    RETURNING id
+                `, [
+                    sourceData.sourceType, sourceData.make || null, sourceData.model || null, sourceData.serial || null, sourceData.identifiers || null,
+                    JSON.stringify(sourceData.deviceChain), sourceData.lawfulControl, sourceData.properOperation, sourceData.ownershipStatus || null
+                ]).then(res => res.rows[0].id).catch(err => {
+                    console.error('Failed to insert evidence_source:', err);
+                    throw err;
+                });
+            } catch (e) {
+                send(400, { error: 'Invalid sourceData JSON' });
+            }
+        }
     });
 
-    // ── Handle file stream ────────────────────────────────────────────
     bb.on('file', (fieldname, fileStream, info) => {
         const { filename, mimeType } = info;
-        capturedFilename = filename;
-        capturedMime = mimeType;
+        filesCount++;
 
-        // Guard: only the first file is processed (Flaw #22)
-        if (fileProcessed) {
-            fileStream.resume();   // drain silently
-            return;
-        }
-        fileProcessed = true;
-
-        // Guard: fir_id must arrive before the file (Flaw #16, #21)
         if (!fir_id) {
-            fileStream.resume();   // drain to avoid socket hang (Flaw #21)
-            return send(400, { error: 'fir_id field must come before the file in FormData' });
+            fileStream.resume();
+            return send(400, { error: 'fir_id field must come before files in FormData' });
+        }
+        if (!sourceIdPromise) {
+            fileStream.resume();
+            return send(400, { error: 'sourceData field must come before files in FormData' });
         }
 
-        // Build object key: UUID + original extension (Flaw #19)
+        const evidenceId = crypto.randomUUID();
         const ext = path.extname(filename) || '';
         const objectKey = `${evidenceId}${ext}`;
+        let fileSize = 0;
 
-        // Build streaming pipeline
         const hashStream = crypto.createHash('sha256');
         const passThrough = new PassThrough();
 
-        // MinIO upload promise (Flaw #17 — streams aren't Promises)
         let rejectPut;
         const putPromise = new Promise((resolve, reject) => {
             rejectPut = reject;
@@ -107,37 +115,30 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
                 .catch(reject);
         });
 
-        // Hash finalization promise (Flaw #17 — manual wrap)
         const hashPromise = new Promise((resolve, reject) => {
             hashStream.on('finish', () => resolve(hashStream.digest('hex')));
             hashStream.on('error', reject);
         });
 
-        // Error handlers MUST reject() — not just log (Flaw #23)
         passThrough.on('error', rejectPut);
         fileStream.on('error', rejectPut);
 
-        // Disk bomb: hit size limit → abort, clean up, 413 (Flaw #18)
         fileStream.on('limit', async () => {
-            fileStream.destroy();   // triggers 'error' → rejectPut fires
+            fileStream.destroy();
             try { await minioInternal.removeObject(BUCKET, objectKey); } catch (_) { }
             send(413, { error: 'File too large. Maximum allowed size is 500MB.' });
         });
 
-        // Pipe data through both hash and MinIO
         fileStream.pipe(hashStream);
         fileStream.pipe(passThrough);
         fileStream.on('data', (chunk) => { fileSize += chunk.length; });
 
-        // Await BOTH MinIO confirmation AND hash digest (Flaw #13)
-        Promise.all([putPromise, hashPromise])
-            .then(async ([, hash]) => {
-                // ── Postgres transaction (Flaw #4, #10, #20) ────────────
+        const fileUploadPromise = Promise.all([putPromise, hashPromise, sourceIdPromise])
+            .then(async ([, hash, sourceId]) => {
                 const client = await pool.connect();
                 try {
                     await client.query('BEGIN');
 
-                    // Lock hash into blockchain via shield-ledger (Flaw #1)
                     let privateKey = null;
                     const userRes = await client.query('SELECT encrypted_private_key FROM users WHERE id = $1', [userId]);
                     const encryptedPrivateKey = userRes.rows[0]?.encrypted_private_key;
@@ -151,41 +152,44 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
 
                     await client.query(
                         `INSERT INTO evidence
-               (id, fir_id, filename, bucket_name, object_key, sha256_hash, uploaded_by, category, mime_type, file_size, ledger_tx_id, ledger_timestamp, uploader_name, uploader_employee_id, description)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-                        [evidenceId, fir_id, capturedFilename, BUCKET, objectKey, hash, userId, capturedCategory, capturedMime, fileSize, ledgerTxId, ledgerTimestamp, req.user.name || null, req.user.employee_id || req.user.employeeId || null, capturedDescription]
+                         (id, fir_id, source_id, filename, bucket_name, object_key, sha256_hash, uploaded_by, category, mime_type, file_size, ledger_tx_id, ledger_timestamp, uploader_name, uploader_employee_id, description)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+                        [evidenceId, fir_id, sourceId, filename, BUCKET, objectKey, hash, userId, capturedCategory, mimeType, fileSize, ledgerTxId, ledgerTimestamp, req.user.name || null, req.user.employee_id || req.user.employeeId || null, capturedDescription]
                     );
 
                     await client.query('COMMIT');
 
-                    // Run metadata extraction asynchronously (non-blocking)
-                    extractMetadata(evidenceId, objectKey, BUCKET)
-                        .catch(err => console.warn('⚠️ Could not extract metadata:', err.message));
+                    extractMetadata(evidenceId, objectKey, BUCKET).catch(err => console.warn('⚠️ Could not extract metadata:', err.message));
 
-                    send(201, { id: evidenceId, sha256_hash: hash, ledgerTxId });
+                    return { id: evidenceId, filename, sha256_hash: hash, ledgerTxId };
                 } catch (err) {
                     await client.query('ROLLBACK');
                     try { await minioInternal.removeObject(BUCKET, objectKey); } catch (_) { }
-                    console.error('Upload transaction failed:', err.message);
-                    send(500, { error: 'Upload failed. Transaction rolled back.' });
+                    throw err;
                 } finally {
-                    client.release();  // NON-NEGOTIABLE (Flaw #20)
+                    client.release();
                 }
-            })
-            .catch((err) => {
-                console.error('Stream pipeline failed:', err.message);
-                send(500, { error: 'File stream failed.' });   // Flaw #25
             });
+
+        uploadPromises.push(fileUploadPromise);
     });
 
-    // Guard: request ends with no file at all (Flaw #26)
-    bb.on('close', () => {
-        if (!fileProcessed && !responseSent) {
-            send(400, { error: 'No file found in the request.' });
+    bb.on('close', async () => {
+        if (filesCount === 0 && !responseSent) {
+            return send(400, { error: 'No files found in the request.' });
+        }
+        
+        try {
+            const results = await Promise.all(uploadPromises);
+            // After all files are processed, we have the sourceId from the promise
+            const sourceId = await sourceIdPromise;
+            send(201, { sourceId, files: results });
+        } catch (err) {
+            console.error('Batch upload failed:', err);
+            send(500, { error: 'Upload failed for one or more files.' });
         }
     });
 
-    // IGNITION — must be the LAST line (Flaw #24)
     req.pipe(bb);
 });
 
@@ -449,8 +453,7 @@ router.get('/', requireRoles(['Police Officer', 'Judicial Authority']), async (r
 // ─────────────────────────────────────────────
 // GET /api/evidence/:id
 // ─────────────────────────────────────────────
-// MUST BE AT THE BOTTOM to prevent intercepting /upload, /verify/:id, etc.
-router.get('/:id', requireRoles(['Police Officer', 'Judicial Authority']), async (req, res) => {
+router.get('/:id', requireRoles(['Police Officer', 'Judicial Authority', 'Admin']), async (req, res) => {
     try {
         const { rows } = await pool.query(
             `SELECT 
@@ -469,6 +472,9 @@ router.get('/:id', requireRoles(['Police Officer', 'Judicial Authority']), async
                 e.uploader_name as "uploaderName",
                 e.uploader_employee_id as "uploaderEmployeeId",
                 e.description,
+                e.source_id as "sourceId",
+                es.certificate_status as "certificateStatus",
+                es.signed_cert_file_path as "signedCertFilePath",
                 COALESCE(
                     (SELECT CASE WHEN al2.result = 'TAMPERED' THEN 'tampered' WHEN al2.result = 'OK' THEN 'verified' END
                      FROM audit_log al2 WHERE al2.evidence_id = e.id ORDER BY al2.checked_at DESC LIMIT 1),
@@ -476,6 +482,7 @@ router.get('/:id', requireRoles(['Police Officer', 'Judicial Authority']), async
                 ) as status
              FROM evidence e 
              JOIN fir f ON e.fir_id = f.id 
+             LEFT JOIN evidence_source es ON e.source_id = es.id
              WHERE e.id = $1`, [req.params.id]
         );
         if (!rows.length) return res.status(404).json({ error: 'Evidence not found' });
