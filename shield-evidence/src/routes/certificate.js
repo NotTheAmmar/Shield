@@ -4,12 +4,29 @@ const path = require('path');
 const { PassThrough } = require('stream');
 const PDFDocument = require('pdfkit');
 const { PDFDocument: PDFLibDocument } = require('pdf-lib');
+const rateLimit = require('express-rate-limit');
 
 const pool = require('../db');
 const { minioInternal, minioPublic, BUCKET } = require('../config/minio');
 const requireRoles = require('../middleware/rbac');
 
 const router = express.Router();
+
+// ── Rate Limiters ─────────────────────────────────────────────────────────
+
+// Mitigates abusive database/file reads via the generation endpoint
+const generateRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per `window`
+    message: { error: 'Too many certificate generation requests from this IP, please try again after 15 minutes.' }
+});
+
+// Mitigates aggressive file uploads and processing overhead
+const uploadRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 50, // Limit each IP to 50 uploads per `window`
+    message: { error: 'Too many upload requests from this IP, please try again after 15 minutes.' }
+});
 
 // Helper to buffer MinIO stream
 const getMinioBuffer = (bucket, objectKey) => {
@@ -25,7 +42,7 @@ const getMinioBuffer = (bucket, objectKey) => {
 };
 
 // GET /api/evidence-source/:id/certificate
-router.get('/:id/certificate', requireRoles(['Police Officer', 'Judicial Authority', 'Admin', 'Forensic Expert']), async (req, res) => {
+router.get('/:id/certificate', generateRateLimiter, requireRoles(['Police Officer', 'Judicial Authority', 'Admin', 'Forensic Expert']), async (req, res) => {
     try {
         const sourceId = req.params.id;
         const userRole = req.user.role;
@@ -298,7 +315,7 @@ router.get('/:id/certificate', requireRoles(['Police Officer', 'Judicial Authori
 });
 
 // POST /api/evidence-source/:id/upload-signed-certificate
-router.post('/:id/upload-signed-certificate', requireRoles(['Police Officer', 'Forensic Expert', 'Admin']), (req, res) => {
+router.post('/:id/upload-signed-certificate', uploadRateLimiter, requireRoles(['Police Officer', 'Forensic Expert', 'Admin']), (req, res) => {
     const sourceId = req.params.id;
     const userId = req.user.id;
     const userRole = req.user.role;
