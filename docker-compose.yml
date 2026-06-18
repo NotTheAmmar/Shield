@@ -114,6 +114,8 @@ services:
       ADMIN_SEED_NAME: ${ADMIN_SEED_NAME}
       ADMIN_SEED_EMPLOYEE_ID: ${ADMIN_SEED_EMPLOYEE_ID}
       BLOCKCHAIN_ENCRYPTION_KEY: ${BLOCKCHAIN_ENCRYPTION_KEY}
+      MASTER_KEY: ${MASTER_KEY}
+      LEDGER_SERVICE_URL: http://shield-ledger:4002
     depends_on:
       - db-users
 
@@ -169,6 +171,8 @@ services:
     environment:
       BLOCKCHAIN_RPC_URL: http://node-police:8545
       BLOCKCHAIN_CONTRACT_ADDRESS: ${BLOCKCHAIN_CONTRACT_ADDRESS}
+      BLOCKCHAIN_DEPLOYER_PRIVATE_KEY: ${BLOCKCHAIN_DEPLOYER_PRIVATE_KEY}
+      MASTER_KEY: ${MASTER_KEY}
 
   shield-watchdog:
     build: ./shield-watchdog

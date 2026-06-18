@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
 /**
  * @title ShieldLedger
  * @dev Anchors digital evidence cryptographic hashes to the Ethereum Virtual Machine (EVM).
  * This establishes decentralized, tamper-proof, and universally verifiable proof-of-existence.
  */
-contract ShieldLedger {
+contract ShieldLedger is AccessControl {
     
     struct EvidenceRecord {
         string sha256Hash;
@@ -20,11 +22,13 @@ contract ShieldLedger {
     // Events for real-time indexing and watchdog monitors
     event EvidenceAnchored(string indexed evidenceId, string sha256Hash, address indexed registeredBy);
 
-    // Modifier to restrict access in the future if required
-    address public owner;
+    // The unique role required to write to the ledger
+    bytes32 public constant EVIDENCE_ANCHOR_ROLE = keccak256("EVIDENCE_ANCHOR_ROLE");
 
     constructor() {
-        owner = msg.sender;
+        // Grant the contract deployer the default admin role: it will be able
+        // to grant and revoke any roles
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     /**
@@ -32,7 +36,7 @@ contract ShieldLedger {
      * @param evidenceId The unique UUID of the evidence file.
      * @param sha256Hash The SHA-256 hash of the evidence content.
      */
-    function anchorEvidence(string calldata evidenceId, string calldata sha256Hash) external {
+    function anchorEvidence(string calldata evidenceId, string calldata sha256Hash) external onlyRole(EVIDENCE_ANCHOR_ROLE) {
         require(bytes(evidenceId).length > 0, "Evidence ID cannot be empty");
         require(bytes(sha256Hash).length == 64, "Must be a valid 64-character SHA-256 hex string");
         require(_evidenceLedger[evidenceId].blockTimestamp == 0, "Evidence ID already anchored on ledger");

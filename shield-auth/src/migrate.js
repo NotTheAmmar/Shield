@@ -31,7 +31,8 @@ async function runMigrations() {
                   must_change_password BOOLEAN      DEFAULT TRUE,
                   created_at           TIMESTAMPTZ  DEFAULT NOW(),
                   blockchain_address   VARCHAR(42),
-                  encrypted_private_key TEXT
+                  encrypted_private_key TEXT,
+                  blockchain_provisioned BOOLEAN DEFAULT FALSE
                 );
             `);
 
@@ -41,6 +42,9 @@ async function runMigrations() {
             `);
             await pool.query(`
                 ALTER TABLE users ADD COLUMN IF NOT EXISTS encrypted_private_key TEXT;
+            `);
+            await pool.query(`
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS blockchain_provisioned BOOLEAN DEFAULT FALSE;
             `);
 
             await pool.query(`
