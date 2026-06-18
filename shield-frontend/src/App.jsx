@@ -58,7 +58,7 @@ export default function App() {
               <Route
                 path="/"
                 element={
-                  <ProtectedRoute roles={['police_officer', 'judicial_authority', 'admin']}>
+                  <ProtectedRoute roles={['police_officer', 'judicial_authority', 'admin', 'forensic_expert']}>
                     <AppLayout><DashboardPage /></AppLayout>
                   </ProtectedRoute>
                 }
@@ -94,7 +94,7 @@ export default function App() {
               <Route
                 path="/vault"
                 element={
-                  <ProtectedRoute roles={['police_officer', 'judicial_authority']}>
+                  <ProtectedRoute roles={['police_officer', 'judicial_authority', 'forensic_expert']}>
                     <AppLayout><VaultPage /></AppLayout>
                   </ProtectedRoute>
                 }
@@ -102,7 +102,7 @@ export default function App() {
               <Route
                 path="/vault/:id"
                 element={
-                  <ProtectedRoute roles={['police_officer', 'judicial_authority']}>
+                  <ProtectedRoute roles={['police_officer', 'judicial_authority', 'forensic_expert']}>
                     <AppLayout><EvidenceDetailPage /></AppLayout>
                   </ProtectedRoute>
                 }

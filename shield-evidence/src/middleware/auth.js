@@ -8,7 +8,20 @@ module.exports = (req, res, next) => {
         return next();
     }
 
-    const authHeader = req.headers.authorization;
+    let authHeader = req.headers.authorization;
+
+    console.log('--- AUTH DEBUG ---');
+    console.log('authHeader:', authHeader);
+    console.log('cookies:', req.headers.cookie);
+
+    // Fallback: Check cookies for token if proxy bypassed gateway
+    if (!authHeader && req.headers.cookie) {
+        const cookies = req.headers.cookie.split(';').map(c => c.trim());
+        const accessCookie = cookies.find(c => c.startsWith('shield_access_token='));
+        if (accessCookie) {
+            authHeader = 'Bearer ' + accessCookie.substring('shield_access_token='.length);
+        }
+    }
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Unauthorized: Missing or invalid authorization header' });

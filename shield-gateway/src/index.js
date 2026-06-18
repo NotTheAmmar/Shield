@@ -142,6 +142,7 @@ app.use('/api/evidence', proxyToEvidence);
 app.use('/api/dashboard', proxyToEvidence);
 app.use('/api/audit', proxyToEvidence);
 app.use('/api/reports', proxyToEvidence);
+app.use('/api/evidence-source', proxyToEvidence);
 
 app.use('/api/auth', proxyToAuth);
 app.use('/api/admin', proxyToAuth);

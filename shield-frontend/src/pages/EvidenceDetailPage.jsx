@@ -5,7 +5,7 @@ import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import HashDisplay from '../components/HashDisplay';
 import FilePreview from '../components/FilePreview';
-import { evidenceAPI, reportsAPI } from '../services/api';
+import { evidenceAPI, reportsAPI, certificateAPI } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
 function fmtDate(iso) {
@@ -33,6 +33,9 @@ export default function EvidenceDetailPage() {
   const [forensicFlags, setForensicFlags] = useState([]);
   const [pdfState, setPdfState] = useState('IDLE'); // IDLE, QUEUING, POLLING, READY, FAILED
   const [pdfUrl, setPdfUrl] = useState('');
+  
+  const [uploadingCert, setUploadingCert] = useState(false);
+  const [certFile, setCertFile] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -64,6 +67,23 @@ export default function EvidenceDetailPage() {
     } catch (err) {
       setVerifyError(err?.response?.data?.error || err.message || 'Database unreachable.');
       setVerifyState('ERROR');
+    }
+  };
+
+  const handleUploadCert = async () => {
+    if (!certFile) return;
+    setUploadingCert(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', certFile);
+      const res = await certificateAPI.uploadSigned(ev.sourceId, fd);
+      setEv(e => ({ ...e, certificateStatus: res.status }));
+      setCertFile(null);
+      alert('Certificate uploaded successfully!');
+    } catch (err) {
+      alert(err?.response?.data?.error || 'Failed to upload certificate');
+    } finally {
+      setUploadingCert(false);
     }
   };
 
@@ -153,6 +173,76 @@ export default function EvidenceDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* Section 63 Certificate Lifecycle */}
+          {ev.sourceId && (
+            <div className="card" style={{ borderLeft: '4px solid var(--navy-700)' }}>
+              <div className="card-header"><h2>Section 63 Certificate Lifecycle</h2></div>
+              <div className="card-body">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div className="detail-row">
+                    <span className="detail-row-label">Batch Source ID</span>
+                    <span className="detail-row-value" style={{ fontFamily: 'monospace' }}>{ev.sourceId}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-row-label">Certificate Status</span>
+                    <span className="badge" style={{ backgroundColor: ev.certificateStatus === 'COMPLETED' ? 'var(--emerald)' : 'var(--amber)', color: '#fff' }}>
+                      {ev.certificateStatus?.replace(/_/g, ' ') || 'UNKNOWN'}
+                    </span>
+                  </div>
+
+                  <div style={{ marginTop: 16, padding: 12, background: 'var(--bg-page)', borderRadius: 6, border: '1px dashed var(--border)' }}>
+                    {ev.certificateStatus === 'PENDING_PART_A' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <p style={{ fontSize: 13, margin: 0, color: 'var(--text-secondary)' }}>Step 1: Download the unsigned certificate, sign Part A (Producing Officer), and re-upload.</p>
+                        <a href={certificateAPI.downloadUrl(ev.sourceId)} download className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }}>
+                          <Download size={14} /> Download Unsigned Certificate
+                        </a>
+                      </div>
+                    )}
+                    {ev.certificateStatus === 'PENDING_PART_B' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <p style={{ fontSize: 13, margin: 0, color: 'var(--text-secondary)' }}>Step 2: Awaiting Forensic Expert to verify hashes and sign Part B.</p>
+                        {role === 'forensic_expert' || role === 'admin' ? (
+                          <a href={certificateAPI.downloadUrl(ev.sourceId)} download className="btn btn-secondary btn-sm" style={{ alignSelf: 'flex-start' }}>
+                            <Download size={14} /> Download Certificate (For Part B)
+                          </a>
+                        ) : (
+                          <div className="alert alert-info" style={{ padding: '8px 12px', margin: 0 }}>Only a Forensic Expert can complete Part B.</div>
+                        )}
+                      </div>
+                    )}
+                    {ev.certificateStatus === 'COMPLETED' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <p style={{ fontSize: 13, margin: 0, color: 'var(--text-secondary)' }}>Certificate is fully signed and legally admissible.</p>
+                        {ev.signedCertFilePath && (
+                           <a href={certificateAPI.signedCertificateUrl(ev.sourceId)} target="_blank" rel="noreferrer" className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }}>
+                             <FileText size={14} /> View Completed PDF
+                           </a>
+                        )}
+                      </div>
+                    )}
+
+                    {ev.certificateStatus !== 'COMPLETED' && (
+                      <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                        <label className="form-label" style={{ fontSize: 12 }}>Upload Signed PDF:</label>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <input type="file" accept="application/pdf" onChange={(e) => setCertFile(e.target.files[0])} style={{ fontSize: 12 }} />
+                          <button 
+                            className="btn btn-secondary btn-sm" 
+                            disabled={!certFile || uploadingCert || (ev.certificateStatus === 'PENDING_PART_B' && role !== 'forensic_expert' && role !== 'admin')}
+                            onClick={handleUploadCert}
+                          >
+                            {uploadingCert ? 'Uploading...' : 'Submit Signed PDF'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Extracted EXIF Metadata */}
           {metadata && (

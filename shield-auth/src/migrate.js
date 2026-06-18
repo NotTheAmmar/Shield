@@ -43,7 +43,6 @@ async function runMigrations() {
                 ALTER TABLE users ADD COLUMN IF NOT EXISTS encrypted_private_key TEXT;
             `);
 
-            // Idempotent migration: add column if it doesn't exist yet (for existing DBs)
             await pool.query(`
                 ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT TRUE;
             `);
@@ -52,6 +51,9 @@ async function runMigrations() {
             `);
             await pool.query(`
                 ALTER TABLE users ADD COLUMN IF NOT EXISTS station VARCHAR(100);
+            `);
+            await pool.query(`
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS parentage_name VARCHAR(255);
             `);
 
             await pool.query(`
