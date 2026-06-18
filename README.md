@@ -8,6 +8,7 @@ By generating cryptographic hash values (SHA-256) at the exact time of submissio
 
 - [Architecture & Monorepo Structure](STRUCTURE.md): Learn how our 7 microservices connect.
 - [Database & Storage Architecture](DATABASE.md): Understand PostgreSQL/PostGIS, Blockchain Ledger, and MinIO details.
+- [Legal & Section 63 Compliance](LEGAL_COMPLIANCE.md): Deep-dive into the Section 63/65B certificate generation and the cryptographic tamper lock.
 - [Contributing Guidelines](CONTRIBUTING.md): Please read this before opening a Pull Request!
 
 ---
