@@ -36,12 +36,17 @@ describe("ShieldLedger", function () {
     [owner, otherAccount] = await ethers.getSigners();
     const ShieldLedgerFactory = await ethers.getContractFactory("ShieldLedger");
     shieldLedger = await ShieldLedgerFactory.deploy();
+    
+    // Grant role so tests can anchor evidence
+    const EVIDENCE_ANCHOR_ROLE = ethers.id("EVIDENCE_ANCHOR_ROLE");
+    await shieldLedger.grantRole(EVIDENCE_ANCHOR_ROLE, owner.address);
   });
 
   // ── Test 1: Deployment ─────────────────────────────────────────────────
   describe("Deployment", function () {
-    it("should deploy successfully and set owner to deployer", async function () {
-      expect(await shieldLedger.owner()).to.equal(owner.address);
+    it("should deploy successfully and set admin role to deployer", async function () {
+      const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
+      expect(await shieldLedger.hasRole(DEFAULT_ADMIN_ROLE, owner.address)).to.equal(true);
     });
   });
 
@@ -128,6 +133,10 @@ describe("ShieldLedger", function () {
     // ── Bonus: Different callers store with their own address ─────────────
     it("should record the correct signer address as registeredBy", async function () {
       const evidenceId = "fir-uuid-020";
+      // Grant role to otherAccount
+      const EVIDENCE_ANCHOR_ROLE = ethers.id("EVIDENCE_ANCHOR_ROLE");
+      await shieldLedger.grantRole(EVIDENCE_ANCHOR_ROLE, otherAccount.address);
+      
       // Submit from a non-owner account
       await shieldLedger.connect(otherAccount).anchorEvidence(evidenceId, VALID_HASH);
 
