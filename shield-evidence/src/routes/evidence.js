@@ -169,6 +169,10 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
                 } finally {
                     client.release();
                 }
+            })
+            .catch(err => {
+                console.error("File upload promise rejected:", err);
+                return { error: true, message: err.message, stack: err.stack };
             });
 
         uploadPromises.push(fileUploadPromise);
@@ -181,12 +185,16 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
         
         try {
             const results = await Promise.all(uploadPromises);
+            const errors = results.filter(r => r && r.error);
+            if (errors.length > 0) {
+                return send(500, { error: 'Upload failed for one or more files.', details: errors });
+            }
             // After all files are processed, we have the sourceId from the promise
             const sourceId = await sourceIdPromise;
             send(201, { sourceId, files: results });
         } catch (err) {
             console.error('Batch upload failed:', err);
-            send(500, { error: 'Upload failed for one or more files.' });
+            send(500, { error: 'Upload failed for one or more files.', details: err.message });
         }
     });
 
