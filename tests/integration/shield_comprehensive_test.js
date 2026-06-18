@@ -480,10 +480,11 @@ async function main() {
     // ═════════════════════════════════════════════════════════
     console.log('\n━━ PHASE 6: Evidence Upload Pipeline ━━━━━━━━━━━━━━━━');
 
-    // Wait 4 seconds to ensure the shield-auth background provision worker
-    // has successfully granted EVIDENCE_ANCHOR_ROLE to the new officer's wallet on-chain
-    console.log('⏳ Waiting 4s for blockchain role provisioning queue...');
-    await sleep(4000);
+    // Wait 12 seconds to ensure the shield-auth background provision worker
+    // has successfully granted EVIDENCE_ANCHOR_ROLE to the new officer's wallet on-chain.
+    // CI runners are slower than local; PoA block mining + worker polling needs headroom.
+    console.log('⏳ Waiting 12s for blockchain role provisioning queue...');
+    await sleep(12000);
 
     // T26: Upload evidence without auth → 401
     try {
