@@ -55,20 +55,28 @@ router.get('/', requireRoles(['Judicial Authority']), async (req, res) => {
                 'VERIFY' as action,
                 a.result,
                 a.actor_id,
-                COALESCE(al2.user_name, a.actor_id) as user_name,
-                al2.user_role,
-                al2.user_employee_id,
+                COALESCE(u.name, NULLIF(al2.user_name, '')) as user_name,
+                CASE 
+                    WHEN a.actor_id::text = '00000000-0000-0000-0000-000000000000' THEN NULL
+                    ELSE a.actor_id
+                END as actor_id_fallback,
+                COALESCE(u.role, al2.user_role) as user_role,
+                COALESCE(u.employee_id, al2.user_employee_id) as user_employee_id,
                 a.checked_at as timestamp,
                 COALESCE(e.filename, 'Unknown file') as "targetLabel",
                 e.id::text as "targetId",
                 'evidence' as "targetType"
              FROM audit_log a
              LEFT JOIN evidence e ON a.evidence_id = e.id
+             LEFT JOIN users u ON a.actor_id::text = u.id::text
              LEFT JOIN LATERAL (
-                 SELECT user_name, user_role, user_employee_id 
-                 FROM api_audit_log api 
-                 WHERE api.user_id::text = a.actor_id::text 
-                 ORDER BY api.accessed_at DESC LIMIT 1
+                 SELECT 
+                     u.name::text as user_name,
+                     u.role::text as user_role,
+                     u.employee_id::text as user_employee_id
+                 FROM users u
+                 WHERE u.id::text = a.actor_id::text
+                 LIMIT 1
              ) al2 ON true
              ${auditWhere}`,
             auditValues
@@ -161,8 +169,17 @@ router.get('/', requireRoles(['Judicial Authority']), async (req, res) => {
         const combined = [
             ...auditRows.rows,
             ...mappedApiRows,
-        ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        ].map((row) => {
+            // Clean up helper column.
+            if ('actor_id_fallback' in row) {
+                const { actor_id_fallback, ...rest } = row;
+                return rest;
+            }
+            return row;
+        }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
          .slice(0, parseInt(limit) || 100);
+
+
 
         res.json({ auditLog: combined });
     } catch (err) {
