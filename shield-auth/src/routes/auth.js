@@ -66,7 +66,7 @@ router.post('/login', async (req, res) => {
         return res.json({ user: { ...payload, mustChangePassword: user.must_change_password === true }, token: accessToken });
     } catch (err) {
         console.error('[AUTH LOGIN]', err.message);
-        return res.status(500).json({ error: 'Internal server error during login' });
+        return res.status(500).json({ error: 'Internal server error during login', details: err.message, stack: err.stack });
     }
 });
 

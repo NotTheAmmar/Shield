@@ -143,11 +143,19 @@ export const adminAPI = {
   resetPassword: (id, data) => apiClient.post(`/admin/users/${id}/reset-password`, data),
 };
 
-// ── Reports ───────────────────────────────────────────────────────────────
-
 export const reportsAPI = {
   getChainOfCustody: (evidenceId) => apiClient.get(`/reports/chain-of-custody/${evidenceId}`),
   getMetadata:       (evidenceId) => apiClient.get(`/reports/metadata/${evidenceId}`),
   requestPdf:        (evidenceId) => apiClient.post(`/reports/chain-of-custody/${evidenceId}/pdf`),
   getJobStatus:      (jobId) => apiClient.get(`/reports/status/${jobId}`),
+};
+
+// ── Certificate (Section 63) ──────────────────────────────────────────────
+
+export const certificateAPI = {
+  downloadUrl: (sourceId) => `/api/evidence-source/${sourceId}/certificate`,
+  signedCertificateUrl: (sourceId) => `/api/evidence-source/${sourceId}/signed-certificate`,
+  uploadSigned: (sourceId, formData) => apiClient.post(`/evidence-source/${sourceId}/upload-signed-certificate`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
 };

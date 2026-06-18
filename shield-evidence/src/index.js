@@ -6,6 +6,7 @@ const auth = require('./middleware/auth');
 const audit = require('./middleware/audit');
 const evidenceRoutes = require('./routes/evidence');
 const firRoutes = require('./routes/fir');
+const certificateRoutes = require('./routes/certificate');
 const pool = require('./db');
 
 const app = express();
@@ -34,6 +35,7 @@ app.use('/api/fir', auth, firRoutes);
 app.use('/api/dashboard', auth, dashboardRoutes);
 app.use('/api/audit', auth, auditRoutes);
 app.use('/api/reports', auth, reportRoutes);
+app.use('/api/evidence-source', auth, certificateRoutes);
 
 // Process-level monitors to catch fatal crashes that evade the Express event loop
 process.on('uncaughtException', (err) => {
@@ -141,6 +143,29 @@ async function runMigrations() {
                   actor        TEXT,
                   logged_at    TIMESTAMPTZ  DEFAULT NOW()
                 );
+                CREATE TABLE IF NOT EXISTS evidence_source (
+                  id                    UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+                  source_type           VARCHAR(100) NOT NULL,
+                  make                  VARCHAR(100),
+                  model                 VARCHAR(100),
+                  serial_number         VARCHAR(100),
+                  identifiers           TEXT,
+                  device_chain          JSONB,
+                  lawful_control        BOOLEAN      NOT NULL,
+                  proper_operation      BOOLEAN      NOT NULL,
+                  ownership_status      VARCHAR(100),
+                  certificate_status    VARCHAR(50)  DEFAULT 'PENDING_PART_A',
+                  signed_cert_file_path VARCHAR(500),
+                  created_at            TIMESTAMPTZ  DEFAULT NOW()
+                );
+            `);
+
+            // Idempotent: data migration for legacy pending status
+            await pool.query(`
+                ALTER TABLE evidence_source ALTER COLUMN certificate_status SET DEFAULT 'PENDING_PART_A';
+                UPDATE evidence_source 
+                SET certificate_status = 'PENDING_PART_A' 
+                WHERE certificate_status = 'pending';
             `);
 
             // Idempotent: add columns if missing (older DB volumes)
@@ -165,6 +190,7 @@ async function runMigrations() {
                 ALTER TABLE evidence ADD COLUMN IF NOT EXISTS uploader_name TEXT;
                 ALTER TABLE evidence ADD COLUMN IF NOT EXISTS uploader_employee_id TEXT;
                 ALTER TABLE evidence ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+                ALTER TABLE evidence ADD COLUMN IF NOT EXISTS source_id UUID REFERENCES evidence_source(id);
             `);
             await pool.query(`
                 ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_name TEXT;

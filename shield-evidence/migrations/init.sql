@@ -40,9 +40,25 @@ CREATE TABLE IF NOT EXISTS fir (
   registered_at     TIMESTAMPTZ  DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS evidence_source (
+  id SERIAL PRIMARY KEY,
+  source_type VARCHAR(100) NOT NULL,
+  make VARCHAR(100),
+  model VARCHAR(100),
+  serial_number VARCHAR(100),
+  identifiers VARCHAR(255),
+  device_chain JSONB NOT NULL,
+  lawful_control BOOLEAN NOT NULL DEFAULT FALSE,
+  proper_operation BOOLEAN NOT NULL DEFAULT FALSE,
+  ownership_status VARCHAR(50),
+  certificate_status VARCHAR(50) DEFAULT 'PENDING_PART_A',
+  signed_cert_file_path TEXT
+);
+
 CREATE TABLE IF NOT EXISTS evidence (
   id           UUID         PRIMARY KEY,
   fir_id       UUID         REFERENCES fir(id) NOT NULL,
+  source_id    INTEGER      REFERENCES evidence_source(id),
   filename     VARCHAR(255) NOT NULL,
   bucket_name  VARCHAR(100) NOT NULL,
   object_key   VARCHAR(500) NOT NULL,

@@ -53,7 +53,9 @@ export function AuthProvider({ children }) {
     'judicial_authority': 'judicial_authority',
     'Judicial Authority': 'judicial_authority',
     'admin': 'admin',
-    'Admin': 'admin'
+    'Admin': 'admin',
+    'forensic_expert': 'forensic_expert',
+    'Forensic Expert': 'forensic_expert'
   };
 
   const isAuthenticated = Boolean(user);
