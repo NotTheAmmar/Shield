@@ -29,23 +29,12 @@ jobs:
         run: |
           cp .env.example .env
 
-          # Replace all placeholder credentials with working CI values
-          sed -i 's/^POSTGRES_USER=.*/POSTGRES_USER=shield_ci/' .env
-          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=shield_ci_pass/' .env
-          sed -i 's/^POSTGRES_DB=.*/POSTGRES_DB=shield_ci/' .env
-          sed -i 's/^MINIO_ROOT_USER=.*/MINIO_ROOT_USER=shield_ci/' .env
-          sed -i 's/^MINIO_ROOT_PASSWORD=.*/MINIO_ROOT_PASSWORD=shield_ci_minio_pass/' .env
-          sed -i 's/^JWT_SECRET=.*/JWT_SECRET=ci_jwt_secret_key_for_testing_only/' .env
-          sed -i 's/^MASTER_KEY=.*/MASTER_KEY=ci_master_key_for_testing_only_2026/' .env
-
-          # Extract deployer private key from keystore
+          # Extract deployer private key from keystore (only dynamic value)
           sed -i '/BLOCKCHAIN_DEPLOYER_PRIVATE_KEY=/d' .env
           PRIVATE_KEY=$(node -e "const {ethers}=require('ethers'),fs=require('fs'); (async()=>{const w=await ethers.Wallet.fromEncryptedJson(fs.readFileSync('./blockchain/keystore/police-account.json','utf8'), fs.readFileSync('./blockchain/password.txt','utf8').trim()); console.log(w.privateKey)})()")
           if [ -z "$PRIVATE_KEY" ]; then echo "FATAL: Failed to extract deployer private key"; exit 1; fi
           echo "BLOCKCHAIN_DEPLOYER_PRIVATE_KEY=$PRIVATE_KEY" >> .env
           echo "Deployer key extracted successfully"
-          echo "--- CI .env initialized ---"
-          grep -v 'PRIVATE_KEY\|PASSWORD\|SECRET\|MASTER_KEY' .env || true
 
       - name: Create Shared Docker Network
         run: |
