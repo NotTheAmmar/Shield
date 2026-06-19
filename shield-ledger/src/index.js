@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const { getContract, getSignerContract, checkConnection } = require('./blockchain');
+const { ethers } = require('ethers');
 
 const app = express();
 const PORT = process.env.PORT || 4002;
@@ -23,6 +24,46 @@ app.get('/health', async (req, res) => {
         chainId: status.chainId,
         timestamp: new Date(),
     });
+});
+
+// ── Internal Network Guard ──────────────────────────────────────────────────
+const internalNetworkGuard = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    if (authHeader !== `Bearer ${process.env.MASTER_KEY}`) {
+        return res.status(403).json({ error: 'Forbidden: Internal Master Key Required' });
+    }
+    next();
+};
+
+// ── POST /api/ledger/grant-anchor-role ─────────────────────────────────────
+// Grants the EVIDENCE_ANCHOR_ROLE to a newly provisioned user wallet.
+app.post('/api/ledger/grant-anchor-role', internalNetworkGuard, async (req, res) => {
+    const { address } = req.body;
+    if (!address || !ethers.isAddress(address)) {
+        return res.status(400).json({ error: 'Valid Ethereum address is required' });
+    }
+
+    try {
+        console.log(`[Ledger] Granting EVIDENCE_ANCHOR_ROLE to ${address}...`);
+        const adminKey = process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY;
+        if (!adminKey) throw new Error("Missing BLOCKCHAIN_DEPLOYER_PRIVATE_KEY");
+
+        const contract = await getSignerContract(adminKey);
+        
+        const EVIDENCE_ANCHOR_ROLE = ethers.id("EVIDENCE_ANCHOR_ROLE");
+
+        // grantRole(bytes32 role, address account)
+        const tx = await contract.grantRole(EVIDENCE_ANCHOR_ROLE, address, { gasPrice: 0 });
+        console.log(`[Ledger] Grant role TX submitted: ${tx.hash}, waiting...`);
+        
+        await tx.wait();
+        console.log(`[Ledger] Role granted successfully to ${address}`);
+        
+        return res.json({ ok: true, address, role: 'EVIDENCE_ANCHOR_ROLE' });
+    } catch (err) {
+        console.error(`[Ledger] Grant role error: ${err.message}`);
+        return res.status(500).json({ error: 'Failed to grant role', details: err.message });
+    }
 });
 
 // ── POST /api/ledger/store ─────────────────────────────────────────────────

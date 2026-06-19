@@ -13,7 +13,11 @@ async function storeHash(evidenceId, hash, privateKey) {
         body: JSON.stringify({ evidenceId, hash, privateKey }),
     });
 
-    if (!res.ok) throw new Error(`Ledger store failed: ${res.status}`);
+    if (!res.ok) {
+        let errBody = '';
+        try { errBody = await res.text(); } catch(e) {}
+        throw new Error(`Ledger store failed: ${res.status} - ${errBody}`);
+    }
     return res.json();
 }
 

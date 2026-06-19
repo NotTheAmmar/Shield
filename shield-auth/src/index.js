@@ -5,6 +5,7 @@ require('dotenv').config();
 const runMigrations = require('./migrate');
 const authRouter = require('./routes/auth');
 const adminRouter = require('./routes/admin');
+const { startProvisionWorker } = require('./provision_worker');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -30,4 +31,7 @@ app.use('/api/admin', auth, adminRouter);
 app.listen(PORT, async () => {
     console.log(`Auth Service running on port ${PORT}`);
     await runMigrations();
+    
+    // Start background queue processors
+    startProvisionWorker();
 });
