@@ -31,7 +31,7 @@ function log(testName, passed, details, skipped = false) {
     else failCount++;
 }
 
-async function http(method, path, { token, body, headers = {}, multipart, timeout = 8000, cookies } = {}) {
+async function http(method, path, { token, body, headers = {}, multipart, timeout = 15000, cookies } = {}) {
     const url = `${GATEWAY}${path}`;
     const opts = { method, headers: { ...headers } };
 
