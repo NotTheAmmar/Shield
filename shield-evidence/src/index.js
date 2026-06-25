@@ -77,6 +77,8 @@ async function runMigrations() {
                   sha256_hash       VARCHAR(64),
                   mime_type         VARCHAR(100),
                   file_size         BIGINT,
+                  ledger_tx_id      TEXT,
+                  ledger_timestamp  TIMESTAMPTZ,
                   registered_at     TIMESTAMPTZ  DEFAULT NOW()
                 );
 
@@ -177,6 +179,8 @@ async function runMigrations() {
                 ALTER TABLE fir ADD COLUMN IF NOT EXISTS sha256_hash VARCHAR(64);
                 ALTER TABLE fir ADD COLUMN IF NOT EXISTS mime_type VARCHAR(100);
                 ALTER TABLE fir ADD COLUMN IF NOT EXISTS file_size BIGINT;
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS ledger_tx_id TEXT;
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS ledger_timestamp TIMESTAMPTZ;
             `);
             await pool.query(`
                 ALTER TABLE evidence_metadata ADD COLUMN IF NOT EXISTS all_metadata JSONB;

@@ -31,6 +31,10 @@ BODY2=$(echo "$O2" | sed '$d')
 OFFICER_EMAIL=$(echo "$BODY2" | grep -o '"email":"[^"]*' | cut -d'"' -f4)
 if [ -z "$OFFICER_EMAIL" ]; then echo "❌ FAILED: $BODY2"; rm -f "$TEST_FILE"; exit 1; else echo "✅ User Created: $OFFICER_EMAIL"; fi
 
+# Wait for ProvisionWorker to grant blockchain anchor role (runs every 2s)
+echo "⏳ Waiting 5 seconds for blockchain role provisioning..."
+sleep 5
+
 # Step 3
 echo -en "[3] Testing Auth Service: Login as Officer... "
 O3=$(curl -s -w "\n%{http_code}" -X POST http://localhost:3001/api/auth/login -H "Content-Type: application/json" -d '{"email":"'"$OFFICER_EMAIL"'","password":"SecurePassword123!","role":"Police Officer"}')
@@ -40,17 +44,25 @@ if [ -z "$OFFICER_TOKEN" ]; then echo "❌ FAILED: $BODY3"; rm -f "$TEST_FILE"; 
 
 # Step 4
 echo -en "[4] Testing FIR Service: Create FIR... "
-O4=$(curl -s -w "\n%{http_code}" -X POST http://localhost:3001/api/fir/create -H "Authorization: Bearer $OFFICER_TOKEN" -F "firNumber=FIR/2026/TEST/$(date +%s)" -F "case_category=Theft" -F "description=Evidence testing FIR" -F "location=Test HQ")
+O4=$(curl -s -w "\n%{http_code}" -X POST http://localhost:3001/api/fir/create -H "Authorization: Bearer $OFFICER_TOKEN" -F "firNumber=FIR/2026/TEST/$(date +%s)" -F "case_category=Theft" -F "description=Evidence testing FIR" -F "location=Test HQ" -F "file=@$TEST_FILE")
 BODY4=$(echo "$O4" | sed '$d')
 FIR_ID=$(echo "$BODY4" | grep -o '"fir_id":"[^"]*' | cut -d'"' -f4)
 if [ -z "$FIR_ID" ]; then echo "❌ FAILED: $BODY4"; rm -f "$TEST_FILE"; exit 1; else echo "✅ FIR Created: $FIR_ID"; fi
 
+# Step 4.5
+echo -en "[4.5] Testing FIR Service: Verify FIR Integrity against Ledger... "
+O45=$(curl -s -w "\n%{http_code}" -X GET http://localhost:3001/api/fir/verify/$FIR_ID -H "Authorization: Bearer $OFFICER_TOKEN")
+BODY45=$(echo "$O45" | sed '$d')
+STATUS45=$(echo "$BODY45" | grep -o '"status":"[^"]*' | cut -d'"' -f4)
+if [ "$STATUS45" != "verified" ]; then echo "❌ FAILED: $BODY45"; rm -f "$TEST_FILE"; exit 1; else echo "✅ FIR Cryptographic Verification Successful"; fi
+
 # Step 5
 echo -en "[5] Testing Evidence Service: Upload Evidence... "
-O5=$(curl -s -w "\n%{http_code}" -X POST http://localhost:3001/api/evidence/upload -H "Authorization: Bearer $OFFICER_TOKEN" -F "fir_id=$FIR_ID" -F "file=@$TEST_FILE")
+O5=$(curl -s -w "\n%{http_code}" -X POST http://localhost:3001/api/evidence/upload -H "Authorization: Bearer $OFFICER_TOKEN" -F "fir_id=$FIR_ID" -F "category=other" -F "sourceData={\"sourceType\": \"mobile\", \"deviceChain\": [], \"lawfulControl\": true, \"properOperation\": true, \"ownershipStatus\": \"seized\"}" -F "file=@$TEST_FILE")
 BODY5=$(echo "$O5" | sed '$d')
+EV_SOURCE_ID=$(echo "$BODY5" | grep -o '"sourceId":"[^"]*' | cut -d'"' -f4)
 EVIDENCE_ID=$(echo "$BODY5" | grep -o '"id":"[^"]*' | cut -d'"' -f4)
-if [ -z "$EVIDENCE_ID" ]; then echo "❌ FAILED: $BODY5"; rm -f "$TEST_FILE"; exit 1; else echo "✅ Uploaded! ID: $EVIDENCE_ID"; fi
+if [ -z "$EV_SOURCE_ID" ] || [ -z "$EVIDENCE_ID" ]; then echo "❌ FAILED: $BODY5"; rm -f "$TEST_FILE"; exit 1; else echo "✅ Evidence Uploaded! Source ID: $EV_SOURCE_ID, File ID: $EVIDENCE_ID"; fi
 
 # Step 6
 echo -en "[6] Testing Security: Cryptographic Verification... "
