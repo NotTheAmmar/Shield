@@ -1,0 +1,12 @@
+{
+  "sms_header": "AD-HDFCBK",
+  "sms_body": "Dear customer, your HDFC account will be suspended. Please verify your details immediately at https://hdfc-verification-portal.com/login",
+  "received_time": "2026-06-24T18:22:04Z",
+  "victim_phone": "+91 98765 43210",
+  "ip_resolution": {
+    "domain": "hdfc-verification-portal.com",
+    "resolved_ip": "104.21.32.110",
+    "hosting_provider": "Cloudflare Inc."
+  },
+  "forensic_hash": "2f71661601a4e101f31d0442345d3f23a4b0811e55047b77f9e8a8b8d5e95b43"
+}
