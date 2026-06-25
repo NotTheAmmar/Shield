@@ -197,6 +197,10 @@ async function runMigrations() {
                 ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_role TEXT;
                 ALTER TABLE api_audit_log ADD COLUMN IF NOT EXISTS user_employee_id TEXT;
             `);
+            await pool.query(`
+                ALTER TABLE evidence_source ADD COLUMN IF NOT EXISTS part_a_sig_path VARCHAR(500);
+                ALTER TABLE evidence_source ADD COLUMN IF NOT EXISTS part_b_sig_path VARCHAR(500);
+            `);
             
             console.log('[Init] Database schemas (FIR, Evidence, Audit) ready.');
             return;

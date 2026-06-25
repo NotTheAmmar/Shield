@@ -1,6 +1,8 @@
 const fs = require('fs');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
-const BASE_URL = 'http://localhost:3000/api';
+const BASE_URL = 'http://localhost/api';
 
 class ApiClient {
     constructor() {
@@ -60,12 +62,12 @@ async function run() {
 
     console.log('\n[1] Login as Admin');
     let res = await client.request('/auth/login', 'POST', {
-        email: 'admin@police.gov',
-        password: 'Sh13ld@Pr0duct10n2026!',
+        email: process.env.ADMIN_SEED_EMAIL || 'admin@police.gov',
+        password: process.env.ADMIN_SEED_PASSWORD || 'Sh13ld@Pr0duct10n2026!',
         role: 'Admin'
     });
     if (res.status !== 200) {
-        console.error('Admin login failed:', res.data);
+        console.error('Admin login failed:', res);
         return;
     }
     console.log('✔ Admin login success');
