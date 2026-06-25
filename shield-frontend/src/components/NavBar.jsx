@@ -6,10 +6,10 @@ import ThemeToggle from './ThemeToggle';
 import RoleBadge from './RoleBadge';
 
 const NAV_LINKS = [
-  { to: '/',             label: 'Dashboard',       Icon: LayoutDashboard, roles: ['police_officer', 'judicial_authority', 'admin'] },
+  { to: '/',             label: 'Dashboard',       Icon: LayoutDashboard, roles: ['police_officer', 'judicial_authority', 'admin', 'forensic_expert'] },
   { to: '/upload',       label: 'Upload',           Icon: Upload,          roles: ['police_officer'] },
   { to: '/fir',          label: 'FIR Registry',     Icon: FileText,        roles: ['police_officer', 'judicial_authority'] },
-  { to: '/vault',        label: 'Evidence Vault',   Icon: Archive,         roles: ['police_officer', 'judicial_authority'] },
+  { to: '/vault',        label: 'Evidence Vault',   Icon: Archive,         roles: ['police_officer', 'judicial_authority', 'forensic_expert'] },
   { to: '/audit',        label: 'Audit Log',         Icon: BookOpen,        roles: ['judicial_authority'] },
   { to: '/admin/users',  label: 'User Management',  Icon: Users,           roles: ['admin'] },
 ];

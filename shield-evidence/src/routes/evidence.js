@@ -191,7 +191,7 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
             }
             // After all files are processed, we have the sourceId from the promise
             const sourceId = await sourceIdPromise;
-            send(201, { sourceId, files: results });
+            send(201, { id: results[0]?.id, sourceId, files: results });
         } catch (err) {
             console.error('Batch upload failed:', err);
             send(500, { error: 'Upload failed for one or more files.', details: err.message });

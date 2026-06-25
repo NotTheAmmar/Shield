@@ -52,6 +52,18 @@ router.get('/:id/certificate', generateRateLimiter, requireRoles(['Police Office
         if (!sourceRows.length) return res.status(404).json({ error: 'Evidence source batch not found' });
         const source = sourceRows[0];
 
+        // If completed, return the signed certificate directly
+        if (source.certificate_status === 'COMPLETED') {
+            if (!source.signed_cert_file_path) {
+                return res.status(404).json({ error: 'Signed certificate not found' });
+            }
+            const minioBuffer = await getMinioBuffer(BUCKET, source.signed_cert_file_path);
+            res.setHeader('Content-disposition', `attachment; filename=Section63_Certificate_Batch_${sourceId}.pdf`);
+            res.setHeader('Content-type', 'application/pdf');
+            res.end(minioBuffer);
+            return;
+        }
+
         // Strict state enforcement: Forensic Expert cannot access Part B if Part A is not completed.
         if (userRole === 'Forensic Expert' && source.certificate_status === 'PENDING_PART_A') {
             return res.status(400).json({ error: 'Part A is not yet signed by the producing officer. You cannot access Part B.' });
@@ -346,7 +358,7 @@ router.post('/:id/upload-signed-certificate', uploadRateLimiter, requireRoles(['
 
         try {
             // Check current status
-            const { rows } = await pool.query('SELECT certificate_status FROM evidence_source WHERE id = $1', [sourceId]);
+            const { rows } = await pool.query('SELECT certificate_status, signed_cert_file_path FROM evidence_source WHERE id = $1', [sourceId]);
             if (!rows.length) {
                 fileStream.resume();
                 return res.status(404).json({ error: 'Evidence source batch not found' });
@@ -372,27 +384,94 @@ router.post('/:id/upload-signed-certificate', uploadRateLimiter, requireRoles(['
                 return res.status(400).json({ error: 'Certificate is already completed.' });
             }
 
-            const objectKey = `certificates/batch_${sourceId}_signed_${Date.now()}.${ext}`;
+            // Buffer the incoming file stream
+            const uploadedBuffer = await new Promise((resolve, reject) => {
+                const chunks = [];
+                let totalSize = 0;
+                fileStream.on('data', (chunk) => {
+                    totalSize += chunk.length;
+                    if (totalSize > 5 * 1024 * 1024) {
+                        fileStream.destroy(new Error('LIMIT_FILE_SIZE'));
+                        return;
+                    }
+                    chunks.push(chunk);
+                });
+                fileStream.on('end', () => resolve(Buffer.concat(chunks)));
+                fileStream.on('error', reject);
+            });
+
+            let finalBuffer = uploadedBuffer;
+            let finalMime = info.mimeType;
+            let finalKey = `certificates/batch_${sourceId}_signed_${Date.now()}.${ext}`;
+
+            if (currentStatus === 'PENDING_PART_B' && rows[0].signed_cert_file_path) {
+                try {
+                    const prevPath = rows[0].signed_cert_file_path;
+                    const prevBuffer = await getMinioBuffer(BUCKET, prevPath);
+                    const prevExt = prevPath.split('.').pop().toLowerCase();
+                    const isPrevImage = prevExt === 'jpg' || prevExt === 'jpeg' || prevExt === 'png';
+                    const isPrevJpg = prevExt === 'jpg' || prevExt === 'jpeg';
+
+                    // 1. Load Part A (previous upload)
+                    let finalDoc;
+                    if (isPrevImage) {
+                        finalDoc = await PDFLibDocument.create();
+                        const image = isPrevJpg ? await finalDoc.embedJpg(prevBuffer) : await finalDoc.embedPng(prevBuffer);
+                        const page = finalDoc.addPage();
+                        const { width, height } = page.getSize();
+                        const imgDims = image.scaleToFit(width, height);
+                        page.drawImage(image, {
+                            x: width / 2 - imgDims.width / 2,
+                            y: height / 2 - imgDims.height / 2,
+                            width: imgDims.width,
+                            height: imgDims.height,
+                        });
+                    } else {
+                        finalDoc = await PDFLibDocument.load(prevBuffer);
+                    }
+
+                    // 2. Load Part B (new upload)
+                    let partBDoc;
+                    if (info.mimeType === 'image/jpeg' || info.mimeType === 'image/png') {
+                        partBDoc = await PDFLibDocument.create();
+                        const isJpgB = info.mimeType === 'image/jpeg';
+                        const imageB = isJpgB ? await partBDoc.embedJpg(uploadedBuffer) : await partBDoc.embedPng(uploadedBuffer);
+                        const pageB = partBDoc.addPage();
+                        const { width, height } = pageB.getSize();
+                        const imgDims = imageB.scaleToFit(width, height);
+                        pageB.drawImage(imageB, {
+                            x: width / 2 - imgDims.width / 2,
+                            y: height / 2 - imgDims.height / 2,
+                            width: imgDims.width,
+                            height: imgDims.height,
+                        });
+                    } else {
+                        partBDoc = await PDFLibDocument.load(uploadedBuffer);
+                    }
+
+                    // 3. Merge pages
+                    const copiedPages = await finalDoc.copyPages(partBDoc, partBDoc.getPageIndices());
+                    copiedPages.forEach(p => finalDoc.addPage(p));
+
+                    // 4. Save merged document
+                    const mergedBytes = await finalDoc.save();
+                    finalBuffer = Buffer.from(mergedBytes);
+                    finalMime = 'application/pdf';
+                    finalKey = `certificates/batch_${sourceId}_signed_${Date.now()}.pdf`;
+                } catch (mergeErr) {
+                    console.warn('⚠️ Merging certificates failed, falling back to saving uploaded file directly:', mergeErr.message);
+                }
+            }
+
             const passThrough = new PassThrough();
+            passThrough.end(finalBuffer);
 
-            const putPromise = new Promise((resolve, reject) => {
-                minioInternal.putObject(BUCKET, objectKey, passThrough, null, { 'Content-Type': info.mimeType })
-                    .then(resolve)
-                    .catch(reject);
-            });
-
-            fileStream.on('error', (err) => passThrough.destroy(err));
-            fileStream.on('limit', () => {
-                passThrough.destroy(new Error('LIMIT_FILE_SIZE'));
-            });
-            fileStream.pipe(passThrough);
-
-            await putPromise;
+            await minioInternal.putObject(BUCKET, finalKey, passThrough, finalBuffer.length, { 'Content-Type': finalMime });
 
             // Update database
             await pool.query(
                 'UPDATE evidence_source SET certificate_status = $1, signed_cert_file_path = $2 WHERE id = $3',
-                [nextStatus, objectKey, sourceId]
+                [nextStatus, finalKey, sourceId]
             );
 
             // Log the action

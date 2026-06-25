@@ -71,6 +71,9 @@ async function testSuite() {
         if (!createJudgeRes.ok) throw new Error(`Create Judge failed`);
         console.log(`✅ Created Judicial Authority via Admin Route: ${judgeEmail}`);
 
+        console.log('\n⏳ Waiting 15 seconds for blockchain role provisioning to complete...');
+        await new Promise(resolve => setTimeout(resolve, 15000));
+
         // 3. Login as the newly created Police Officer & Judge
         console.log('\n[3] Testing Police & Judge Login...');
         const polLogin = await fetchWithTimeout(`${GATEWAY}/auth/login`, {
@@ -115,6 +118,12 @@ async function testSuite() {
         console.log('\n[5] Testing Storage & Blockchain: Uploading Evidence File...');
         const evForm = new FormData();
         evForm.append('fir_id', firId);
+        evForm.append('sourceData', JSON.stringify({
+            sourceType: 'Physical Storage Media',
+            deviceChain: ['Primary Custodian Device'],
+            lawfulControl: true,
+            properOperation: true
+        }));
         evForm.append('file', new Blob(['This is highly classified digital evidence from the test suite.']), 'secret.txt');
         
         const evRes = await fetchWithTimeout(`${GATEWAY}/evidence/upload`, {

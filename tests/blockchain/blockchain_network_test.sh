@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-# ── Colours & helpers ────────────────────────────────────────────────────────
+# â”€â”€ Colours & helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
@@ -27,10 +27,10 @@ PASS=0
 FAIL=0
 SKIP=0
 
-pass() { echo -e "${GREEN}  ✔ PASS${RESET} — $1"; ((PASS++)) || true; }
-fail() { echo -e "${RED}  ✖ FAIL${RESET} — $1"; ((FAIL++)) || true; }
-skip() { echo -e "${YELLOW}  ⊘ SKIP${RESET} — $1"; ((SKIP++)) || true; }
-section() { echo -e "\n${CYAN}${BOLD}▶ $1${RESET}"; }
+pass() { echo -e "${GREEN}  âœ” PASS${RESET} â€” $1"; ((PASS++)) || true; }
+fail() { echo -e "${RED}  âœ– FAIL${RESET} â€” $1"; ((FAIL++)) || true; }
+skip() { echo -e "${YELLOW}  âŠ˜ SKIP${RESET} â€” $1"; ((SKIP++)) || true; }
+section() { echo -e "\n${CYAN}${BOLD}â–¶ $1${RESET}"; }
 
 rpc() {
   # $1 = port, $2 = method, $3 = params
@@ -41,12 +41,12 @@ rpc() {
 }
 
 echo ""
-echo -e "${BOLD}╔══════════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}║  SHIELD Blockchain Network — Integration Tests   ║${RESET}"
-echo -e "${BOLD}╚══════════════════════════════════════════════════╝${RESET}"
+echo -e "${BOLD}â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—${RESET}"
+echo -e "${BOLD}â•‘  SHIELD Blockchain Network â€” Integration Tests   â•‘${RESET}"
+echo -e "${BOLD}â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•${RESET}"
 echo ""
 
-# ── Section 1: Container Health ──────────────────────────────────────────────
+# â”€â”€ Section 1: Container Health â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 section "1. Container Health"
 
 for container in blockchain-bootnode node-police node-court; do
@@ -58,7 +58,7 @@ for container in blockchain-bootnode node-police node-court; do
   fi
 done
 
-# ── Section 2: RPC Responsiveness ────────────────────────────────────────────
+# â”€â”€ Section 2: RPC Responsiveness â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 section "2. JSON-RPC Endpoints"
 
 # Give nodes a moment if just started
@@ -79,7 +79,7 @@ else
   fail "node-court RPC (port 8546) is not responding"
 fi
 
-# ── Section 3: Chain ID ───────────────────────────────────────────────────────
+# â”€â”€ Section 3: Chain ID â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 section "3. Chain Configuration"
 
 POLICE_CHAIN=$(rpc 8545 "eth_chainId" "[]")
@@ -89,16 +89,16 @@ COURT_CHAIN=$(rpc  8546 "eth_chainId" "[]")
 if echo "$POLICE_CHAIN" | grep -q '"0x7a69"'; then
   pass "node-police chain ID is 31337 (0x7a69)"
 else
-  fail "node-police chain ID mismatch — got: $POLICE_CHAIN"
+  fail "node-police chain ID mismatch â€” got: $POLICE_CHAIN"
 fi
 
 if echo "$COURT_CHAIN" | grep -q '"0x7a69"'; then
   pass "node-court chain ID is 31337 (0x7a69)"
 else
-  fail "node-court chain ID mismatch — got: $COURT_CHAIN"
+  fail "node-court chain ID mismatch â€” got: $COURT_CHAIN"
 fi
 
-# ── Section 4: Peer Connectivity ──────────────────────────────────────────────
+# â”€â”€ Section 4: Peer Connectivity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 section "4. Peer Connectivity"
 
 # Allow extra time for peer discovery via bootnode
@@ -117,20 +117,20 @@ COURT_PEERS_DEC=$(printf '%d' "$COURT_PEER_COUNT" 2>/dev/null || echo 0)
 if [ "$POLICE_PEERS_DEC" -ge 1 ] 2>/dev/null; then
   pass "node-police has $POLICE_PEERS_DEC peer(s)"
 else
-  fail "node-police has 0 peers — expected at least 1 (bootnode + court node)"
+  fail "node-police has 0 peers â€” expected at least 1 (bootnode + court node)"
 fi
 
 if [ "$COURT_PEERS_DEC" -ge 1 ] 2>/dev/null; then
   pass "node-court has $COURT_PEERS_DEC peer(s)"
 else
-  fail "node-court has 0 peers — expected at least 1 (bootnode + police node)"
+  fail "node-court has 0 peers â€” expected at least 1 (bootnode + police node)"
 fi
 
-# ── Section 5: Block Production ───────────────────────────────────────────────
+# â”€â”€ Section 5: Block Production â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 section "5. Block Sealing / Production"
 
 BLOCK_BEFORE=$(rpc 8545 "eth_blockNumber" "[]" | grep -o '"0x[0-9a-f]*"' | tr -d '"' | head -1)
-echo "  Current block: $BLOCK_BEFORE — waiting 12s for new blocks..."
+echo "  Current block: $BLOCK_BEFORE â€” waiting 12s for new blocks..."
 sleep 12
 BLOCK_AFTER=$(rpc 8545 "eth_blockNumber" "[]" | grep -o '"0x[0-9a-f]*"' | tr -d '"' | head -1)
 
@@ -143,7 +143,7 @@ else
   fail "Block number did not increase (before: $BLOCK_BEFORE_DEC, after: $BLOCK_AFTER_DEC)"
 fi
 
-# ── Section 6: Zero-Gas Transaction ──────────────────────────────────────────
+# â”€â”€ Section 6: Zero-Gas Transaction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 section "6. Zero-Gas Transaction"
 
 POLICE_ADDR="0x80de6ef5a945d6cc1dad5375e3ced4df466e0384"
@@ -156,7 +156,7 @@ if echo "$TX_RESULT" | grep -q '"0x'; then
   TX_HASH=$(echo "$TX_RESULT" | grep -o '"0x[0-9a-f]*"' | tr -d '"' | head -1)
   pass "Zero-gas transaction accepted by node-police (tx: ${TX_HASH:0:18}...)"
 
-  # ── Section 7: Cross-Node Propagation ─────────────────────────────────
+  # â”€â”€ Section 7: Cross-Node Propagation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   section "7. Cross-Node Transaction Propagation"
   echo "  Waiting 18s for transaction to be mined and propagated..."
   sleep 18
@@ -174,13 +174,13 @@ else
   skip "Cross-node propagation (depends on previous test)"
 fi
 
-# ── Section 8: ABI File Integrity ────────────────────────────────────────────
+# â”€â”€ Section 8: ABI File Integrity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 section "8. ABI Export Integrity"
 
 ABI_FILE="./shield-ledger/src/abis/ShieldLedger.json"
 
 if [ ! -f "$ABI_FILE" ]; then
-  fail "ABI file not found at $ABI_FILE — run 'npx hardhat compile' first"
+  fail "ABI file not found at $ABI_FILE â€” run 'npx hardhat compile' first"
 else
   # Check it is valid JSON
   if ! python3 -c "import json; json.load(open('$ABI_FILE'))" 2>/dev/null; then
@@ -195,11 +195,11 @@ else
   fi
 fi
 
-# ── Summary ───────────────────────────────────────────────────────────────────
+# â”€â”€ Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 echo ""
-echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+echo -e "${BOLD}â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”${RESET}"
 echo -e "${BOLD}  Results: ${GREEN}${PASS} passed${RESET}  ${RED}${FAIL} failed${RESET}  ${YELLOW}${SKIP} skipped${RESET}"
-echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+echo -e "${BOLD}â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”${RESET}"
 echo ""
 
 if [ "$FAIL" -gt 0 ]; then
