@@ -1,0 +1,4 @@
+Timestamp,RegistryKey,ValueName,ValueData,Interpretation
+2026-06-24T09:12:00Z,HKLM\SYSTEM\CurrentControlSet\Enum\USBSTOR,Disk&Ven_SanDisk&Prod_Ultra&Rev_1.00,4C531001350225114170,SanDisk USB Connected
+2026-06-24T09:15:30Z,HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2\{e81a32-11e2-b92},VolumeName,Backup_AI,USB volume mounted
+2026-06-24T09:20:12Z,UserAssist\{CEBFF5CD-094B-4662-8E6A-19E15EA15112},cmd.exe,"robocopy C:\projects\ai-core F:\backup /E",Command executed to copy source code

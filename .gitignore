@@ -23,3 +23,6 @@ typechain-types/
 .docker-data/geth-bootnode/
 .docker-data/geth-police/
 .docker-data/geth-court/
+
+# Nested github repo clone
+github-repo/

@@ -1,0 +1,5 @@
+POLICE DEPT CYBER CELL - FIRST INFORMATION REPORT
+Number: FIR-2026-CYBER-8921
+Complainant: Ramesh Kumar
+Sections: 66D IT Act, 420 IPC
+Details: Victim clicked link in phishing SMS. Funds transferred to beneficiary UPI ID: rajesh99@oksbi.

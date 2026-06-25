@@ -166,9 +166,9 @@ async function main() {
 
     console.log(`\n[6] Verifying evidence ${evidenceId.substring(0, 8)}...`);
     const verifyRes = await http('GET', `/api/evidence/verify/${evidenceId}`, { token });
-
+    if (verifyRes.status === 404) {
         console.log('   ⚠️  Evidence ID not found in SHIELD database.');
-
+    }
     const status = verifyRes.data.status;
 
     // ═══════════════════════════════════════════════════════════
