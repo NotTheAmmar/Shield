@@ -43,7 +43,7 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
         }
     };
 
-    const userId = req.user.id;
+    const userId = req.user.userId || req.user.id;
     let fir_id;
     let capturedCategory = 'other', capturedDescription = '';
     let sourceData = null;
@@ -139,16 +139,23 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
                 try {
                     await client.query('BEGIN');
 
-                    let privateKey = null;
-                    const userRes = await client.query('SELECT encrypted_private_key FROM users WHERE id = $1', [userId]);
-                    const encryptedPrivateKey = userRes.rows[0]?.encrypted_private_key;
-                    if (encryptedPrivateKey) {
-                        const { decryptPrivateKey } = require('../crypto');
-                        privateKey = decryptPrivateKey(encryptedPrivateKey);
+                    // Attempt blockchain anchoring (non-blocking — don't fail the upload if blockchain is down)
+                    let ledgerTxId = null;
+                    let ledgerTimestamp = null;
+                    try {
+                        let privateKey = null;
+                        const userRes = await client.query('SELECT encrypted_private_key FROM users WHERE id = $1', [userId]);
+                        const encryptedPrivateKey = userRes.rows[0]?.encrypted_private_key;
+                        if (encryptedPrivateKey) {
+                            const { decryptPrivateKey } = require('../crypto');
+                            privateKey = decryptPrivateKey(encryptedPrivateKey);
+                        }
+                        const ledgerResult = await ledger.storeEvidenceHash(evidenceId, fir_id, hash, privateKey);
+                        ledgerTxId = ledgerResult?.txId || null;
+                        ledgerTimestamp = ledgerTxId ? new Date().toISOString() : null;
+                    } catch (ledgerErr) {
+                        console.warn(`[Evidence] Blockchain anchoring failed for ${evidenceId}: ${ledgerErr.message}. Evidence will be saved without ledger proof.`);
                     }
-                    const ledgerResult = await ledger.storeHash(evidenceId, hash, privateKey);
-                    const ledgerTxId = ledgerResult?.txId || null;
-                    const ledgerTimestamp = ledgerTxId ? new Date().toISOString() : null;
 
                     await client.query(
                         `INSERT INTO evidence
@@ -207,7 +214,7 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
 // ─────────────────────────────────────────────
 router.get('/verify/:id', async (req, res) => {
     const { id } = req.params;
-    const actorId = req.user.id;
+    const actorId = req.user.userId || req.user.id;
 
     try {
         // 1. Fetch record from Postgres
@@ -229,7 +236,7 @@ router.get('/verify/:id', async (req, res) => {
         });
 
         // 3. Get immutable hash from ledger — NOT Postgres (Flaw #2)
-        const ledgerHash = await ledger.getHash(id);
+        const ledgerHash = await ledger.getEvidenceHash(id);
 
         // 4. In MOCK mode, ledger returns null → fall back to Postgres hash
         const truthHash = ledgerHash || record.sha256_hash;
@@ -347,7 +354,7 @@ router.post('/internal/verify-batch', express.json(), internalNetworkGuard, requ
                     });
                 });
 
-                const ledgerHash = await ledger.getHash(id);
+                const ledgerHash = await ledger.getEvidenceHash(id);
                 const truthHash = ledgerHash || record.sha256_hash;
                 const result = (liveHash === truthHash) ? 'OK' : 'TAMPERED';
 

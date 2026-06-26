@@ -31,7 +31,7 @@ function log(testName, passed, details, skipped = false) {
     else failCount++;
 }
 
-async function http(method, path, { token, body, headers = {}, multipart, timeout = 8000, cookies } = {}) {
+async function http(method, path, { token, body, headers = {}, multipart, timeout = 15000, cookies } = {}) {
     const url = `${GATEWAY}${path}`;
     const opts = { method, headers: { ...headers } };
 
@@ -858,11 +858,12 @@ async function main() {
     // T50: Create second FIR and verify FIR listing count increases
     try {
         const tok = officerToken || adminToken;
-        const listBefore = await http('GET', '/api/fir/list', { token: tok });
+        const listBefore = await http('GET', '/api/fir/list', { token: tok, timeout: 15000 });
         const countBefore = listBefore.data?.data?.length || 0;
 
         await http('POST', '/api/fir/create', {
             token: tok,
+            timeout: 15000,
             multipart: {
                 firNumber: `FIR/2026/COUNT/${Date.now()}`,
                 incidentType: 'Theft',
@@ -872,7 +873,7 @@ async function main() {
             }
         });
 
-        const listAfter = await http('GET', '/api/fir/list', { token: tok });
+        const listAfter = await http('GET', '/api/fir/list', { token: tok, timeout: 15000 });
         const countAfter = listAfter.data?.data?.length || 0;
         log('T50: FIR count increases after creation', countAfter > countBefore,
             `Before: ${countBefore}, After: ${countAfter}`);

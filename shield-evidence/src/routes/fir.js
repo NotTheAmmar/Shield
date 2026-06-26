@@ -6,6 +6,7 @@ const { PassThrough } = require('stream');
 const pool = require('../db');
 const { minioInternal, minioPublic, BUCKET } = require('../config/minio');
 const requireRoles = require('../middleware/rbac');
+const ledger = require('../services/ledger');
 
 const router = express.Router();
 
@@ -94,10 +95,28 @@ router.post('/create', requireRoles(['Police Officer']), (req, res) => {
                 }
 
                 try {
+                    // Attempt blockchain anchoring (non-blocking — don't fail the FIR if blockchain is down)
+                    let ledgerTxId = null;
+                    let ledgerTimestamp = null;
+                    try {
+                        let privateKey = null;
+                        const userRes = await pool.query('SELECT encrypted_private_key FROM users WHERE id = $1', [reportingOfficer]);
+                        const encryptedPrivateKey = userRes.rows[0]?.encrypted_private_key;
+                        if (encryptedPrivateKey) {
+                            const { decryptPrivateKey } = require('../crypto');
+                            privateKey = decryptPrivateKey(encryptedPrivateKey);
+                        }
+                        const ledgerResult = await ledger.storeFIRHash(firId, hash, privateKey);
+                        ledgerTxId = ledgerResult?.txId || null;
+                        ledgerTimestamp = ledgerTxId ? new Date().toISOString() : null;
+                    } catch (ledgerErr) {
+                        console.warn(`[FIR] Blockchain anchoring failed for ${firId}: ${ledgerErr.message}. FIR will be saved without ledger proof.`);
+                    }
+
                     await pool.query(
-                        `INSERT INTO fir (id, case_category, description, location, reporting_officer, fir_number, filename, bucket_name, object_key, sha256_hash, mime_type, file_size)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-                        [firId, caseCategory, desc, loc, reportingOfficer, firNumber, capturedFilename, BUCKET, objectKey, hash, capturedMime, fileSize]
+                        `INSERT INTO fir (id, case_category, description, location, reporting_officer, fir_number, filename, bucket_name, object_key, sha256_hash, mime_type, file_size, ledger_tx_id, ledger_timestamp)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+                        [firId, caseCategory, desc, loc, reportingOfficer, firNumber, capturedFilename, BUCKET, objectKey, hash, capturedMime, fileSize, ledgerTxId, ledgerTimestamp]
                     );
 
                     send(201, {
@@ -109,7 +128,7 @@ router.post('/create', requireRoles(['Police Officer']), (req, res) => {
                 } catch (err) {
                     try { await minioInternal.removeObject(BUCKET, objectKey); } catch (_) {}
                     console.error('Error creating FIR:', err.message);
-                    send(500, { error: 'Failed to create FIR' });
+                    send(500, { error: 'Failed to create FIR', details: err.message, stack: err.stack });
                 }
             })
             .catch((err) => {
@@ -130,6 +149,46 @@ router.post('/create', requireRoles(['Police Officer']), (req, res) => {
     });
 
     req.pipe(bb);
+});
+
+// ─────────────────────────────────────────────
+// GET /api/fir/verify/:id
+// ─────────────────────────────────────────────
+router.get('/verify/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const { rows } = await pool.query('SELECT * FROM fir WHERE id = $1', [id]);
+        if (!rows.length) return res.status(404).json({ error: 'FIR not found' });
+        const record = rows[0];
+
+        const liveHash = await new Promise((resolve, reject) => {
+            minioInternal.getObject(record.bucket_name, record.object_key, (err, stream) => {
+                if (err) return reject(err);
+                const hashStream = crypto.createHash('sha256');
+                stream.on('data', chunk => hashStream.update(chunk));
+                stream.on('end', () => resolve(hashStream.digest('hex')));
+                stream.on('error', reject);
+            });
+        });
+
+        const ledgerHash = await ledger.getFIRHash(id);
+        const truthHash = ledgerHash || record.sha256_hash;
+        const match = (liveHash === truthHash);
+        const status = match ? 'verified' : 'tampered';
+
+        res.json({
+            id: record.id,
+            status,
+            currentHash: liveHash,
+            ledgerHash: truthHash,
+            match,
+            verifiedAt: new Date().toISOString()
+        });
+    } catch (err) {
+        console.error('FIR Verify error:', err.message);
+        res.status(500).json({ error: 'FIR Verification failed', details: err.message });
+    }
 });
 // ─────────────────────────────────────────────
 // GET /api/fir/:id/download

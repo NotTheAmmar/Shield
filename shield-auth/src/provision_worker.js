@@ -36,28 +36,35 @@ async function processQueue() {
                 continue;
             }
 
-            // Make synchronous HTTP call to Ledger service
-            const response = await fetch(`${LEDGER_SERVICE_URL}/api/ledger/grant-anchor-role`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${MASTER_KEY}`
-                },
-                body: JSON.stringify({ address: user.blockchain_address })
-            });
+            try {
+                // Make synchronous HTTP call to Ledger service
+                const response = await fetch(`${LEDGER_SERVICE_URL}/api/ledger/grant-anchor-role`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${MASTER_KEY}`
+                    },
+                    body: JSON.stringify({ address: user.blockchain_address })
+                });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(`Ledger API returned ${response.status}: ${JSON.stringify(errorData)}`);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`Ledger API returned ${response.status}: ${JSON.stringify(errorData)}`);
+                }
+
+                // Transaction successfully mined
+                await pool.query('UPDATE users SET blockchain_provisioned = TRUE WHERE id = $1', [user.id]);
+                console.log(`[ProvisionWorker] Successfully provisioned user ${user.id} on the blockchain.`);
+            } catch (err) {
+                // Log the error but CONTINUE to the next user instead of blocking the queue
+                console.error(`[ProvisionWorker] Failed to provision user ${user.id}:`, err.message);
+                // Break out of the loop for this tick — retry all pending users on the next interval
+                break;
             }
-
-            // Transaction successfully mined
-            await pool.query('UPDATE users SET blockchain_provisioned = TRUE WHERE id = $1', [user.id]);
-            console.log(`[ProvisionWorker] Successfully provisioned user ${user.id} on the blockchain.`);
         }
     } catch (err) {
-        console.error(`[ProvisionWorker] Failed to process user:`, err.message);
-        // We do not set blockchain_provisioned to TRUE, so it will retry on the next loop
+        // Database-level errors (connection lost, etc.)
+        console.error(`[ProvisionWorker] Database error:`, err.message);
     } finally {
         isProcessing = false;
     }

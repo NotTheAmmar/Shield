@@ -139,6 +139,7 @@ function proxyToAuth(req, res) {
 // These routes MUST come BEFORE express.json() so the body stream is intact
 app.use('/api/fir', proxyToEvidence);
 app.use('/api/evidence', proxyToEvidence);
+
 app.use('/api/dashboard', proxyToEvidence);
 app.use('/api/audit', proxyToEvidence);
 app.use('/api/reports', proxyToEvidence);

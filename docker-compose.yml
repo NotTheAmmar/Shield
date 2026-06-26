@@ -118,6 +118,7 @@ services:
       LEDGER_SERVICE_URL: http://shield-ledger:4002
     depends_on:
       - db-users
+      - shield-ledger
 
   shield-evidence:
     build: ./shield-evidence
