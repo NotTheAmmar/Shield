@@ -48,7 +48,7 @@ async function getFIRHash(firId) {
         return null;
     }
 
-    const res = await fetch(`${process.env.LEDGER_URL}/api/ledger/fir/${firId}`);
+    const res = await fetch(`${process.env.LEDGER_URL}/api/ledger/fir/${encodeURIComponent(firId)}`);
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`Ledger FIR get failed: ${res.status}`);
     const data = await res.json();
@@ -61,7 +61,7 @@ async function getEvidenceHash(evidenceId) {
         return null;
     }
 
-    const res = await fetch(`${process.env.LEDGER_URL}/api/ledger/evidence/${evidenceId}`);
+    const res = await fetch(`${process.env.LEDGER_URL}/api/ledger/evidence/${encodeURIComponent(evidenceId)}`);
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`Ledger Evidence get failed: ${res.status}`);
     const data = await res.json();
