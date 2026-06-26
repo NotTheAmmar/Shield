@@ -150,7 +150,7 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
                             const { decryptPrivateKey } = require('../crypto');
                             privateKey = decryptPrivateKey(encryptedPrivateKey);
                         }
-                        const ledgerResult = await ledger.storeHash(evidenceId, hash, privateKey);
+                        const ledgerResult = await ledger.storeEvidenceHash(evidenceId, fir_id, hash, privateKey);
                         ledgerTxId = ledgerResult?.txId || null;
                         ledgerTimestamp = ledgerTxId ? new Date().toISOString() : null;
                     } catch (ledgerErr) {
@@ -236,7 +236,7 @@ router.get('/verify/:id', async (req, res) => {
         });
 
         // 3. Get immutable hash from ledger — NOT Postgres (Flaw #2)
-        const ledgerHash = await ledger.getHash(id);
+        const ledgerHash = await ledger.getEvidenceHash(id);
 
         // 4. In MOCK mode, ledger returns null → fall back to Postgres hash
         const truthHash = ledgerHash || record.sha256_hash;
@@ -354,7 +354,7 @@ router.post('/internal/verify-batch', express.json(), internalNetworkGuard, requ
                     });
                 });
 
-                const ledgerHash = await ledger.getHash(id);
+                const ledgerHash = await ledger.getEvidenceHash(id);
                 const truthHash = ledgerHash || record.sha256_hash;
                 const result = (liveHash === truthHash) ? 'OK' : 'TAMPERED';
 

@@ -187,8 +187,8 @@ else
     fail "ABI file at $ABI_FILE is not valid JSON"
   else
     # Check it contains the expected function signatures
-    if grep -q '"anchorEvidence"' "$ABI_FILE" && grep -q '"getEvidence"' "$ABI_FILE"; then
-      pass "ABI file exists and contains 'anchorEvidence' and 'getEvidence' signatures"
+    if grep -q '"anchorFIR"' "$ABI_FILE" && grep -q '"anchorEvidence"' "$ABI_FILE"; then
+      pass "ABI file exists and contains 'anchorFIR' and 'anchorEvidence' signatures"
     else
       fail "ABI file is missing expected function signatures"
     fi

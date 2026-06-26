@@ -36,7 +36,7 @@ const internalNetworkGuard = (req, res, next) => {
 };
 
 // ── POST /api/ledger/grant-anchor-role ─────────────────────────────────────
-// Grants the EVIDENCE_ANCHOR_ROLE to a newly provisioned user wallet.
+// Grants the ANCHOR_ROLE to a newly provisioned user wallet.
 app.post('/api/ledger/grant-anchor-role', internalNetworkGuard, async (req, res) => {
     const { address } = req.body;
     if (!address || !ethers.isAddress(address)) {
@@ -44,94 +44,105 @@ app.post('/api/ledger/grant-anchor-role', internalNetworkGuard, async (req, res)
     }
 
     try {
-        console.log(`[Ledger] Granting EVIDENCE_ANCHOR_ROLE to ${address}...`);
+        console.log(`[Ledger] Granting ANCHOR_ROLE to ${address}...`);
         const adminKey = process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY;
         if (!adminKey) throw new Error("Missing BLOCKCHAIN_DEPLOYER_PRIVATE_KEY");
 
         const contract = await getSignerContract(adminKey);
         
-        const EVIDENCE_ANCHOR_ROLE = ethers.id("EVIDENCE_ANCHOR_ROLE");
+        const ANCHOR_ROLE = ethers.id("ANCHOR_ROLE");
 
         // grantRole(bytes32 role, address account)
-        const tx = await contract.grantRole(EVIDENCE_ANCHOR_ROLE, address, { gasPrice: 0 });
+        const tx = await contract.grantRole(ANCHOR_ROLE, address, { gasPrice: 0 });
         console.log(`[Ledger] Grant role TX submitted: ${tx.hash}, waiting...`);
         
         await tx.wait();
         console.log(`[Ledger] Role granted successfully to ${address}`);
         
-        return res.json({ ok: true, address, role: 'EVIDENCE_ANCHOR_ROLE' });
+        return res.json({ ok: true, address, role: 'ANCHOR_ROLE' });
     } catch (err) {
         console.error(`[Ledger] Grant role error: ${err.message}`);
         return res.status(500).json({ error: 'Failed to grant role', details: err.message });
     }
 });
 
-// ── POST /api/ledger/store ─────────────────────────────────────────────────
-// Stores an evidence hash in the immutable ledger.
-// Body: { evidenceId: string, hash: string }
+// ── POST /api/ledger/store/fir ─────────────────────────────────────────────
+// Stores an FIR hash in the immutable ledger.
+// Body: { firId: string, hash: string, privateKey: string }
+app.post('/api/ledger/store/fir', async (req, res) => {
+    const { firId, hash, privateKey } = req.body;
 
-app.post('/api/ledger/store', async (req, res) => {
-    const { evidenceId, hash, privateKey } = req.body;
-
-    if (!evidenceId || !hash) {
-        return res.status(400).json({ error: 'evidenceId and hash are required' });
-    }
+    if (!firId || !hash) return res.status(400).json({ error: 'firId and hash are required' });
 
     try {
-        console.log(`[Ledger] Anchoring hash for ${evidenceId}...`);
+        console.log(`[Ledger] Anchoring hash for FIR ${firId}...`);
         const contract = await getSignerContract(privateKey);
         
-        // anchorEvidence(string evidenceId, string sha256Hash)
-        // Explicitly set gasPrice to 0 as node-police operates without gas fees
-        const tx = await contract.anchorEvidence(evidenceId, hash, { gasPrice: 0 });
-        console.log(`[Ledger] TX submitted: ${tx.hash}, waiting for confirmation...`);
-        
+        const tx = await contract.anchorFIR(firId, hash, { gasPrice: 0 });
         const receipt = await tx.wait();
-        console.log(`[Ledger] Stored hash for ${evidenceId} (tx: ${receipt.hash})`);
         
-        return res.json({
-            ok: true,
-            txId: receipt.hash,
-            key: `evidence:${evidenceId}`,
-        });
+        return res.json({ ok: true, txId: receipt.hash, key: `fir:${firId}` });
     } catch (err) {
-        console.error(`[Ledger] Store error: ${err.message}`);
-        // Handle custom contract reverts
         if (err.message.includes("already anchored")) {
-            return res.status(409).json({ error: 'Evidence ID already anchored on ledger' });
+            return res.status(409).json({ error: 'FIR ID already anchored on ledger' });
         }
-        return res.status(500).json({ error: 'Failed to store hash in ledger', details: err.message });
+        return res.status(500).json({ error: 'Failed to store FIR in ledger', details: err.message });
     }
 });
 
-// ── GET /api/ledger/:evidenceId ────────────────────────────────────────────
-// Retrieves the stored hash for an evidence item.
+// ── POST /api/ledger/store/evidence ────────────────────────────────────────
+// Stores an evidence hash in the immutable ledger linked to an FIR.
+// Body: { evidenceId: string, firId: string, hash: string, privateKey: string }
+app.post('/api/ledger/store/evidence', async (req, res) => {
+    const { evidenceId, firId, hash, privateKey } = req.body;
 
-app.get('/api/ledger/:evidenceId', async (req, res) => {
-    const { evidenceId } = req.params;
+    if (!evidenceId || !firId || !hash) return res.status(400).json({ error: 'evidenceId, firId, and hash are required' });
 
     try {
-        const contract = getContract();
+        console.log(`[Ledger] Anchoring hash for Evidence ${evidenceId}...`);
+        const contract = await getSignerContract(privateKey);
         
-        // getEvidence returns (string sha256Hash, uint256 blockTimestamp, address registeredBy)
-        const [sha256Hash, blockTimestamp, registeredBy] = await contract.getEvidence(evidenceId);
+        const tx = await contract.anchorEvidence(evidenceId, firId, hash, { gasPrice: 0 });
+        const receipt = await tx.wait();
         
-        return res.json({
-            evidenceId,
-            hash: sha256Hash,
-            registeredBy,
-            timestamp: Number(blockTimestamp), // Convert BigInt to JS Number
-        });
+        return res.json({ ok: true, txId: receipt.hash, key: `evidence:${evidenceId}` });
     } catch (err) {
-        // Contract reverts if record is not found (blockTimestamp == 0) or if the contract has no code yet (decoding fails)
-        if (err.message.includes("Evidence record not found") || 
-            err.message.includes("revert") || 
-            err.code === 'BAD_DATA' || 
-            err.message.includes("could not decode result data")) {
-            return res.status(404).json({ error: 'Hash not found in ledger' });
+        if (err.message.includes("already anchored")) {
+            return res.status(409).json({ error: 'Evidence ID already anchored on ledger' });
         }
-        console.error(`[Ledger] Get error: ${err.message}`);
-        return res.status(500).json({ error: 'Failed to retrieve hash from ledger', details: err.message });
+        return res.status(500).json({ error: 'Failed to store Evidence in ledger', details: err.message });
+    }
+});
+
+// ── GET /api/ledger/fir/:firId ─────────────────────────────────────────────
+// Retrieves the stored hash for an FIR.
+app.get('/api/ledger/fir/:firId', async (req, res) => {
+    try {
+        const contract = getContract();
+        const [sha256Hash, blockTimestamp, registeredBy] = await contract.getFIR(req.params.firId);
+        
+        return res.json({ firId: req.params.firId, hash: sha256Hash, registeredBy, timestamp: Number(blockTimestamp) });
+    } catch (err) {
+        if (err.message.includes("not found") || err.message.includes("revert") || err.code === 'BAD_DATA') {
+            return res.status(404).json({ error: 'FIR hash not found in ledger' });
+        }
+        return res.status(500).json({ error: 'Failed to retrieve FIR hash', details: err.message });
+    }
+});
+
+// ── GET /api/ledger/evidence/:evidenceId ───────────────────────────────────
+// Retrieves the stored hash and FIR link for an evidence item.
+app.get('/api/ledger/evidence/:evidenceId', async (req, res) => {
+    try {
+        const contract = getContract();
+        const [sha256Hash, firId, blockTimestamp, registeredBy] = await contract.getEvidence(req.params.evidenceId);
+        
+        return res.json({ evidenceId: req.params.evidenceId, firId, hash: sha256Hash, registeredBy, timestamp: Number(blockTimestamp) });
+    } catch (err) {
+        if (err.message.includes("not found") || err.message.includes("revert") || err.code === 'BAD_DATA') {
+            return res.status(404).json({ error: 'Evidence hash not found in ledger' });
+        }
+        return res.status(500).json({ error: 'Failed to retrieve Evidence hash', details: err.message });
     }
 });
 

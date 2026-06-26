@@ -106,7 +106,7 @@ router.post('/create', requireRoles(['Police Officer']), (req, res) => {
                             const { decryptPrivateKey } = require('../crypto');
                             privateKey = decryptPrivateKey(encryptedPrivateKey);
                         }
-                        const ledgerResult = await ledger.storeHash(firId, hash, privateKey);
+                        const ledgerResult = await ledger.storeFIRHash(firId, hash, privateKey);
                         ledgerTxId = ledgerResult?.txId || null;
                         ledgerTimestamp = ledgerTxId ? new Date().toISOString() : null;
                     } catch (ledgerErr) {
@@ -172,7 +172,7 @@ router.get('/verify/:id', async (req, res) => {
             });
         });
 
-        const ledgerHash = await ledger.getHash(id);
+        const ledgerHash = await ledger.getFIRHash(id);
         const truthHash = ledgerHash || record.sha256_hash;
         const match = (liveHash === truthHash);
         const status = match ? 'verified' : 'tampered';
