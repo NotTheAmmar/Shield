@@ -30,26 +30,31 @@ task(TASK_COMPILE, "Compiles the entire project and exports ABIs").setAction(
     // Run the default compile task first
     await runSuper(args);
 
-    const artifactPath = path.join(
-      __dirname,
-      "artifacts",
-      "contracts",
-      "ShieldLedger.sol",
-      "ShieldLedger.json"
-    );
-
     const abiOutputDir  = path.join(__dirname, "shield-ledger", "src", "abis");
-    const abiOutputFile = path.join(abiOutputDir, "ShieldLedger.json");
-
-    if (!fs.existsSync(artifactPath)) {
-      console.log("\n[ABI Export] ShieldLedger artifact not found — skipping ABI export.");
-      return;
-    }
-
-    const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
     fs.mkdirSync(abiOutputDir, { recursive: true });
-    fs.writeFileSync(abiOutputFile, JSON.stringify(artifact.abi, null, 2));
-    console.log("\n[ABI Export] ShieldLedger.json written to shield-ledger/src/abis/");
+
+    const contractsToExport = ["FIRLedger", "EvidenceLedger"];
+
+    for (const contractName of contractsToExport) {
+      const artifactPath = path.join(
+        __dirname,
+        "artifacts",
+        "contracts",
+        `${contractName}.sol`,
+        `${contractName}.json`
+      );
+
+      const abiOutputFile = path.join(abiOutputDir, `${contractName}.json`);
+
+      if (!fs.existsSync(artifactPath)) {
+        console.log(`\n[ABI Export] ${contractName} artifact not found — skipping ABI export.`);
+        continue;
+      }
+
+      const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
+      fs.writeFileSync(abiOutputFile, JSON.stringify(artifact.abi, null, 2));
+      console.log(`\n[ABI Export] ${contractName}.json written to shield-ledger/src/abis/`);
+    }
   }
 );
 

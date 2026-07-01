@@ -73,7 +73,8 @@ Fill in the required variables. The table below explains each one:
 | `MASTER_KEY` | Generate: `openssl rand -base64 32` |
 | `BLOCKCHAIN_ENCRYPTION_KEY` | Generate: `openssl rand -base64 32` *(must be exactly 32 bytes / 44 base64 chars)* |
 | `BLOCKCHAIN_DEPLOYER_PRIVATE_KEY` | Extract from keystore — see command below |
-| `BLOCKCHAIN_CONTRACT_ADDRESS` | Set this **after Step 5** (smart contract deployment) |
+| `BLOCKCHAIN_FIR_CONTRACT_ADDRESS` | Set this **after Step 5** (smart contract deployment) |
+| `BLOCKCHAIN_EVIDENCE_CONTRACT_ADDRESS` | Set this **after Step 5** (smart contract deployment) |
 
 To extract `BLOCKCHAIN_DEPLOYER_PRIVATE_KEY`, run this once after cloning:
 
@@ -168,21 +169,23 @@ This compiles `contracts/ShieldLedger.sol` and automatically exports the ABI to 
 npx hardhat run scripts/deploy.js --network localnet
 ```
 
-The script will print the deployed contract address:
+The script will print the deployed contract addresses:
 ```
-ShieldLedger deployed to: 0x...
+FIRLedger deployed to: 0x...
+EvidenceLedger deployed to: 0x...
 ```
 
 ### Update `.env`
 
-Set `BLOCKCHAIN_CONTRACT_ADDRESS` to the address printed above:
+Set `BLOCKCHAIN_FIR_CONTRACT_ADDRESS` and `BLOCKCHAIN_EVIDENCE_CONTRACT_ADDRESS` to the addresses printed above:
 
 ```env
-BLOCKCHAIN_CONTRACT_ADDRESS=0x<address-from-above>
+BLOCKCHAIN_FIR_CONTRACT_ADDRESS=0x<address-from-above>
+BLOCKCHAIN_EVIDENCE_CONTRACT_ADDRESS=0x<address-from-above>
 ```
 
 > [!NOTE]
-> Unlike the police/court addresses, `BLOCKCHAIN_CONTRACT_ADDRESS` **changes every time you deploy**. If you reset the blockchain (Step 8), you must redeploy and update this value again before restarting the app stack.
+> Unlike the police/court addresses, these addresses **change every time you deploy**. If you reset the blockchain (Step 8), you must redeploy and update this value again before restarting the app stack.
 
 ---
 
@@ -285,7 +288,7 @@ docker compose up -d
 This permanently deletes all on-chain transaction history. Any evidence hashes anchored on-chain will be lost.
 
 > [!CAUTION]
-> After resetting the blockchain, you must **re-deploy the smart contract** (Step 5) and **update `BLOCKCHAIN_CONTRACT_ADDRESS`** in your `.env` before restarting the app stack. Evidence that was verified against the old chain will fail re-verification.
+> After resetting the blockchain, you must **re-deploy the smart contracts** (Step 5) and **update `BLOCKCHAIN_FIR_CONTRACT_ADDRESS` and `BLOCKCHAIN_EVIDENCE_CONTRACT_ADDRESS`** in your `.env` before restarting the app stack. Evidence that was verified against the old chain will fail re-verification.
 
 ```bash
 # 1. Stop the blockchain
@@ -298,7 +301,7 @@ rm -rf .docker-data/geth-court
 # 3. Restart — nodes re-initialize from genesis.json automatically
 docker compose -f docker-compose.blockchain.yml up -d
 
-# 4. Re-deploy the contract and update BLOCKCHAIN_CONTRACT_ADDRESS in .env
+# 4. Re-deploy the contract and update BLOCKCHAIN_FIR_CONTRACT_ADDRESS and BLOCKCHAIN_EVIDENCE_CONTRACT_ADDRESS in .env
 npx hardhat run scripts/deploy.js --network localnet
 
 # 5. Restart the app stack to pick up the new contract address
@@ -330,7 +333,7 @@ docker network create \
 # 4. Start blockchain first, then deploy contract
 docker compose -f docker-compose.blockchain.yml up -d
 npx hardhat run scripts/deploy.js --network localnet
-# → Copy the printed address and set it in .env as BLOCKCHAIN_CONTRACT_ADDRESS
+# → Copy the printed addresses and set them in .env
 
 # 5. Start the application stack
 docker compose up -d --build
@@ -428,6 +431,6 @@ shield-frontend  — React UI served on port 3000
 1. docker network create shield_shield-network
 2. docker compose -f docker-compose.blockchain.yml up -d
 3. npx hardhat compile && npx hardhat run scripts/deploy.js --network localnet
-4. (set BLOCKCHAIN_CONTRACT_ADDRESS in .env)
+4. (set BLOCKCHAIN_FIR_CONTRACT_ADDRESS and BLOCKCHAIN_EVIDENCE_CONTRACT_ADDRESS in .env)
 5. docker compose up -d --build
 ```

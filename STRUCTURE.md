@@ -25,8 +25,8 @@ The project relies on three core databases/stores, managed via Docker:
 
 ### EVM Blockchain Integration Layer
 SHIELD runs a private 3-node Clique Proof-of-Authority (PoA) Ethereum network for tamper-proof evidence anchoring. Each node represents a real-world institution and operates as both a block sealer and a transaction signer on behalf of its organization.
--   **Solidity Contracts (`contracts/`)**: The `ShieldLedger.sol` contract anchors evidence UUIDs and SHA-256 hashes into on-chain state. It stores the sealing institution's address (`registeredBy`) for each record, creating a cryptographically verifiable chain of custody.
--   **Hardhat (`hardhat.config.js`)**: Compiles contracts, runs Solidity unit tests, and automatically exports the contract ABI to `shield-ledger/src/abis/` on every compile. Includes a `localnet` network entry pointing to `node-police`'s RPC.
+-   **Solidity Contracts (`contracts/`)**: The `FIRLedger.sol` and `EvidenceLedger.sol` contracts anchor FIR metadata and Evidence hashes respectively into on-chain state. They store the sealing institution's address (`registeredBy`) for each record, creating a cryptographically verifiable chain of custody.
+-   **Hardhat (`hardhat.config.js`)**: Compiles contracts, runs Solidity unit tests, and automatically exports the contract ABIs to `shield-ledger/src/abis/` on every compile. Includes a `localnet` network entry pointing to `node-police`'s RPC.
 -   **Private Blockchain Network (`docker-compose.blockchain.yml`)**: Boots 3 Geth nodes on an isolated `blockchain-network` Docker bridge:
     -   `blockchain-bootnode`: Static peer-discovery relay with a committed key for deterministic `enode://` URLs.
     -   `node-police`: Full sealer node representing the police institution. Multi-homed on `shield-network` so `shield-ledger` can reach its JSON-RPC at port `8545`.
@@ -65,11 +65,13 @@ shield-project/
 │   └── src/
 │       ├── index.js       # Service entry point
 │       └── abis/          # [Auto-generated] Contract ABIs exported by `npx hardhat compile`
-│           └── ShieldLedger.json
+│           ├── FIRLedger.json
+│           └── EvidenceLedger.json
 ├── shield-watchdog/       # [Node.js] Background automated watchdog scanner
 │
 ├── contracts/             # [Solidity 0.8.x] EVM Smart Contract source files
-│   └── ShieldLedger.sol   # Evidence anchor Solidity contract
+│   ├── FIRLedger.sol      # FIR anchor Solidity contract
+│   └── EvidenceLedger.sol # Evidence anchor Solidity contract
 │
 ├── blockchain/            # Private Geth network configuration (committed to repo)
 │   ├── genesis.json       # Clique PoA genesis block (Chain ID 31337, 2 sealers, zero gas)
@@ -84,7 +86,8 @@ shield-project/
     ├── integration/       # E2E functional test suites & bash cURL runners
     ├── simulation/        # Direct-attack security tampering simulation scripts
     └── blockchain/        # Blockchain-specific tests
-        ├── ShieldLedger.test.js         # Hardhat Solidity unit tests (run: npx hardhat test)
+        ├── FIRLedger.test.js            # Hardhat Solidity unit tests (run: npx hardhat test)
+        ├── EvidenceLedger.test.js       # Hardhat Solidity unit tests (run: npx hardhat test)
         └── blockchain_network_test.sh   # Docker network integration tests
 ```
 

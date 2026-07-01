@@ -9,7 +9,9 @@ const ROLE_MAP = {
   'judicial_authority': 'judicial_authority',
   'Judicial Authority': 'judicial_authority',
   'admin': 'admin',
-  'Admin': 'admin'
+  'Admin': 'admin',
+  'forensic_expert': 'forensic_expert',
+  'Forensic Expert': 'forensic_expert'
 };
 
 const normalizeRole = (role) => ROLE_MAP[role] || role?.toLowerCase();
@@ -37,5 +39,6 @@ const requireRoles = (allowedRoles) => {
     };
 };
 
+requireRoles.normalizeRole = normalizeRole;
 module.exports = requireRoles;
 

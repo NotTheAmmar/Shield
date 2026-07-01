@@ -157,7 +157,7 @@ async function main() {
         token = login1.data.token;
     } else {
         const login2 = await http('POST', '/api/auth/login', {
-            body: { email: 'admin@shield.gov.in', password: 'admin@123', role: 'Admin' }
+            body: { email: 'admin@shield.gov.in', password: process.env.ADMIN_SEED_PASSWORD || 'Admin@123', role: 'Admin' }
         });
         if (!login2.data?.token) throw new Error('Cannot login to verify. Try manually in the UI.');
         token = login2.data.token;

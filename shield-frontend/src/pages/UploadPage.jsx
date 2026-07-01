@@ -344,8 +344,8 @@ function UploadEvidenceTab({ searchParams }) {
       </div>
 
       {/* SECTION 63 SOURCE DETAILS */}
-      <div style={{ marginTop: 24, padding: 16, border: '1px solid var(--navy-200)', borderRadius: 8, background: 'var(--navy-50)' }}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem', color: 'var(--navy-800)' }}>Section 63: Source Device Batch Info</h3>
+      <div style={{ marginTop: 24, padding: 16, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-table-alt)' }}>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem', color: 'var(--text-primary)' }}>Section 63: Source Device Batch Info</h3>
         
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div className="form-group">
@@ -404,7 +404,7 @@ function UploadEvidenceTab({ searchParams }) {
           <button type="button" className="btn btn-ghost btn-sm" onClick={addChainItem}>+ Add Node to Chain</button>
         </div>
 
-        <div className="form-group" style={{ background: '#fff', padding: 12, borderRadius: 6, border: '1px solid var(--border)' }}>
+        <div className="form-group" style={{ background: 'var(--bg-card)', padding: 12, borderRadius: 6, border: '1px solid var(--border)' }}>
           <label className="form-label" style={{ marginBottom: 8 }}>Mandatory Declarations <span style={{ color: 'var(--crimson)' }}>*</span></label>
           <div style={{ display: 'flex', gap: 20, fontSize: 14 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>

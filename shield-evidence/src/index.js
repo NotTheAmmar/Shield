@@ -13,7 +13,7 @@ const app = express();
 const PORT = process.env.PORT || 4001;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Health check
 // Trust proxy ONLY for localhost and standard Docker bridge subnets to prevent X-Forwarded-For spoofing

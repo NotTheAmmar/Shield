@@ -158,4 +158,5 @@ export const certificateAPI = {
   uploadSigned: (sourceId, formData) => apiClient.post(`/evidence-source/${sourceId}/upload-signed-certificate`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
+  signDigital: (sourceId, data) => apiClient.post(`/evidence-source/${sourceId}/sign-digital`, data),
 };

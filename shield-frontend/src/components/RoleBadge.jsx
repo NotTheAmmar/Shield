@@ -1,10 +1,11 @@
 import React from 'react';
-import { Shield, Scale, Settings } from 'lucide-react';
+import { Shield, Scale, Settings, Search } from 'lucide-react';
 
 const CONFIG = {
   'police_officer':    { className: 'badge-police',   Icon: Shield, label: 'police_officer'    },
   'judicial_authority':{ className: 'badge-judicial', Icon: Scale,  label: 'judicial_authority' },
   'admin':             { className: 'badge-admin',    Icon: Settings,label: 'admin'              },
+  'forensic_expert':   { className: 'badge-forensic', Icon: Search,  label: 'forensic_expert'    },
 };
 
 const ROLE_MAP = {
@@ -13,7 +14,9 @@ const ROLE_MAP = {
   'judicial_authority': 'judicial_authority',
   'Judicial Authority': 'judicial_authority',
   'admin': 'admin',
-  'Admin': 'admin'
+  'Admin': 'admin',
+  'forensic_expert': 'forensic_expert',
+  'Forensic Expert': 'forensic_expert'
 };
 
 export default function RoleBadge({ role }) {

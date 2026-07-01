@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const { getContract, getSignerContract, checkConnection } = require('./blockchain');
+const { getFIRContract, getEvidenceContract, getSignerFIRContract, getSignerEvidenceContract, checkConnection } = require('./blockchain');
 const { ethers } = require('ethers');
 
 const app = express();
@@ -48,16 +48,17 @@ app.post('/api/ledger/grant-anchor-role', internalNetworkGuard, async (req, res)
         const adminKey = process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY;
         if (!adminKey) throw new Error("Missing BLOCKCHAIN_DEPLOYER_PRIVATE_KEY");
 
-        const contract = await getSignerContract(adminKey);
+        const firContract = await getSignerFIRContract(adminKey);
+        const evidenceContract = await getSignerEvidenceContract(adminKey);
         
         const ANCHOR_ROLE = ethers.id("ANCHOR_ROLE");
 
-        // grantRole(bytes32 role, address account)
-        const tx = await contract.grantRole(ANCHOR_ROLE, address, { gasPrice: 0 });
-        console.log(`[Ledger] Grant role TX submitted: ${tx.hash}, waiting...`);
+        const tx1 = await firContract.grantRole(ANCHOR_ROLE, address, { gasPrice: 0 });
+        const tx2 = await evidenceContract.grantRole(ANCHOR_ROLE, address, { gasPrice: 0 });
+        console.log(`[Ledger] Grant role TXs submitted, waiting...`);
         
-        await tx.wait();
-        console.log(`[Ledger] Role granted successfully to ${address}`);
+        await Promise.all([tx1.wait(), tx2.wait()]);
+        console.log(`[Ledger] Role granted successfully to ${address} on both contracts`);
         
         return res.json({ ok: true, address, role: 'ANCHOR_ROLE' });
     } catch (err) {
@@ -76,7 +77,7 @@ app.post('/api/ledger/store/fir', async (req, res) => {
 
     try {
         console.log(`[Ledger] Anchoring hash for FIR ${firId}...`);
-        const contract = await getSignerContract(privateKey);
+        const contract = await getSignerFIRContract(privateKey);
         
         const tx = await contract.anchorFIR(firId, hash, { gasPrice: 0 });
         const receipt = await tx.wait();
@@ -100,7 +101,7 @@ app.post('/api/ledger/store/evidence', async (req, res) => {
 
     try {
         console.log(`[Ledger] Anchoring hash for Evidence ${evidenceId}...`);
-        const contract = await getSignerContract(privateKey);
+        const contract = await getSignerEvidenceContract(privateKey);
         
         const tx = await contract.anchorEvidence(evidenceId, firId, hash, { gasPrice: 0 });
         const receipt = await tx.wait();
@@ -118,7 +119,7 @@ app.post('/api/ledger/store/evidence', async (req, res) => {
 // Retrieves the stored hash for an FIR.
 app.get('/api/ledger/fir/:firId', async (req, res) => {
     try {
-        const contract = getContract();
+        const contract = getFIRContract();
         const [sha256Hash, blockTimestamp, registeredBy] = await contract.getFIR(req.params.firId);
         
         return res.json({ firId: req.params.firId, hash: sha256Hash, registeredBy, timestamp: Number(blockTimestamp) });
@@ -134,7 +135,7 @@ app.get('/api/ledger/fir/:firId', async (req, res) => {
 // Retrieves the stored hash and FIR link for an evidence item.
 app.get('/api/ledger/evidence/:evidenceId', async (req, res) => {
     try {
-        const contract = getContract();
+        const contract = getEvidenceContract();
         const [sha256Hash, firId, blockTimestamp, registeredBy] = await contract.getEvidence(req.params.evidenceId);
         
         return res.json({ evidenceId: req.params.evidenceId, firId, hash: sha256Hash, registeredBy, timestamp: Number(blockTimestamp) });
