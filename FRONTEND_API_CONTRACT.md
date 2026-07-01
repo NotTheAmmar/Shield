@@ -28,7 +28,7 @@ Authenticate a user and receive a JWT.
 {
   "email": "officer@police.gov.in",
   "password": "••••••••",
-  "role": "police_officer"   // "police_officer" | "judicial_authority" | "admin"
+  "role": "police_officer"   // "police_officer" | "judicial_authority" | "admin" | "forensic_expert"
 }
 ```
 
@@ -467,6 +467,28 @@ Stream the original evidence file.
 
 **Response**: Binary file stream with correct `Content-Type` header.
 
+### `POST /api/evidence-source/:id/sign-digital`
+
+Digitally sign a Section 63/65B Certificate via an HTML5 canvas signature.
+
+**Headers**: `Authorization: Bearer <token>`
+**Required Role**: `police_officer` (Part A) or `forensic_expert` (Part B)
+
+**Request Body**:
+```json
+{
+  "signatureBase64": "data:image/png;base64,iVBORw0KGgo..."
+}
+```
+
+**Success `200`**
+```json
+{
+  "status": "COMPLETED",
+  "message": "Certificate digitally signed and merged successfully"
+}
+```
+
 ---
 
 ## 4. Audit Log  →  `shield-gateway` (aggregates from all services)
@@ -540,7 +562,7 @@ List all user accounts. Admin role only.
 | `page`   | number | Default `1`                                         |
 | `limit`  | number | Default `25`                                        |
 | `search` | string | Name or email partial match                         |
-| `role`   | string | `police_officer` \| `judicial_authority` \| `admin` |
+| `role`   | string | `police_officer` \| `judicial_authority` \| `admin` \| `forensic_expert` |
 | `status` | string | `active` \| `deactivated`                           |
 
 **Success `200`**
@@ -748,7 +770,7 @@ All errors follow this consistent shape:
 }
 ```
 
-**Role values**: `police_officer` | `judicial_authority` | `admin`
+**Role values**: `police_officer` | `judicial_authority` | `admin` | `forensic_expert`
 
 **Token expiry**: **15 minutes** (government/banking standard). Frontend clears token and redirects to `/login` on `401` from any endpoint *except* the login endpoint itself (which surfaces the error message in the UI instead).
 
@@ -773,18 +795,19 @@ The frontend enforces role restrictions at two levels:
 1. **Route level** (`ProtectedRoute`) — wrong-role users are redirected before the page renders.
 2. **Component level** — individual UI elements are conditionally rendered based on `role` from `useAuth()`.
 
-| Feature / UI Element                        | Police Officer | Judicial Authority | Admin |
-| ------------------------------------------- | :------------: | :----------------: | :---: |
-| Dashboard                                   |       ✅        |         ✅          |   ✅   |
-| Upload FIR / Evidence                       |       ✅        |         ❌          |   ❌   |
-| FIR Registry (browse)                       |       ✅        |         ✅          |   ❌   |
-| FIR Detail — "Attach More Evidence" button  |       ✅        |         ❌          |   ❌   |
-| FIR Detail — Re-Verify Integrity button     |       ✅        |         ✅          |   ❌   |
-| Evidence Vault (browse)                     |       ✅        |         ✅          |   ❌   |
-| Evidence Detail — Re-Verify button          |       ✅        |         ✅          |   ❌   |
-| Evidence Detail — "View Audit Trail" button |       ❌        |         ✅          |   ❌   |
-| Audit Log page                              |       ❌        |         ✅          |   ❌   |
-| User Management                             |       ❌        |         ❌          |   ✅   |
+| Feature / UI Element                        | Police Officer | Forensic Expert | Judicial Authority | Admin |
+| ------------------------------------------- | :------------: | :-------------: | :----------------: | :---: |
+| Dashboard                                   |       ✅        |        ✅        |         ✅          |   ✅   |
+| Upload FIR / Evidence                       |       ✅        |        ❌        |         ❌          |   ❌   |
+| FIR Registry (browse)                       |       ✅        |        ✅        |         ✅          |   ❌   |
+| FIR Detail — "Attach More Evidence" button  |       ✅        |        ❌        |         ❌          |   ❌   |
+| FIR Detail — Re-Verify Integrity button     |       ✅        |        ✅        |         ✅          |   ❌   |
+| Evidence Vault (browse)                     |       ✅        |        ✅        |         ✅          |   ❌   |
+| Evidence Detail — Re-Verify button          |       ✅        |        ✅        |         ✅          |   ❌   |
+| Evidence Detail — Digitally Sign Cert       |       ✅        |        ✅        |         ❌          |   ❌   |
+| Evidence Detail — "View Audit Trail" button |       ❌        |        ❌        |         ✅          |   ❌   |
+| Audit Log page                              |       ❌        |        ❌        |         ✅          |   ❌   |
+| User Management                             |       ❌        |        ❌        |         ❌          |   ✅   |
 
 ---
 

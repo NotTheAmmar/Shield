@@ -22,7 +22,8 @@ The service binds locally to port `4002` and requires access to the blockchain n
 |---|---|---|
 | `PORT` | Listening port for ledger microservice | `4002` |
 | `BLOCKCHAIN_RPC_URL` | RPC URL of the blockchain node | `http://node-police:8545` |
-| `BLOCKCHAIN_CONTRACT_ADDRESS` | Deployed address of the `ShieldLedger` contract | (Required) |
+| `FIR_CONTRACT_ADDRESS` | Deployed address of the `FIRLedger` contract | (Required) |
+| `EVIDENCE_CONTRACT_ADDRESS` | Deployed address of the `EvidenceLedger` contract | (Required) |
 
 ## 🚀 API Endpoints
 

@@ -70,12 +70,12 @@ For a step-by-step walk-through of starting a fresh system, deploying the smart 
    ```bash
    docker compose -f docker-compose.blockchain.yml up -d
    ```
-3. Deploy the smart contract:
+3. Deploy the smart contracts:
    ```bash
    npx hardhat compile
    npx hardhat run scripts/deploy.js --network localnet
    ```
-4. Copy the printed contract address into your `.env` as `BLOCKCHAIN_CONTRACT_ADDRESS`.
+4. Copy the printed contract addresses into your `.env` as `BLOCKCHAIN_FIR_CONTRACT_ADDRESS` and `BLOCKCHAIN_EVIDENCE_CONTRACT_ADDRESS`.
 5. Start the application stack:
    ```bash
    docker compose up -d --build

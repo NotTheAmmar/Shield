@@ -374,7 +374,8 @@ router.post('/:id/upload-signed-certificate', uploadRateLimiter, requireRoles(['
             if (currentStatus === 'PENDING_PART_A') {
                 nextStatus = 'PENDING_PART_B';
             } else if (currentStatus === 'PENDING_PART_B') {
-                if (userRole !== 'Forensic Expert' && userRole !== 'Admin') {
+                const normalizedRole = requireRoles.normalizeRole(userRole);
+                if (normalizedRole !== 'forensic_expert' && normalizedRole !== 'admin') {
                      fileStream.resume();
                      return res.status(403).json({ error: 'Only a Forensic Expert can upload Part B.' });
                 }
@@ -521,6 +522,257 @@ router.get('/:id/signed-certificate', requireRoles(['Police Officer', 'Judicial 
     } catch (err) {
         console.error('Failed to download signed certificate:', err);
         res.status(500).json({ error: 'Failed to generate download URL' });
+    }
+});
+
+// POST /api/evidence-source/:id/sign-digital
+router.post('/:id/sign-digital', uploadRateLimiter, requireRoles(['Police Officer', 'Forensic Expert', 'Admin']), async (req, res) => {
+    try {
+        const sourceId = req.params.id;
+        const userId = req.user.id;
+        const userRole = requireRoles.normalizeRole(req.user.role);
+        const { signatureBase64 } = req.body;
+
+        if (!signatureBase64) {
+            return res.status(400).json({ error: 'Signature image is required' });
+        }
+
+        const { rows: sourceRows } = await pool.query('SELECT * FROM evidence_source WHERE id = $1', [sourceId]);
+        if (!sourceRows.length) return res.status(404).json({ error: 'Evidence source batch not found' });
+        const source = sourceRows[0];
+        const currentStatus = source.certificate_status;
+
+        if (currentStatus === 'FAILED_VERIFICATION') {
+            return res.status(403).json({ error: 'Evidence integrity compromised. Certificate locked.' });
+        }
+        if (currentStatus === 'COMPLETED') {
+            return res.status(400).json({ error: 'Certificate is already completed.' });
+        }
+
+        let nextStatus;
+        if (currentStatus === 'PENDING_PART_A') {
+            nextStatus = 'PENDING_PART_B';
+        } else if (currentStatus === 'PENDING_PART_B') {
+            if (userRole !== 'forensic_expert' && userRole !== 'admin') {
+                return res.status(403).json({ error: 'Only a Forensic Expert can sign Part B.' });
+            }
+            nextStatus = 'COMPLETED';
+        }
+
+        // We will generate the PDF just like GET /certificate, but embed the signature.
+        const { rows: files } = await pool.query('SELECT * FROM evidence WHERE source_id = $1 ORDER BY uploaded_at ASC', [sourceId]);
+        if (!files.length) return res.status(404).json({ error: 'No evidence files found for this batch' });
+
+        const { rows: userRows } = await pool.query('SELECT name, employee_id, designation, station, parentage_name FROM users WHERE id = $1', [files[0].uploaded_by]);
+        const uploader = userRows[0] || {};
+
+        const checkSquare = (checked) => checked ? '[ X ]' : '[   ]';
+        const sType = source.source_type || '';
+        const isComputer = sType.match(/computer/i);
+        const isStorage = sType.match(/storage/i);
+        const isDvr = sType.match(/dvr/i);
+        const isMobile = sType.match(/mobile/i);
+        const isFlash = sType.match(/flash/i);
+        const isCd = sType.match(/cd/i) || sType.match(/dvd/i);
+        const isServer = sType.match(/server/i);
+        const isCloud = sType.match(/cloud/i);
+        const isOther = (!isComputer && !isStorage && !isDvr && !isMobile && !isFlash && !isCd && !isServer && !isCloud);
+
+        const drawDeviceSection = (doc) => {
+            doc.text(`Computer / Storage Media ${checkSquare(isComputer || isStorage)}    DVR ${checkSquare(isDvr)}    Mobile ${checkSquare(isMobile)}    Flash Drive ${checkSquare(isFlash)}`);
+            doc.moveDown(0.5);
+            doc.text(`CD/DVD ${checkSquare(isCd)}    Server ${checkSquare(isServer)}    Cloud ${checkSquare(isCloud)}    Other ${checkSquare(isOther)}`);
+            doc.moveDown(0.5);
+            doc.text(`Other: ${isOther ? sType : '__________________________________________________'}`);
+            doc.moveDown();
+            doc.text(`Make & Model: ${source.make || '______'} - ${source.model || '______'}          Color: ______________________`);
+            doc.text(`Serial Number: ${source.serial_number || '______________________'}`);
+            doc.text(`IMEI/UIN/UID/MAC/Cloud ID: ${source.identifiers || '______________________'} (as applicable)`);
+            let chainText = '______________________';
+            try {
+                if (source.device_chain) {
+                    const chainArr = typeof source.device_chain === 'string' ? JSON.parse(source.device_chain) : source.device_chain;
+                    if (Array.isArray(chainArr) && chainArr.length > 0) {
+                        chainText = chainArr.map(c => `${c.type || ''} ${c.identifier ? `(${c.identifier})` : ''}`.trim()).join(' -> ');
+                    }
+                }
+            } catch(e) {}
+            doc.text(`and any other relevant information, if any, about the device/digital record: ${chainText}`);
+            doc.moveDown();
+        };
+
+        const drawHashSection = (doc) => {
+            doc.text(`I state that the HASH value/s of the electronic/digital record/s is As detailed in the enclosed Hash Report,`);
+            doc.text(`obtained through the following algorithm:—`);
+            doc.moveDown(0.5);
+            doc.text(`[   ] SHA1:`);
+            doc.text(`[ X ] SHA256: As detailed in Hash Report`);
+            doc.text(`[   ] MD5:`);
+            doc.text(`[   ] Other: ______________________ (Legally acceptable standard)`);
+            doc.text(`(Hash report to be enclosed with the certificate)`);
+            doc.moveDown();
+        };
+
+        const signatureBuffer = Buffer.from(signatureBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+
+        const pdfkitBufferPromise = new Promise((resolve, reject) => {
+            try {
+                const doc = new PDFDocument({ margin: 50, size: 'A4' });
+                const chunks = [];
+                doc.on('data', chunk => chunks.push(chunk));
+                doc.on('end', () => resolve(Buffer.concat(chunks)));
+                doc.on('error', reject);
+
+                if (currentStatus === 'PENDING_PART_A') {
+                    doc.font('Helvetica-Bold').fontSize(12).text('THE SCHEDULE', { align: 'center' });
+                    doc.font('Helvetica').fontSize(10).text('[See section 63(4)(c)]', { align: 'center' });
+                    doc.font('Helvetica-Bold').fontSize(12).text('CERTIFICATE', { align: 'center' });
+                    doc.text('PART A', { align: 'center' });
+                    doc.font('Helvetica').fontSize(10).text('(To be filled by the Party)', { align: 'center' });
+                    doc.moveDown(1.5);
+
+                    const name = uploader.name || files[0].uploader_name || '______________';
+                    const parentage = uploader.parentage_name || '______________';
+                    const station = uploader.station || '______________';
+
+                    doc.text(`I, ${name} (Name), Son/daughter/spouse of ${parentage}`);
+                    doc.text(`residing/employed at ${station} do hereby solemnly affirm and`);
+                    doc.text('sincerely state and submit as follows:—');
+                    doc.moveDown();
+
+                    doc.text('I have produced electronic record/output of the digital record taken from the following');
+                    doc.text('device/digital record source (tick mark):—');
+                    doc.moveDown(0.5);
+
+                    drawDeviceSection(doc);
+
+                    const legalText = `The digital device or the digital record source was under the lawful control for regularly creating, storing or processing information for the purposes of carrying out regular activities and during this period, the computer or the communication device was working properly and the relevant information was regularly fed into the computer during the ordinary course of business. If the computer/digital device at any point of time was not working properly or out of operation, then it has not affected the electronic/digital record or its accuracy. The digital device or the source of the digital record is:—`;
+                    doc.text(legalText, { align: 'justify' });
+                    doc.moveDown(0.5);
+
+                    const oStatus = source.ownership_status || '';
+                    doc.text(`Owned ${checkSquare(oStatus.match(/own/i))}    Maintained ${checkSquare(oStatus.match(/maintain/i))}    Managed ${checkSquare(oStatus.match(/manage/i))}    Operated ${checkSquare(oStatus.match(/operate/i))}`);
+                    doc.text(`by me (select as applicable).`);
+                    doc.moveDown();
+
+                    drawHashSection(doc);
+
+                    doc.moveDown(2);
+                    const sigX = doc.page.width - 200;
+                    const sigY = doc.y;
+                    doc.image(signatureBuffer, sigX, sigY - 30, { width: 100 });
+                    doc.text(`(Name and signature)`, sigX, sigY + 30);
+                    doc.moveDown();
+                    
+                    doc.text(`Date (DD/MM/YYYY): ${new Date().toLocaleDateString('en-GB')}`);
+                    doc.text(`Time (IST): ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })} hours`);
+                    doc.text(`Place: ${station}`);
+                } else {
+                    // PENDING_PART_B
+                    doc.font('Helvetica-Bold').fontSize(12).text('PART B', { align: 'center' });
+                    doc.font('Helvetica').fontSize(10).text('(To be filled by the Expert)', { align: 'center' });
+                    doc.moveDown(1.5);
+                    
+                    const feName = req.user.name || '______________________';
+                    const feParentage = req.user.parentage_name || '______________________';
+                    const feStation = req.user.station || '______________________________________';
+                    
+                    doc.text(`I, ${feName} (Name), Son/daughter/spouse of ${feParentage}`);
+                    doc.text(`residing/employed at ${feStation} do hereby solemnly affirm and`);
+                    doc.text('sincerely state and submit as follows:—');
+                    doc.moveDown();
+
+                    doc.text('The produced electronic record/output of the digital record are obtained from the following');
+                    doc.text('device/digital record source (tick mark):—');
+                    doc.moveDown(0.5);
+
+                    drawDeviceSection(doc);
+                    drawHashSection(doc);
+                    
+                    doc.moveDown(2);
+                    const feDesignation = req.user.designation || 'Examiner of Electronic Evidence';
+                    const sigX = doc.page.width - 200;
+                    const sigY = doc.y;
+                    doc.image(signatureBuffer, sigX, sigY - 30, { width: 100 });
+                    doc.text(`${feName}`, sigX, sigY + 30);
+                    doc.text(`${feDesignation}`, sigX, sigY + 45);
+                    doc.text(`(Signature)`, sigX, sigY + 60);
+                    
+                    doc.text(`Date (DD/MM/YYYY): ${new Date().toLocaleDateString('en-GB')}`, 50, sigY + 30);
+                    doc.text(`Time (IST): ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })} hours`, 50, sigY + 45);
+                    doc.text(`Place: ${feStation}`, 50, sigY + 60);
+
+                    doc.addPage();
+                    doc.font('Helvetica-Bold').fontSize(12).text('ENCLOSED HASH REPORT', { align: 'center' });
+                    doc.font('Helvetica').fontSize(10).text(`For Section 63 Certificate (Batch: ${sourceId})`, { align: 'center' });
+                    doc.moveDown(2);
+                    
+                    files.forEach((file, idx) => {
+                        const sanitizedFilename = file.filename.replace(/[^\x20-\x7E]/g, '?');
+                        doc.font('Helvetica-Bold').text(`${idx + 1}. Filename: `);
+                        doc.font('Helvetica').text(`    ${sanitizedFilename}`, { width: 400 });
+                        doc.moveDown(0.2);
+                        doc.text(`    SHA-256 Hash: ${file.sha256_hash}`);
+                        doc.text(`    Blockchain TX ID: ${file.ledger_tx_id || 'Pending Anchoring'}`);
+                        if (file.ledger_timestamp) {
+                            const ts = new Date(file.ledger_timestamp);
+                            doc.text(`    Timestamp: ${ts.toLocaleDateString('en-GB')} ${ts.toLocaleTimeString('en-GB')} IST`);
+                        } else {
+                            doc.text(`    Timestamp: Pending`);
+                        }
+                        doc.moveDown(1);
+                    });
+                }
+
+                doc.end();
+            } catch (err) {
+                reject(err);
+            }
+        });
+
+        const newDocBuffer = await pdfkitBufferPromise;
+        let finalBuffer = newDocBuffer;
+        let finalKey = `certificates/batch_${sourceId}_signed_${Date.now()}.pdf`;
+
+        // If Part B, merge with Part A from MinIO
+        if (currentStatus === 'PENDING_PART_B' && source.signed_cert_file_path) {
+            try {
+                const prevBuffer = await getMinioBuffer(BUCKET, source.signed_cert_file_path);
+                
+                const finalDoc = await PDFLibDocument.load(prevBuffer);
+                const partBDoc = await PDFLibDocument.load(newDocBuffer);
+                
+                const copiedPages = await finalDoc.copyPages(partBDoc, partBDoc.getPageIndices());
+                copiedPages.forEach(p => finalDoc.addPage(p));
+                
+                const mergedBytes = await finalDoc.save();
+                finalBuffer = Buffer.from(mergedBytes);
+            } catch (mergeErr) {
+                console.warn('⚠️ Merging certificates failed in digital sign:', mergeErr.message);
+            }
+        }
+
+        const passThrough = new PassThrough();
+        passThrough.end(finalBuffer);
+        await minioInternal.putObject(BUCKET, finalKey, passThrough, finalBuffer.length, { 'Content-Type': 'application/pdf' });
+
+        await pool.query(
+            'UPDATE evidence_source SET certificate_status = $1, signed_cert_file_path = $2 WHERE id = $3',
+            [nextStatus, finalKey, sourceId]
+        );
+
+        await pool.query(
+            `INSERT INTO api_audit_log (user_id, user_name, user_role, method, endpoint, ip_address, status_code)
+             VALUES ($1, $2, $3, 'UPLOAD_CERT_DIGITAL', $4, $5, 200)`,
+            [userId, req.user.name, req.user.role, req.originalUrl, req.ip || '0.0.0.0']
+        );
+
+        res.status(200).json({ message: 'Digital signature applied successfully', status: nextStatus });
+    } catch (err) {
+        console.error('Digital sign error:', err);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Failed to process digital signature' });
+        }
     }
 });
 

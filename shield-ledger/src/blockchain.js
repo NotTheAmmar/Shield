@@ -3,65 +3,85 @@ const fs = require('fs');
 const path = require('path');
 
 const RPC_URL = process.env.BLOCKCHAIN_RPC_URL || 'http://node-police:8545';
-const CONTRACT_ADDRESS = process.env.BLOCKCHAIN_CONTRACT_ADDRESS;
+const FIR_CONTRACT_ADDRESS = process.env.FIR_CONTRACT_ADDRESS;
+const EVIDENCE_CONTRACT_ADDRESS = process.env.EVIDENCE_CONTRACT_ADDRESS;
 
 let provider;
 let signer;
-let contract;
+let firContract;
+let evidenceContract;
 
-function getContract() {
-    if (contract) return contract;
+function initProvider() {
+    if (!provider) {
+        provider = new ethers.JsonRpcProvider(RPC_URL);
+    }
+    return provider;
+}
 
-    if (!CONTRACT_ADDRESS) {
-        throw new Error('BLOCKCHAIN_CONTRACT_ADDRESS environment variable is not set');
+function getFIRContract() {
+    if (firContract) return firContract;
+
+    if (!FIR_CONTRACT_ADDRESS) {
+        throw new Error('FIR_CONTRACT_ADDRESS environment variable is not set');
     }
 
     try {
-        // Initialize provider
-        provider = new ethers.JsonRpcProvider(RPC_URL);
-        
-        // Since we are connecting to a local PoA node (node-police) that has its 
-        // accounts unlocked, we can get the first signer directly from the node.
-        
-        // Note: ethers v6 async getSigner requires await, but for a simple 
-        // connection module we'll construct it synchronously if possible, or
-        // we'll fetch it lazily. To make it simple and robust, we'll fetch
-        // the signer and contract dynamically.
-
-        // Load ABI
-        const abiPath = path.join(__dirname, 'abis', 'ShieldLedger.json');
+        initProvider();
+        const abiPath = path.join(__dirname, 'abis', 'FIRLedger.json');
         const contractJson = JSON.parse(fs.readFileSync(abiPath, 'utf8'));
-        const abi = contractJson.abi || contractJson; // Handle different artifact formats
-
-        // Create an un-connected contract first
-        contract = new ethers.Contract(CONTRACT_ADDRESS, abi, provider);
-        
-        return contract;
+        const abi = contractJson.abi || contractJson;
+        firContract = new ethers.Contract(FIR_CONTRACT_ADDRESS, abi, provider);
+        return firContract;
     } catch (err) {
-        console.error('[Blockchain] Error initializing contract:', err.message);
+        console.error('[Blockchain] Error initializing FIR contract:', err.message);
         throw err;
     }
 }
 
-async function getSignerContract(privateKey) {
-    const c = getContract();
+function getEvidenceContract() {
+    if (evidenceContract) return evidenceContract;
+
+    if (!EVIDENCE_CONTRACT_ADDRESS) {
+        throw new Error('EVIDENCE_CONTRACT_ADDRESS environment variable is not set');
+    }
+
+    try {
+        initProvider();
+        const abiPath = path.join(__dirname, 'abis', 'EvidenceLedger.json');
+        const contractJson = JSON.parse(fs.readFileSync(abiPath, 'utf8'));
+        const abi = contractJson.abi || contractJson;
+        evidenceContract = new ethers.Contract(EVIDENCE_CONTRACT_ADDRESS, abi, provider);
+        return evidenceContract;
+    } catch (err) {
+        console.error('[Blockchain] Error initializing Evidence contract:', err.message);
+        throw err;
+    }
+}
+
+async function getSignerFIRContract(privateKey) {
+    const c = getFIRContract();
     if (privateKey) {
-        // Use the user's explicit private key (unique signature)
         const wallet = new ethers.Wallet(privateKey, provider);
         return c.connect(wallet);
     }
-    
-    // Fallback if no private key provided
-    if (!signer) {
-        signer = await provider.getSigner();
+    if (!signer) signer = await provider.getSigner();
+    return c.connect(signer);
+}
+
+async function getSignerEvidenceContract(privateKey) {
+    const c = getEvidenceContract();
+    if (privateKey) {
+        const wallet = new ethers.Wallet(privateKey, provider);
+        return c.connect(wallet);
     }
+    if (!signer) signer = await provider.getSigner();
     return c.connect(signer);
 }
 
 // Ensure connection works
 async function checkConnection() {
     try {
-        const p = provider || new ethers.JsonRpcProvider(RPC_URL);
+        const p = initProvider();
         const network = await p.getNetwork();
         return { connected: true, chainId: Number(network.chainId) };
     } catch (err) {
@@ -70,7 +90,9 @@ async function checkConnection() {
 }
 
 module.exports = {
-    getContract,
-    getSignerContract,
+    getFIRContract,
+    getEvidenceContract,
+    getSignerFIRContract,
+    getSignerEvidenceContract,
     checkConnection
 };

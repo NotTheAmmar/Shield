@@ -53,10 +53,15 @@ jobs:
 
       - name: Deploy Smart Contract
         run: |
-          DEPLOYED_ADDR=$(npx hardhat run scripts/deploy.js --network localnet | grep -oE "0x[0-9a-fA-F]{40}" | head -1)
-          sed -i '/BLOCKCHAIN_CONTRACT_ADDRESS=/d' .env
-          echo "BLOCKCHAIN_CONTRACT_ADDRESS=$DEPLOYED_ADDR" >> .env
-          echo "Deployed contract to $DEPLOYED_ADDR"
+          DEPLOY_OUT=$(npx hardhat run scripts/deploy.js --network localnet)
+          echo "$DEPLOY_OUT"
+          FIR_ADDR=$(echo "$DEPLOY_OUT" | grep "FIRLedger deployed to:" | awk '{print $4}')
+          EVI_ADDR=$(echo "$DEPLOY_OUT" | grep "EvidenceLedger deployed to:" | awk '{print $4}')
+          sed -i '/BLOCKCHAIN_FIR_CONTRACT_ADDRESS=/d' .env
+          sed -i '/BLOCKCHAIN_EVIDENCE_CONTRACT_ADDRESS=/d' .env
+          echo "BLOCKCHAIN_FIR_CONTRACT_ADDRESS=$FIR_ADDR" >> .env
+          echo "BLOCKCHAIN_EVIDENCE_CONTRACT_ADDRESS=$EVI_ADDR" >> .env
+          echo "Deployed FIRLedger to $FIR_ADDR and EvidenceLedger to $EVI_ADDR"
 
       - name: Boot Docker Compose Stack
         run: |

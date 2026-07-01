@@ -1,8 +1,8 @@
 /**
- * SHIELD — Hardhat Deploy Script for ShieldLedger
+ * SHIELD — Hardhat Deploy Script for FIRLedger and EvidenceLedger
  *
- * Deploys the ShieldLedger smart contract to the target network and prints
- * the deployed contract address to stdout so CI can capture it.
+ * Deploys the smart contracts to the target network and prints
+ * the deployed contract addresses to stdout so CI can capture them.
  *
  * Usage:
  *   npx hardhat run scripts/deploy.js --network localnet   (Docker PoA chain)
@@ -13,16 +13,17 @@ const { ethers } = require("hardhat");
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  console.log("Deploying ShieldLedger with account:", deployer.address);
+  console.log("Deploying contracts with account:", deployer.address);
 
-  const ShieldLedger = await ethers.getContractFactory("ShieldLedger");
-  const contract = await ShieldLedger.deploy();
+  const FIRLedger = await ethers.getContractFactory("FIRLedger");
+  const firContract = await FIRLedger.deploy();
+  await firContract.waitForDeployment();
+  console.log("FIRLedger deployed to:", await firContract.getAddress());
 
-  // ethers v6: deploymentTransaction().wait() ensures the contract is mined
-  await contract.waitForDeployment();
-
-  const deployedAddress = await contract.getAddress();
-  console.log("ShieldLedger deployed to:", deployedAddress);
+  const EvidenceLedger = await ethers.getContractFactory("EvidenceLedger");
+  const evidenceContract = await EvidenceLedger.deploy();
+  await evidenceContract.waitForDeployment();
+  console.log("EvidenceLedger deployed to:", await evidenceContract.getAddress());
 }
 
 main()

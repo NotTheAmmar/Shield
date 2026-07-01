@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import HashDisplay from '../components/HashDisplay';
 import FilePreview from '../components/FilePreview';
+import SignaturePad from '../components/SignaturePad';
 import { evidenceAPI, reportsAPI, certificateAPI } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -36,6 +37,9 @@ export default function EvidenceDetailPage() {
   
   const [uploadingCert, setUploadingCert] = useState(false);
   const [certFile, setCertFile] = useState(null);
+
+  const [isDigitalSignMode, setIsDigitalSignMode] = useState(false);
+  const [signatureData, setSignatureData] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -82,6 +86,22 @@ export default function EvidenceDetailPage() {
       alert('Certificate uploaded successfully!');
     } catch (err) {
       alert(err?.response?.data?.error || 'Failed to upload certificate');
+    } finally {
+      setUploadingCert(false);
+    }
+  };
+
+  const handleDigitalSign = async () => {
+    if (!signatureData) return;
+    setUploadingCert(true);
+    try {
+      const res = await certificateAPI.signDigital(ev.sourceId, { signatureBase64: signatureData });
+      setEv(e => ({ ...e, certificateStatus: res.status }));
+      setSignatureData(null);
+      setIsDigitalSignMode(false);
+      alert('Digital signature applied and certificate generated successfully!');
+    } catch (err) {
+      alert(err?.response?.data?.error || 'Failed to apply digital signature');
     } finally {
       setUploadingCert(false);
     }
@@ -223,19 +243,53 @@ export default function EvidenceDetailPage() {
                       </div>
                     )}
 
-                    {ev.certificateStatus !== 'COMPLETED' && (
+                    {ev.certificateStatus !== 'COMPLETED' && role !== 'judicial_authority' && (
                       <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                        <label className="form-label" style={{ fontSize: 12 }}>Upload Signed PDF:</label>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <input type="file" accept="application/pdf" onChange={(e) => setCertFile(e.target.files[0])} style={{ fontSize: 12 }} />
-                          <button 
-                            className="btn btn-secondary btn-sm" 
-                            disabled={!certFile || uploadingCert || (ev.certificateStatus === 'PENDING_PART_B' && role !== 'forensic_expert' && role !== 'admin')}
-                            onClick={handleUploadCert}
-                          >
-                            {uploadingCert ? 'Uploading...' : 'Submit Signed PDF'}
-                          </button>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                          <label className="form-label" style={{ fontSize: 12, margin: 0 }}>Provide Signature:</label>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button
+                              className={`btn btn-sm ${!isDigitalSignMode ? 'btn-primary' : 'btn-secondary'}`}
+                              onClick={() => setIsDigitalSignMode(false)}
+                            >
+                              Upload Scanned PDF
+                            </button>
+                            <button
+                              className={`btn btn-sm ${isDigitalSignMode ? 'btn-primary' : 'btn-secondary'}`}
+                              onClick={() => setIsDigitalSignMode(true)}
+                            >
+                              Digitally Sign
+                            </button>
+                          </div>
                         </div>
+
+                        {isDigitalSignMode ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <SignaturePad 
+                              onSign={(data) => setSignatureData(data)} 
+                              onClear={() => setSignatureData(null)} 
+                            />
+                            <button
+                              className="btn btn-primary btn-sm"
+                              disabled={!signatureData || uploadingCert || (ev.certificateStatus === 'PENDING_PART_B' && role !== 'forensic_expert' && role !== 'admin')}
+                              onClick={handleDigitalSign}
+                              style={{ alignSelf: 'flex-start' }}
+                            >
+                              {uploadingCert ? 'Processing...' : 'Apply Digital Signature'}
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <input type="file" accept="application/pdf" onChange={(e) => setCertFile(e.target.files[0])} style={{ fontSize: 12 }} />
+                            <button 
+                              className="btn btn-secondary btn-sm" 
+                              disabled={!certFile || uploadingCert || (ev.certificateStatus === 'PENDING_PART_B' && role !== 'forensic_expert' && role !== 'admin')}
+                              onClick={handleUploadCert}
+                            >
+                              {uploadingCert ? 'Uploading...' : 'Submit Signed PDF'}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

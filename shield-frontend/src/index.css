@@ -572,6 +572,12 @@ html.dark .badge-judicial { background: rgba(168, 85, 247, 0.15); }
 }
 html.dark .badge-admin { background: rgba(16, 185, 129, 0.15); }
 
+.badge-forensic {
+  background: var(--amber-light);
+  color: var(--amber);
+}
+html.dark .badge-forensic { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
+
 /* Status: active/deactivated */
 .badge-active { background: var(--emerald-light); color: var(--emerald); }
 html.dark .badge-active { background: rgba(16, 185, 129, 0.15); }
