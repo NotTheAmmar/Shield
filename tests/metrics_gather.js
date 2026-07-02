@@ -50,9 +50,9 @@ const CONFIG = {
                            || process.env.BLOCKCHAIN_EVIDENCE_CONTRACT_ADDRESS,
     DEPLOYER_PRIVATE_KEY:  process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY,
 
-    // Admin credentials (already seeded)
+    // Admin credentials (already seeded) — loaded from .env, no hardcoded fallback
     ADMIN_EMAIL:    process.env.ADMIN_SEED_EMAIL    || 'admin@shield.gov.in',
-    ADMIN_PASSWORD: process.env.ADMIN_SEED_PASSWORD || 'Admin@123',
+    ADMIN_PASSWORD: process.env.ADMIN_SEED_PASSWORD,   // required — must be in .env
 
     // A Police Officer account to use for FIR/evidence uploads.
     // If not set, the script will CREATE a temporary officer via the admin API.
@@ -63,14 +63,14 @@ const CONFIG = {
     DB_HOST:     process.env.DB_HOST          || 'localhost',
     DB_PORT:     parseInt(process.env.DB_PORT || '5432'),
     DB_USER:     process.env.POSTGRES_USER    || 'shield_postgres',
-    DB_PASSWORD: process.env.POSTGRES_PASSWORD|| 'pass_postgres',
+    DB_PASSWORD: process.env.POSTGRES_PASSWORD,         // required — must be in .env
     DB_NAME:     process.env.POSTGRES_DB      || 'shield_db',
 
     // MinIO (direct connection for circuit-breaker tampering)
     MINIO_ENDPOINT: process.env.MINIO_ENDPOINT      || 'localhost',
     MINIO_PORT:     parseInt(process.env.MINIO_PORT || '9000'),
     MINIO_USER:     process.env.MINIO_ROOT_USER     || 'shield_minio',
-    MINIO_PASS:     process.env.MINIO_ROOT_PASSWORD || 'pass_mino',
+    MINIO_PASS:     process.env.MINIO_ROOT_PASSWORD,    // required — must be in .env
     MINIO_BUCKET:   process.env.MINIO_BUCKET        || 'evidence',
 
     // Internal master key (used by watchdog API guard)
