@@ -30,6 +30,12 @@ services:
       - "5432:5432"
     volumes:
       - ./.docker-data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
   minio-store:
     image: minio/minio
@@ -117,8 +123,10 @@ services:
       MASTER_KEY: ${MASTER_KEY}
       LEDGER_SERVICE_URL: http://shield-ledger:4002
     depends_on:
-      - db-users
-      - shield-ledger
+      db-users:
+        condition: service_healthy
+      shield-ledger:
+        condition: service_started
 
   shield-evidence:
     build: ./shield-evidence
@@ -149,8 +157,12 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       BLOCKCHAIN_ENCRYPTION_KEY: ${BLOCKCHAIN_ENCRYPTION_KEY}
     depends_on:
-      - minio-store
-      - shield-ledger
+      db-users:
+        condition: service_healthy
+      minio-store:
+        condition: service_started
+      shield-ledger:
+        condition: service_started
 
   shield-ledger:
     build: ./shield-ledger

@@ -40,6 +40,12 @@ services:
       - "5432:5432"
     volumes:
       - ./.docker-data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
   # ── Object Storage (Official MinIO Image) ──────────────────────────────────
   minio-store:
@@ -103,7 +109,8 @@ services:
       ADMIN_SEED_EMPLOYEE_ID: ${ADMIN_SEED_EMPLOYEE_ID}
       BLOCKCHAIN_ENCRYPTION_KEY: ${BLOCKCHAIN_ENCRYPTION_KEY}
     depends_on:
-      - db-users
+      db-users:
+        condition: service_healthy
 
   # ── Custom Evidence Locker Service (Pushed Custom Image) ──────────────────
   shield-evidence:
@@ -126,8 +133,12 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       BLOCKCHAIN_ENCRYPTION_KEY: ${BLOCKCHAIN_ENCRYPTION_KEY}
     depends_on:
-      - minio-store
-      - shield-ledger
+      db-users:
+        condition: service_healthy
+      minio-store:
+        condition: service_started
+      shield-ledger:
+        condition: service_started
 
   # ── Custom Ledger Interface (Pushed Custom Image) ─────────────────────────
   shield-ledger:

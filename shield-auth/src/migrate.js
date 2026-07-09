@@ -3,7 +3,7 @@ const path = require('path');
 const bcrypt = require('bcrypt');
 const pool = require('./db');
 
-const MAX_RETRIES = 10;
+const MAX_RETRIES = 20;
 const RETRY_DELAY_MS = 3000;
 
 function sleep(ms) {

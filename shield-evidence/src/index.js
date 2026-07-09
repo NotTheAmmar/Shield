@@ -52,7 +52,7 @@ process.on('unhandledRejection', (reason, promise) => {
 const fs = require('fs');
 const path = require('path');
 
-const MAX_RETRIES = 10;
+const MAX_RETRIES = 20;
 const RETRY_DELAY_MS = 3000;
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
