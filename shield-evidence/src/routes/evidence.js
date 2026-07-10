@@ -53,7 +53,9 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
 
     const bb = busboy({
         headers: req.headers,
-        limits: { fileSize: 500 * 1024 * 1024 },
+        // +1 byte: busboy fires 'limit' when bytes *reach* the cap (not exceed it),
+        // so without +1 a file of exactly 500 MB would be rejected.
+        limits: { fileSize: 500 * 1024 * 1024 + 1 },
     });
 
     bb.on('field', (name, val) => {
@@ -236,9 +238,18 @@ router.get('/verify/:id', async (req, res) => {
         });
 
         // 3. Get immutable hash from ledger — NOT Postgres (Flaw #2)
-        const ledgerHash = await ledger.getEvidenceHash(id);
+        // Wrap in try/catch: if the ledger service is unreachable or returns an
+        // unexpected status code, getEvidenceHash() throws. We must not let a
+        // transient ledger failure prevent integrity verification — fall back to
+        // the hash stored in Postgres instead of returning a 500 to the caller.
+        let ledgerHash = null;
+        try {
+            ledgerHash = await ledger.getEvidenceHash(id);
+        } catch (ledgerErr) {
+            console.warn(`[Evidence Verify] Ledger lookup failed for ${id}: ${ledgerErr.message}. Falling back to Postgres hash.`);
+        }
 
-        // 4. In MOCK mode, ledger returns null → fall back to Postgres hash
+        // 4. In MOCK mode or on ledger error, ledger returns null → fall back to Postgres hash
         const truthHash = ledgerHash || record.sha256_hash;
         const result = (liveHash === truthHash) ? 'OK' : 'TAMPERED';
 
