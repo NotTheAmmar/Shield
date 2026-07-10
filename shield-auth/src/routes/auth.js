@@ -1,11 +1,45 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const pool = require('../db');
 
 const router = express.Router();
 
-router.post('/login', async (req, res) => {
+// ── Rate Limiters ──────────────────────────────────────────────────────────
+
+// Login: 5 failed attempts per 15 minutes per IP
+// skip: counts only failures — successful logins don't consume quota
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    skip: (req, res) => res.statusCode < 400,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many login attempts. Please try again in 15 minutes.' }
+});
+
+// Refresh: 20 calls per 15 minutes per IP
+// Legitimate clients refresh every 15 min; this blocks token-farming
+const refreshLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many token refresh requests. Please try again later.' }
+});
+
+// Change-password: 5 attempts per 15 minutes per IP
+const changePasswordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    skip: (req, res) => res.statusCode < 400,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many password change attempts. Please try again in 15 minutes.' }
+});
+
+router.post('/login', loginLimiter, async (req, res) => {
     const { email, password, role } = req.body;
 
     if (!email || !password || !role) {
@@ -81,7 +115,7 @@ router.get('/me', (req, res) => {
     }
 });
 
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', refreshLimiter, async (req, res) => {
     const refreshToken = req.cookies?.shield_refresh_token;
     if (!refreshToken) return res.status(401).json({ error: 'No refresh token' });
     
@@ -144,7 +178,7 @@ router.post('/logout', (req, res) => {
  * Body: { currentPassword, newPassword }
  * On success: clears the must_change_password flag and returns updated user info.
  */
-router.post('/change-password', async (req, res) => {
+router.post('/change-password', changePasswordLimiter, async (req, res) => {
     const token = req.cookies?.shield_access_token;
     if (!token) return res.status(401).json({ error: 'Not authenticated' });
 
