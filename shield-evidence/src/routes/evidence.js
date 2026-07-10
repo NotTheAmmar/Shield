@@ -179,7 +179,7 @@ router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
             })
             .catch(err => {
                 console.error("File upload promise rejected:", err);
-                return { error: true, message: err.message, stack: err.stack };
+                return { error: true, message: err.message };
             });
 
         uploadPromises.push(fileUploadPromise);
@@ -262,7 +262,7 @@ router.get('/verify/:id', async (req, res) => {
 
     } catch (err) {
         console.error('Verify error:', err.message);
-        res.status(500).json({ error: 'Verification failed', details: err.message, stack: err.stack });
+        res.status(500).json({ error: 'Verification failed', details: err.message });
     }
 });
 

@@ -125,6 +125,7 @@ async function runMigrations() {
                 await sleep(RETRY_DELAY_MS);
             } else {
                 console.error(`[Auth Init] Failed after ${MAX_RETRIES} attempts:`, err.message);
+                throw err;
             }
         }
     }

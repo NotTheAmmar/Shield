@@ -27,11 +27,22 @@ const auth = require('./middleware/auth');
 app.use('/api/auth', authRouter);
 app.use('/api/admin', auth, adminRouter);
 
-// Start the server and ensure DB is ready natively
-app.listen(PORT, async () => {
-    console.log(`Auth Service running on port ${PORT}`);
+// Ensure DB is migrated BEFORE binding the port so no requests
+// are ever served against missing tables.
+async function start() {
     await runMigrations();
-    
-    // Start background queue processors
+    app.listen(PORT, () => {
+        console.log(`Auth Service running on port ${PORT}`);
+    });
+    // Start background queue processors after the server is live
     startProvisionWorker();
+}
+
+start();
+
+// Graceful shutdown — release Postgres pool
+process.on('SIGTERM', async () => {
+    console.log('SIGTERM received — closing pg pool');
+    await pool.end();
+    process.exit(0);
 });

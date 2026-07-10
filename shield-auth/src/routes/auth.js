@@ -66,7 +66,7 @@ router.post('/login', async (req, res) => {
         return res.json({ user: { ...payload, mustChangePassword: user.must_change_password === true }, token: accessToken });
     } catch (err) {
         console.error('[AUTH LOGIN]', err.message);
-        return res.status(500).json({ error: 'Internal server error during login', details: err.message, stack: err.stack });
+        return res.status(500).json({ error: 'Internal server error during login' });
     }
 });
 
@@ -88,17 +88,21 @@ router.post('/refresh', async (req, res) => {
     try {
         const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
         
-        // Ensure user is still active to prevent revoked users from lingering
-        const { rows } = await pool.query('SELECT status FROM users WHERE id = $1', [decoded.id]);
-        if (!rows.length || rows[0].status !== 'active') throw new Error('User inactive');
+        // Re-fetch full user from DB so any role/name/status changes take effect immediately
+        const { rows } = await pool.query(
+            'SELECT id, email, role, name, employee_id, status, blockchain_address FROM users WHERE id = $1',
+            [decoded.id]
+        );
+        if (!rows.length || rows[0].status !== 'active') throw new Error('User inactive or not found');
         
+        const user = rows[0];
         const payload = {
-            id: decoded.id,
-            email: decoded.email,
-            role: decoded.role,
-            name: decoded.name,
-            employeeId: decoded.employeeId,
-            blockchainAddress: decoded.blockchainAddress
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            name: user.name,
+            employeeId: user.employee_id,
+            blockchainAddress: user.blockchain_address
         };
         
         const accessToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });

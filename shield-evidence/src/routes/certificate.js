@@ -318,10 +318,9 @@ router.get('/:id/certificate', generateRateLimiter, requireRoles(['Police Office
         res.end(Buffer.from(pdfBytes));
 
     } catch (err) {
-        require('fs').writeFileSync('error.log', err.stack);
         console.error('Certificate generation error:', err.stack);
         if (!res.headersSent) {
-            res.status(500).json({ error: 'Failed to generate certificate', details: err.message, stack: err.stack });
+            res.status(500).json({ error: 'Failed to generate certificate' });
         }
     }
 });

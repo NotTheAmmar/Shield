@@ -111,8 +111,10 @@ async function start() {
     console.log(`   Scan interval: Every ${INTERVAL_MINUTES} minutes`);
     console.log(`   Target: ${API_BASE_URL}`);
 
-    // Wait 15 seconds for other services to boot
-    await new Promise(r => setTimeout(r, 15000));
+    // Wait for other services to boot — configurable via WATCHDOG_STARTUP_DELAY_MS
+    const startupDelay = parseInt(process.env.WATCHDOG_STARTUP_DELAY_MS || '30000', 10);
+    console.log(`   Startup delay: ${startupDelay / 1000}s`);
+    await new Promise(r => setTimeout(r, startupDelay));
 
     // Run immediately on startup
     await runVerification();

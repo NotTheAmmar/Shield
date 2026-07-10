@@ -10,10 +10,6 @@ module.exports = (req, res, next) => {
 
     let authHeader = req.headers.authorization;
 
-    console.log('--- AUTH DEBUG ---');
-    console.log('authHeader:', authHeader);
-    console.log('cookies:', req.headers.cookie);
-
     // Fallback: Check cookies for token if proxy bypassed gateway
     if (!authHeader && req.headers.cookie) {
         const cookies = req.headers.cookie.split(';').map(c => c.trim());

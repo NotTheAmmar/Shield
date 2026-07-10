@@ -6,8 +6,9 @@ const MASTER_KEY = process.env.MASTER_KEY || 'replace_this_with_a_32_byte_base64
 let isProcessing = false;
 
 async function processQueue() {
-    if (isProcessing) return;
+    if (isProcessing) return false;
     isProcessing = true;
+    let processedAny = false;
 
     try {
         while (true) {
@@ -33,6 +34,7 @@ async function processQueue() {
             // Admin does not need blockchain anchoring access, only Police and Judicial roles
             if (user.role.toLowerCase() === 'admin') {
                 await pool.query('UPDATE users SET blockchain_provisioned = TRUE WHERE id = $1', [user.id]);
+                processedAny = true;
                 continue;
             }
 
@@ -55,6 +57,7 @@ async function processQueue() {
                 // Transaction successfully mined
                 await pool.query('UPDATE users SET blockchain_provisioned = TRUE WHERE id = $1', [user.id]);
                 console.log(`[ProvisionWorker] Successfully provisioned user ${user.id} on the blockchain.`);
+                processedAny = true;
             } catch (err) {
                 // Log the error but CONTINUE to the next user instead of blocking the queue
                 console.error(`[ProvisionWorker] Failed to provision user ${user.id}:`, err.message);
@@ -68,13 +71,42 @@ async function processQueue() {
     } finally {
         isProcessing = false;
     }
+
+    return processedAny;
 }
 
 function startProvisionWorker() {
-    console.log('[ProvisionWorker] Started blockchain queue processor.');
-    // Run every 2 seconds to ensure fast provisioning
-    setInterval(processQueue, 2000);
+    console.log('[ProvisionWorker] Started blockchain queue processor (adaptive backoff).');
+
+    const MIN_INTERVAL_MS = 2000;   // 2s — used when queue has work
+    const MAX_IDLE_MS     = 60000;  // 60s — max interval when queue is empty
+    const MAX_ERROR_MS    = 30000;  // 30s — max interval after DB/network errors
+
+    let currentInterval = MIN_INTERVAL_MS;
+    let timeoutHandle = null;
+
+    async function tick() {
+        let foundWork = false;
+        try {
+            // processQueue returns true if it processed at least one user
+            foundWork = await processQueue();
+            if (foundWork) {
+                currentInterval = MIN_INTERVAL_MS; // Reset — keep polling fast while there's a backlog
+            } else {
+                // Idle: back off exponentially up to MAX_IDLE_MS
+                currentInterval = Math.min(currentInterval * 2, MAX_IDLE_MS);
+            }
+        } catch (err) {
+            // Unexpected error outside processQueue's own handler — back off, don't spin
+            console.error('[ProvisionWorker] Unexpected tick error:', err.message);
+            currentInterval = Math.min(currentInterval * 2, MAX_ERROR_MS);
+        }
+
+        timeoutHandle = setTimeout(tick, currentInterval);
+    }
+
+    // Kick off
+    timeoutHandle = setTimeout(tick, MIN_INTERVAL_MS);
 }
 
 module.exports = { startProvisionWorker };
-
