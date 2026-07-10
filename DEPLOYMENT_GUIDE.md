@@ -75,6 +75,7 @@ Fill in the required variables. The table below explains each one:
 | `BLOCKCHAIN_DEPLOYER_PRIVATE_KEY` | Extract from keystore — see command below |
 | `BLOCKCHAIN_FIR_CONTRACT_ADDRESS` | Set this **after Step 5** (smart contract deployment) |
 | `BLOCKCHAIN_EVIDENCE_CONTRACT_ADDRESS` | Set this **after Step 5** (smart contract deployment) |
+| `WATCHDOG_STARTUP_DELAY_MS` | *(Optional)* How long the watchdog waits before its first scan. Default: `30000` (30s). Increase on slow VMs. |
 
 To extract `BLOCKCHAIN_DEPLOYER_PRIVATE_KEY`, run this once after cloning:
 
@@ -208,6 +209,9 @@ This starts all services:
 | `shield-gateway` | API gateway / reverse proxy | 3001 |
 | `shield-frontend` | React web interface | 3000 |
 | `nginx` | Edge reverse proxy | 80 |
+
+> [!NOTE]
+> `db-users` (PostgreSQL) and `minio-store` (MinIO) are configured with Docker healthchecks. Services that depend on them (`shield-auth`, `shield-evidence`) will not start until those stores report healthy. This eliminates startup race conditions on slow machines or VMs.
 
 ### Verify all services are up
 

@@ -40,14 +40,13 @@ This project uses a **Monorepo** structure. All microservices and infrastructure
 ```text
 shield-project/
 ├── .gitignore             # Global gitignore files (Recursive)
-├── .dockerignore          # Global dockerignore
+├── .dockerignore          # Global dockerignore (per-service .dockerignore files also exist in each shield-* dir)
 ├── README.md              # Main project documentation and run guide
 ├── STRUCTURE.md           # Repository architecture layout
 ├── DATABASE.md            # Comprehensive database & storage schemas
 ├── CONTRIBUTING.md        # Guidelines for collaborating on this repo
 ├── package.json           # Root scripts for cross-platform task running
 ├── docker-compose.yml     # Main composition file orchestrating all services and databases
-├── docker-compose.prod.yml # Production compose pulling pre-built Docker Hub images
 ├── docker-compose.blockchain.yml # Private 3-node Clique PoA blockchain network
 ├── hardhat.config.js      # Hardhat: compile, test, and ABI export config
 ├── .docker-data/          # [GitIgnored] Local persistence volumes for PostgreSQL, MinIO, and Geth

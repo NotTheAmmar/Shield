@@ -9,4 +9,5 @@ gitguardian:
     - ".env.example"
     - "**/.env.example"
     - "**/package-lock.json"
-    - "tests/*"
+    - "tests/results/**/*"
+    - "tests/results/metrics.json"

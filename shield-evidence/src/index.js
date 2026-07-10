@@ -214,6 +214,7 @@ async function runMigrations() {
                 await sleep(RETRY_DELAY_MS);
             } else {
                 console.error('[Init] Failed after all retries:', err.message);
+                throw err;
             }
         }
     }
@@ -238,6 +239,7 @@ async function ensureMinioBucket() {
                 await sleep(RETRY_DELAY_MS);
             } else {
                 console.error('[MinIO] Failed to ensure bucket after all retries:', err.message);
+                throw err;
             }
         }
     }

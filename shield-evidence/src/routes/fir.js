@@ -133,7 +133,7 @@ router.post('/create', requireRoles(['Police Officer']), (req, res) => {
                 } catch (err) {
                     try { await minioInternal.removeObject(BUCKET, objectKey); } catch (_) {}
                     console.error('Error creating FIR:', err.message);
-                    send(500, { error: 'Failed to create FIR', details: err.message, stack: err.stack });
+                    send(500, { error: 'Failed to create FIR', details: err.message });
                 }
             })
             .catch((err) => {

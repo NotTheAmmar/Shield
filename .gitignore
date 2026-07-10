@@ -26,4 +26,7 @@ typechain-types/
 
 # Nested github repo clone
 github-repo/
+
+# Tests — results and metrics are local only
 tests/results/
+tests/results/metrics.json
