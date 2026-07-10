@@ -32,7 +32,12 @@ router.post('/create', requireRoles(['Police Officer']), (req, res) => {
         }
     };
 
-    const bb = busboy({ headers: req.headers, limits: { fileSize: 500 * 1024 * 1024 } });
+    const bb = busboy({
+        headers: req.headers,
+        // +1 byte: busboy fires 'limit' when bytes *reach* the cap (not exceed it),
+        // so without +1 a file of exactly 500 MB would be rejected.
+        limits: { fileSize: 500 * 1024 * 1024 + 1 }
+    });
 
     bb.on('field', (name, val) => {
         fields[name] = val;
@@ -172,7 +177,14 @@ router.get('/verify/:id', async (req, res) => {
             });
         });
 
-        const ledgerHash = await ledger.getFIRHash(id);
+        // Wrap in try/catch: if the ledger service is unreachable or returns an
+        // unexpected status code, getFIRHash() throws. Fall back to Postgres hash.
+        let ledgerHash = null;
+        try {
+            ledgerHash = await ledger.getFIRHash(id);
+        } catch (ledgerErr) {
+            console.warn(`[FIR Verify] Ledger lookup failed for ${id}: ${ledgerErr.message}. Falling back to Postgres hash.`);
+        }
         const truthHash = ledgerHash || record.sha256_hash;
         const match = (liveHash === truthHash);
         const status = match ? 'verified' : 'tampered';

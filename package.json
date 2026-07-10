@@ -16,7 +16,8 @@
     "test:contract": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true npx hardhat test",
     "test:blockchain": "bash tests/blockchain/blockchain_network_test.sh",
     "watchdog:local": "node tests/integration/watchdog_local.js",
-    "test:manual": "bash tests/integration/run_manual_tests.sh"
+    "test:manual": "bash tests/integration/run_manual_tests.sh",
+    "metrics:gather": "node tests/metrics_gather.js"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

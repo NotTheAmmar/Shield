@@ -124,7 +124,10 @@ app.get('/api/ledger/fir/:firId', async (req, res) => {
         
         return res.json({ firId: req.params.firId, hash: sha256Hash, registeredBy, timestamp: Number(blockTimestamp) });
     } catch (err) {
-        if (err.message.includes("not found") || err.message.includes("revert") || err.code === 'BAD_DATA') {
+        // ethers v6: un-anchored IDs cause a contract revert → CALL_EXCEPTION code.
+        // Also handle legacy string checks for older ethers / custom messages.
+        if (err.code === 'CALL_EXCEPTION' || err.code === 'BAD_DATA' ||
+            err.message.includes("not found") || err.message.includes("revert")) {
             return res.status(404).json({ error: 'FIR hash not found in ledger' });
         }
         return res.status(500).json({ error: 'Failed to retrieve FIR hash', details: err.message });
@@ -140,7 +143,9 @@ app.get('/api/ledger/evidence/:evidenceId', async (req, res) => {
         
         return res.json({ evidenceId: req.params.evidenceId, firId, hash: sha256Hash, registeredBy, timestamp: Number(blockTimestamp) });
     } catch (err) {
-        if (err.message.includes("not found") || err.message.includes("revert") || err.code === 'BAD_DATA') {
+        // ethers v6: un-anchored IDs cause a contract revert → CALL_EXCEPTION code.
+        if (err.code === 'CALL_EXCEPTION' || err.code === 'BAD_DATA' ||
+            err.message.includes("not found") || err.message.includes("revert")) {
             return res.status(404).json({ error: 'Evidence hash not found in ledger' });
         }
         return res.status(500).json({ error: 'Failed to retrieve Evidence hash', details: err.message });
