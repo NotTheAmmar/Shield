@@ -64,7 +64,12 @@ app.use((req, res, next) => {
     const role = req.user.role.toLowerCase().replace(/[\s_]/g, '');
     if (role === 'admin') {
       const path = req.path.toLowerCase();
-      // Drop any file or case viewing / downloading / uploading request initiated by an Admin
+      // Internal system watchdog endpoints (/api/evidence/internal/*) are authorized for Admin infrastructure health & integrity monitoring
+      if (path.startsWith('/api/evidence/internal')) {
+        return next();
+      }
+
+      // Drop any legal case viewing / downloading / uploading request initiated by an Admin
       const isRestrictedCasePath = 
         path.startsWith('/api/fir') || 
         path.startsWith('/api/evidence') || 
