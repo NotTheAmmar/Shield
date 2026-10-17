@@ -8,7 +8,20 @@ const { minioInternal, minioPublic, BUCKET } = require('../config/minio');
 const requireRoles = require('../middleware/rbac');
 const ledger = require('../services/ledger');
 
+const rateLimit = require('express-rate-limit');
+
 const router = express.Router();
+
+// Rate limiter for FIR & Supplementary endpoints (CodeQL missing-rate-limiting fix)
+const firLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 1000,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests on FIR endpoints. Please try again later.' }
+});
+
+router.use(firLimiter);
 
 /**
  * Jurisdictional Access Control Helper:
