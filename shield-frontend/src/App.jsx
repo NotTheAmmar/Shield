@@ -18,6 +18,9 @@ import AuditLogPage from './pages/AuditLogPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import ForcePasswordChangePage from './pages/ForcePasswordChangePage';
 import ForensicUploadPage from './pages/ForensicUploadPage';
+import JudicialMagistratePage from './pages/JudicialMagistratePage';
+import SessionsJudgePage from './pages/SessionsJudgePage';
+import AdvocatePortalPage from './pages/AdvocatePortalPage';
 
 function AppLayout({ children }) {
   return (
@@ -125,6 +128,36 @@ export default function App() {
                 element={
                   <ProtectedRoute roles={['judicial_authority', 'judicial_magistrate', 'sessions_judge']}>
                     <AppLayout><AuditLogPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Person 4: Judicial Magistrate Pre-Trial Bench */}
+              <Route
+                path="/judicial"
+                element={
+                  <ProtectedRoute roles={['judicial_magistrate', 'judicial_authority', 'admin']}>
+                    <AppLayout><JudicialMagistratePage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Person 4: Sessions Judge Trial Bench */}
+              <Route
+                path="/judge"
+                element={
+                  <ProtectedRoute roles={['sessions_judge', 'judicial_authority', 'admin']}>
+                    <AppLayout><SessionsJudgePage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Person 4: Advocate Discovery & Vakalatnama Portal */}
+              <Route
+                path="/advocate"
+                element={
+                  <ProtectedRoute roles={['advocate', 'admin']}>
+                    <AppLayout><AdvocatePortalPage /></AppLayout>
                   </ProtectedRoute>
                 }
               />

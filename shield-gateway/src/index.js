@@ -74,7 +74,10 @@ app.use((req, res, next) => {
         path.startsWith('/api/fir') || 
         path.startsWith('/api/evidence') || 
         path.startsWith('/api/evidence-source') ||
-        path.startsWith('/api/reports');
+        path.startsWith('/api/reports') ||
+        path.startsWith('/api/judicial') ||
+        path.startsWith('/api/judge') ||
+        path.startsWith('/api/advocate');
 
       if (isRestrictedCasePath) {
         console.warn(`[ZERO-TRUST VIOLATION BLOCKED] Admin (${req.user.employeeId || req.user.email}) attempted to access legal case data: ${req.method} ${req.originalUrl}`);
@@ -171,6 +174,9 @@ function proxyToAuth(req, res) {
 // These routes MUST come BEFORE express.json() so the body stream is intact
 app.use('/api/fir', proxyToEvidence);
 app.use('/api/evidence', proxyToEvidence);
+app.use('/api/judicial', proxyToEvidence);
+app.use('/api/judge', proxyToEvidence);
+app.use('/api/advocate', proxyToEvidence);
 
 app.use('/api/dashboard', proxyToEvidence);
 app.use('/api/audit', proxyToEvidence);

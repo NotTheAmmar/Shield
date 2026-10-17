@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Shield, LayoutDashboard, Upload, FileText, Archive, BookOpen, Users, ChevronDown, LogOut, User } from 'lucide-react';
+import { Shield, LayoutDashboard, Upload, FileText, Archive, BookOpen, Users, ChevronDown, LogOut, User, Scale, Gavel, Briefcase } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import ThemeToggle from './ThemeToggle';
 import RoleBadge from './RoleBadge';
@@ -9,6 +9,9 @@ const NAV_LINKS = [
   { to: '/',             label: 'Dashboard',       Icon: LayoutDashboard, roles: ['police_officer', 'judicial_authority', 'judicial_magistrate', 'sessions_judge', 'forensic_expert', 'advocate', 'admin'] },
   { to: '/upload',       label: 'Upload FIR',       Icon: Upload,          roles: ['police_officer'] },
   { to: '/forensic/upload', label: 'FSL Ingestion', Icon: Upload,          roles: ['forensic_expert'] },
+  { to: '/judicial',     label: 'Magistrate Bench', Icon: Scale,           roles: ['judicial_magistrate', 'judicial_authority'] },
+  { to: '/judge',        label: 'Trial Roster',     Icon: Gavel,           roles: ['sessions_judge'] },
+  { to: '/advocate',     label: 'Advocate Vault',   Icon: Briefcase,       roles: ['advocate'] },
   { to: '/fir',          label: 'FIR Registry',     Icon: FileText,        roles: ['police_officer', 'judicial_authority', 'judicial_magistrate', 'sessions_judge'] },
   { to: '/vault',        label: 'Evidence Vault',   Icon: Archive,         roles: ['police_officer', 'judicial_authority', 'judicial_magistrate', 'sessions_judge', 'forensic_expert'] },
   { to: '/audit',        label: 'Audit Log',         Icon: BookOpen,        roles: ['judicial_authority', 'judicial_magistrate', 'sessions_judge'] },

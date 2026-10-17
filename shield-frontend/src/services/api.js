@@ -173,3 +173,32 @@ export const certificateAPI = {
   }),
   signDigital: (sourceId, data) => apiClient.post(`/evidence-source/${sourceId}/sign-digital`, data),
 };
+
+// ── Person 4: Judicial Magistrate (Pre-Trial) ─────────────────────────────
+
+export const judicialAPI = {
+  getFeed: () => apiClient.get('/judicial/feed'),
+  commitCase: (firId, data) => apiClient.post(`/judicial/fir/${firId}/commit`, data),
+  getPendingVakalatnama: () => apiClient.get('/judicial/vakalatnama/pending'),
+  reviewVakalatnama: (id, data) => apiClient.patch(`/judicial/vakalatnama/${id}/review`, data),
+  vakalatnamaDocUrl: (id) => `/api/judicial/vakalatnama/${id}/document`,
+};
+
+// ── Person 4: Sessions Judge (Trial Bench) ─────────────────────────────────
+
+export const judgeAPI = {
+  getTrialRoster: () => apiClient.get('/judge/trial-roster'),
+  updateCaseStatus: (firId, data) => apiClient.patch(`/judge/fir/${firId}/status`, data),
+};
+
+// ── Person 4: Advocate Portal ──────────────────────────────────────────────
+
+export const advocateAPI = {
+  searchFir: (firNumber) => apiClient.get('/advocate/search-fir', { params: { firNumber } }),
+  submitVakalatnama: (formData) => apiClient.post('/advocate/vakalatnama', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  getMyCases: () => apiClient.get('/advocate/my-cases'),
+  getMyApplications: () => apiClient.get('/advocate/my-applications'),
+  watermarkedDownloadUrl: (evidenceId) => `/api/advocate/evidence/${evidenceId}/download-watermarked`,
+};

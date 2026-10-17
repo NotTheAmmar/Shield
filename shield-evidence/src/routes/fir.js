@@ -315,6 +315,17 @@ router.get('/list', requireRoles(['Police Officer', 'Judicial Authority', 'Foren
             idx++;
         }
 
+        // Advocate Scoping: Advocates can only list cases where their Vakalatnama is APPROVED
+        if (userRole === 'advocate') {
+            const advId = req.user.userId || req.user.id;
+            conditions.push(`EXISTS (
+                SELECT 1 FROM vakalatnama_requests vr
+                WHERE vr.fir_id = f.id AND vr.advocate_id = $${idx} AND vr.status = 'APPROVED'
+            )`);
+            values.push(advId);
+            idx++;
+        }
+
         if (search) {
             conditions.push(`(f.fir_number ILIKE $${idx} OR f.case_category ILIKE $${idx} OR f.description ILIKE $${idx} OR f.location ILIKE $${idx} OR f.station ILIKE $${idx} OR f.applicable_sections ILIKE $${idx})`);
             values.push(`%${search}%`);
@@ -500,6 +511,21 @@ router.get('/:id', requireRoles(['Police Officer', 'Judicial Authority', 'Forens
                 error: 'Forbidden: Jurisdictional access denied for this police station.',
                 code: 'JURISDICTION_ACCESS_DENIED'
             });
+        }
+
+        // Advocate Locus Standi Scoping: Requires approved Vakalatnama for this FIR
+        if (requireRoles.normalizeRole(req.user.role) === 'advocate') {
+            const advId = req.user.userId || req.user.id;
+            const { rows: vakRows } = await pool.query(
+                `SELECT id FROM vakalatnama_requests WHERE fir_id = $1 AND advocate_id = $2 AND status = 'APPROVED'`,
+                [req.params.id, advId]
+            );
+            if (!vakRows.length) {
+                return res.status(403).json({
+                    error: 'Forbidden: Advocate access requires an approved Vakalatnama for this FIR.',
+                    code: 'VAKALATNAMA_REQUIRED'
+                });
+            }
         }
 
         const evidenceRows = await pool.query(
