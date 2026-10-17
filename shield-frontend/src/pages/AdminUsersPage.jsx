@@ -18,10 +18,19 @@ function fmtDateTime(iso) {
   return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function getSecureRandomInt(max) {
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+    const array = new Uint32Array(1);
+    window.crypto.getRandomValues(array);
+    return array[0] % max;
+  }
+  return 0;
+}
+
 function generatePassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
   let pw = 'Sh!3ld@';
-  for (let i = 0; i < 6; i++) pw += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 6; i++) pw += chars[getSecureRandomInt(chars.length)];
   return pw;
 }
 
@@ -36,7 +45,7 @@ function generateEmployeeId(role = '') {
   else if (role.includes('Admin')) prefix = 'ADM-';
 
   let id = prefix;
-  for (let i = 0; i < 5; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 5; i++) id += chars[getSecureRandomInt(chars.length)];
   return id;
 }
 

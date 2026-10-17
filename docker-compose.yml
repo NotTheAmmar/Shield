@@ -38,7 +38,7 @@ services:
       start_period: 10s
 
   minio-store:
-    image: minio/minio
+    image: elestio/minio:latest
     container_name: minio-store
     networks:
       - shield-network

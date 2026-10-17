@@ -1,10 +1,22 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const http = require('http');
+const rateLimit = require('express-rate-limit');
 const pool = require('../db');
 const requireRoles = require('../middleware/rbac');
 
 const router = express.Router();
+
+// Rate limiter for administrative and monitoring endpoints (CodeQL missing-rate-limiting fix)
+const adminLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 200, // max 200 requests per 15 minutes per IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many admin requests. Please try again later.' }
+});
+
+router.use(adminLimiter);
 
 function checkHttpService(host, port, path = '/') {
     return new Promise((resolve) => {
@@ -28,7 +40,7 @@ function checkHttpService(host, port, path = '/') {
 }
 
 // GET /api/admin/system-health
-router.get('/system-health', requireRoles(['Admin']), async (req, res) => {
+router.get('/system-health', adminLimiter, requireRoles(['Admin']), async (req, res) => {
     try {
         const dbStart = Date.now();
         let dbStatus = 'ONLINE';
@@ -79,7 +91,7 @@ router.get('/system-health', requireRoles(['Admin']), async (req, res) => {
 });
 
 // GET /api/admin/audit-logs
-router.get('/audit-logs', requireRoles(['Admin']), async (req, res) => {
+router.get('/audit-logs', adminLimiter, requireRoles(['Admin']), async (req, res) => {
     try {
         const { search, method, page = 1, limit = 50 } = req.query;
         const pageNum = Math.max(1, parseInt(page, 10));
@@ -133,7 +145,7 @@ router.get('/audit-logs', requireRoles(['Admin']), async (req, res) => {
 });
 
 // GET /api/admin/watchdog-alerts
-router.get('/watchdog-alerts', requireRoles(['Admin']), async (req, res) => {
+router.get('/watchdog-alerts', adminLimiter, requireRoles(['Admin']), async (req, res) => {
     try {
         // Query watchdog security alerts from api_audit_log
         const { rows } = await pool.query(`
