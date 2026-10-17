@@ -112,6 +112,8 @@ export const firAPI = {
   close:  (id) => apiClient.patch(`/fir/${id}/close`),
   verify: (id) => apiClient.get(`/evidence/verify/${id}`),
   downloadUrl: (id) => `/api/fir/${id}/download`,
+  getSupplementary: (id) => apiClient.get(`/fir/${id}/supplementary`),
+  addSupplementary: (id, data) => apiClient.post(`/fir/${id}/supplementary`, data),
 };
 
 // ── Evidence ──────────────────────────────────────────────────────────────

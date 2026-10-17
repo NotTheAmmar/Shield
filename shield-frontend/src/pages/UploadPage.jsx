@@ -1,62 +1,116 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Archive, CheckCircle, MapPin } from 'lucide-react';
+import { FileText, Archive, CheckCircle, MapPin, Shield, Lock, ExternalLink } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import DropZone from '../components/DropZone';
 import { firAPI, evidenceAPI } from '../services/api';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 const CATEGORIES = ['photo', 'video', 'audio', 'document', 'other'];
 
-export default function UploadPage() {
-  const [tab, setTab] = useState('fir');
-  const [searchParams] = useSearchParams();
+const CRIME_CATEGORIES = [
+  'Theft (BNS Sec 303)',
+  'Cybercrime & Phishing (IT Act Sec 66D)',
+  'Financial Fraud & Cheating (BNS Sec 318)',
+  'Assault & Grievous Hurt (BNS Sec 115)',
+  'Criminal Breach of Trust (BNS Sec 316)',
+  'Burglary / Trespass (BNS Sec 331)',
+  'Narcotics (NDPS Act)',
+  'Other Statutory Offence'
+];
 
-  // Switch to evidence tab if navigated from FIR detail with ev pre-selection
+const COMMON_STATIONS = [
+  'Kothrud PS',
+  'Andheri PS',
+  'Bandra PS',
+  'Cyber Crime PS, Pune',
+  'Cyber Crime PS, Mumbai',
+  'Shivajinagar PS',
+  'Deccan Gymkhana PS',
+  'Hinjewadi PS',
+  'Crime Branch Station'
+];
+
+export default function UploadPage() {
+  const { role, user } = useAuth();
+  const [searchParams] = useSearchParams();
+  
+  // Police officers only have Scanned FIR registration; Forensic Experts handle evidence batches
+  const isPolice = role === 'police_officer';
+  const isForensic = role === 'forensic_expert';
+
+  const defaultTab = isForensic ? 'evidence' : 'fir';
+  const [tab, setTab] = useState(defaultTab);
+
   useEffect(() => {
-    if (searchParams.get('tab') === 'evidence') setTab('evidence');
-  }, [searchParams]);
+    if (searchParams.get('tab') === 'evidence' && !isPolice) {
+      setTab('evidence');
+    }
+  }, [searchParams, isPolice]);
 
   return (
     <>
       <PageHeader
-        title="Upload"
-        subtitle="Submit a scanned FIR document or attach digital evidence to a case."
+        title={isPolice ? "Scanned FIR Registration" : "Upload Portal"}
+        subtitle={
+          isPolice
+            ? "Register physical First Information Reports (FIR) with cryptographic SHA-256 seal & Section 193 BNSS immutability freeze."
+            : "Upload forensic evidence batches and custody records."
+        }
       />
 
-      <div className="tabs">
-        <button
-          className={`tab-btn ${tab === 'fir' ? 'active' : ''}`}
-          onClick={() => setTab('fir')}
-          id="tab-fir"
-        >
-          <FileText size={14} /> Upload FIR
-        </button>
-        <button
-          className={`tab-btn ${tab === 'evidence' ? 'active' : ''}`}
-          onClick={() => setTab('evidence')}
-          id="tab-evidence"
-        >
-          <Archive size={14} /> Upload Evidence
-        </button>
-      </div>
+      {/* Tabs shown only if user has access to multiple functions */}
+      {!isPolice && (
+        <div className="tabs">
+          <button
+            className={`tab-btn ${tab === 'fir' ? 'active' : ''}`}
+            onClick={() => setTab('fir')}
+            id="tab-fir"
+          >
+            <FileText size={14} /> Upload FIR
+          </button>
+          <button
+            className={`tab-btn ${tab === 'evidence' ? 'active' : ''}`}
+            onClick={() => setTab('evidence')}
+            id="tab-evidence"
+          >
+            <Archive size={14} /> Upload Evidence Batch
+          </button>
+        </div>
+      )}
 
-      {tab === 'fir' ? <UploadFirTab /> : <UploadEvidenceTab searchParams={searchParams} />}
+      {isPolice ? (
+        <UploadFirTab user={user} />
+      ) : tab === 'fir' ? (
+        <UploadFirTab user={user} />
+      ) : (
+        <UploadEvidenceTab searchParams={searchParams} />
+      )}
     </>
   );
 }
 
-// ── Tab 1: Upload FIR ──────────────────────────────────────────────────────
+// ── Tab 1: Upload Scanned FIR (Police Officer Persona) ─────────────────────
 
-function UploadFirTab() {
+function UploadFirTab({ user }) {
   const [firNumber, setFirNumber] = useState('');
-  const [incidentType, setIncidentType] = useState('');
-  const [dateTime, setDateTime] = useState('');
+  const [incidentDateTime, setIncidentDateTime] = useState('');
+  const [applicableSections, setApplicableSections] = useState('');
+  const [station, setStation] = useState(user?.station || '');
+  const [incidentType, setIncidentType] = useState('Theft (BNS Sec 303)');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [files, setFiles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState('');
+
+  // Auto-sync station if user profile updates
+  useEffect(() => {
+    if (user?.station && !station) {
+      setStation(user.station);
+    }
+  }, [user, station]);
 
   const handleFiles = (accepted) => {
     setFiles(accepted);
@@ -71,21 +125,27 @@ function UploadFirTab() {
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => setLocation(`${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`),
-      () => setError('Unable to retrieve your location.')
+      () => setError('Unable to retrieve current GPS location.')
     );
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!firNumber.trim()) { setError('FIR Number is required.'); return; }
-    if (!files.length) { setError('Please select a file to upload.'); return; }
+    if (!station.trim()) { setError('Police Station jurisdiction is mandatory.'); return; }
+    if (!applicableSections.trim()) { setError('Applicable penal code / statutory sections are required.'); return; }
+    if (!files.length) { setError('Please attach the scanned physical FIR document (PDF or Image).'); return; }
+
     setSubmitting(true);
     setError('');
     try {
       const fd = new FormData();
       fd.append('firNumber', firNumber.trim());
+      fd.append('incidentDateTime', incidentDateTime);
+      fd.append('dateTime', incidentDateTime); // backward compatibility
+      fd.append('applicableSections', applicableSections.trim());
+      fd.append('station', station.trim());
       fd.append('incidentType', incidentType.trim());
-      fd.append('dateTime', dateTime);
       fd.append('location', location.trim());
       fd.append('description', description.trim());
       fd.append('file', files[0]);
@@ -94,12 +154,12 @@ function UploadFirTab() {
       setSuccess(result);
       setFiles([]);
       setFirNumber('');
-      setIncidentType('');
-      setDateTime('');
+      setIncidentDateTime('');
+      setApplicableSections('');
       setLocation('');
       setDescription('');
     } catch (err) {
-      setError(err?.response?.data?.error || err.message || 'Upload failed. Please try again.');
+      setError(err?.response?.data?.error || err.message || 'Scanned FIR registration failed. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -107,78 +167,177 @@ function UploadFirTab() {
 
   return (
     <form className="upload-form" onSubmit={handleSubmit} noValidate>
+      {/* Immutability Legal Banner */}
+      <div style={{
+        background: 'rgba(28, 58, 95, 0.06)',
+        border: '1px solid rgba(28, 58, 95, 0.2)',
+        borderRadius: 8,
+        padding: '12px 16px',
+        marginBottom: 20,
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 12
+      }}>
+        <Lock size={18} style={{ color: 'var(--navy-700)', marginTop: 2, flexShrink: 0 }} />
+        <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--text-primary)' }}>
+          <strong>Statutory Compliance · Section 173 CrPC &amp; Section 193 BNSS, 2023:</strong>
+          <div style={{ color: 'var(--text-secondary)', marginTop: 2 }}>
+            Once registered, the scanned FIR document and narrative are permanently locked and immutably anchored to the EVM blockchain ledger. Subsequent investigation discoveries must be appended using <strong>Section 193(9) BNSS Case Diaries</strong>.
+          </div>
+        </div>
+      </div>
+
       {success && (
-        <div className="alert alert-success" role="alert">
-          <CheckCircle size={16} />
-          <div>
-            <strong>FIR uploaded successfully.</strong>
-            <div style={{ fontSize: 12, marginTop: 4, fontFamily: 'var(--font-mono)' }}>
-              {success.firNumber}
+        <div className="alert alert-success" role="alert" style={{ marginBottom: 20 }}>
+          <CheckCircle size={18} />
+          <div style={{ width: '100%' }}>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>
+              FIR Registered &amp; Immutably Anchored!
             </div>
+            <div style={{ fontSize: 12, marginTop: 4, fontFamily: 'var(--font-mono)' }}>
+              Case File: <strong>{success.firNumber}</strong> · Station: <strong>{success.station || station}</strong>
+            </div>
+            {success.sha256Hash && (
+              <div style={{ fontSize: 11, marginTop: 4, color: 'var(--text-muted)', wordBreak: 'break-all' }}>
+                SHA-256 Digest: {success.sha256Hash}
+              </div>
+            )}
+            {success.fir_id && (
+              <div style={{ marginTop: 8 }}>
+                <Link to={`/fir/${success.fir_id}`} className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  Open Case File &amp; Investigation Diary <ExternalLink size={12} />
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}
-      {error && <div className="alert alert-error" role="alert">{error}</div>}
+
+      {error && <div className="alert alert-error" role="alert" style={{ marginBottom: 20 }}>{error}</div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div className="form-group">
-          <label className="form-label" htmlFor="fir-number">FIR Number <span style={{ color: 'var(--crimson)' }}>*</span></label>
+          <label className="form-label" htmlFor="fir-number">
+            FIR Number <span style={{ color: 'var(--crimson)' }}>*</span>
+          </label>
           <input
             id="fir-number"
             className="form-input"
-            placeholder="e.g. FIR/2025/MH/0042"
+            placeholder="e.g. FIR/2026/MH/0214"
             value={firNumber}
             onChange={(e) => setFirNumber(e.target.value)}
             required
           />
         </div>
         <div className="form-group">
-          <label className="form-label" htmlFor="incident-type">Incident Type</label>
+          <label className="form-label" htmlFor="station">
+            Police Station Jurisdiction <span style={{ color: 'var(--crimson)' }}>*</span>
+          </label>
           <input
-            id="incident-type"
+            id="station"
+            list="station-suggestions"
             className="form-input"
-            placeholder="e.g. Theft, Assault"
-            value={incidentType}
-            onChange={(e) => setIncidentType(e.target.value)}
+            placeholder="e.g. Kothrud PS"
+            value={station}
+            onChange={(e) => setStation(e.target.value)}
+            required
           />
+          <datalist id="station-suggestions">
+            {COMMON_STATIONS.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div className="form-group">
-          <label className="form-label" htmlFor="date-time">Date/Time of Incident</label>
+          <label className="form-label" htmlFor="date-time">
+            Date / Time of Incident <span style={{ color: 'var(--crimson)' }}>*</span>
+          </label>
           <input
             type="datetime-local"
             id="date-time"
             className="form-input"
-            value={dateTime}
-            onChange={(e) => setDateTime(e.target.value)}
+            value={incidentDateTime}
+            onChange={(e) => setIncidentDateTime(e.target.value)}
+            required
           />
         </div>
         <div className="form-group">
-          <label className="form-label" htmlFor="location">Location</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input
-              id="location"
-              className="form-input"
-              placeholder="Address or Coordinates"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              style={{ flex: 1 }}
-            />
-            <button type="button" className="btn btn-secondary btn-sm" onClick={handleGPS} title="Use Current GPS">
-              <MapPin size={16} />
-            </button>
-          </div>
+          <label className="form-label" htmlFor="incident-type">
+            Crime Category / Type
+          </label>
+          <select
+            id="incident-type"
+            className="form-select"
+            value={incidentType}
+            onChange={(e) => setIncidentType(e.target.value)}
+          >
+            {CRIME_CATEGORIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
         </div>
       </div>
 
       <div className="form-group">
-        <label className="form-label" htmlFor="description">Incident Description</label>
+        <label className="form-label" htmlFor="applicable-sections">
+          Applicable Penal Code &amp; Special Act Sections <span style={{ color: 'var(--crimson)' }}>*</span>
+        </label>
+        <input
+          id="applicable-sections"
+          className="form-input"
+          placeholder="e.g. BNS Sec 303 (Theft), Sec 318 (Cheating), IT Act Sec 66C, Sec 66D"
+          value={applicableSections}
+          onChange={(e) => setApplicableSections(e.target.value)}
+          required
+        />
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+          Specify statutory provisions invoked under the Bharatiya Nyaya Sanhita (BNS) or specific central/state acts.
+        </span>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="form-group">
+          <label className="form-label" htmlFor="location">Incident Location / Scene</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              id="location"
+              className="form-input"
+              placeholder="Physical street address or scene coordinates"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleGPS}
+              title="Capture Current GPS Coordinates"
+            >
+              <MapPin size={16} />
+            </button>
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="reporting-officer-display">Registering Investigating Officer</label>
+          <input
+            id="reporting-officer-display"
+            className="form-input"
+            value={user ? `${user.name} (${user.employeeId || user.role})` : 'Law Enforcement Officer'}
+            disabled
+            style={{ background: 'var(--bg-table-alt)', color: 'var(--text-secondary)' }}
+          />
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label" htmlFor="description">Initial Occurrence Narrative Summary</label>
         <textarea
           id="description"
           className="form-input"
-          placeholder="Brief description of the incident..."
+          placeholder="Summary of the initial complaint, cognizable offence facts, or complainant allegations..."
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
@@ -187,27 +346,48 @@ function UploadFirTab() {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Scanned FIR Document <span style={{ color: 'var(--crimson)' }}>*</span></label>
+        <label className="form-label">
+          Physical Scanned FIR Document <span style={{ color: 'var(--crimson)' }}>*</span>
+        </label>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
-          Accepted formats: PDF, JPG, PNG. This is a scanned/photographed physical FIR — not form data.
+          Attach the high-resolution scanned paper document or photograph of the signed FIR (PDF, JPG, PNG). This file will be hashed on-the-fly and preserved in MinIO object storage.
         </p>
         <DropZone
           onFiles={handleFiles}
-          accept={{ 'application/pdf': ['.pdf'], 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'] }}
+          accept={{
+            'application/pdf': ['.pdf'],
+            'image/jpeg': ['.jpg', '.jpeg'],
+            'image/png': ['.png']
+          }}
           multiple={false}
           files={files}
           onRemove={(index) => setFiles(prev => prev.filter((_, idx) => idx !== index))}
         />
       </div>
 
-      <button type="submit" className="btn btn-primary" disabled={submitting}>
-        {submitting ? <><span className="spinner" style={{ width: 16, height: 16 }} /> Uploading & Securing…</> : 'Upload FIR'}
+      <button
+        type="submit"
+        className="btn btn-primary btn-lg"
+        disabled={submitting}
+        style={{ marginTop: 8 }}
+      >
+        {submitting ? (
+          <>
+            <span className="spinner" style={{ width: 16, height: 16 }} />
+            Calculating SHA-256 &amp; Anchoring to EVM…
+          </>
+        ) : (
+          <>
+            <Shield size={16} />
+            Register &amp; Lock Scanned FIR
+          </>
+        )}
       </button>
     </form>
   );
 }
 
-// ── Tab 2: Upload Evidence ─────────────────────────────────────────────────
+// ── Tab 2: Upload Evidence Batch (Forensic Expert View) ────────────────────
 
 function UploadEvidenceTab({ searchParams }) {
   const [firList, setFirList] = useState([]);
@@ -276,7 +456,10 @@ function UploadEvidenceTab({ searchParams }) {
     e.preventDefault();
     if (!form.firId) { setError('Please select a linked FIR.'); return; }
     if (!sourceData.sourceType) { setError('Please specify the source device type.'); return; }
-    if (!sourceData.lawfulControl || !sourceData.properOperation) { setError('Legal declarations (lawful control & proper operation) are mandatory under Section 63 BSA.'); return; }
+    if (!sourceData.lawfulControl || !sourceData.properOperation) {
+      setError('Legal declarations (lawful control & proper operation) are mandatory under Section 63 BSA.');
+      return;
+    }
     if (!files.length) { setError('Please select at least one evidence file.'); return; }
     
     setSubmitting(true);
@@ -286,7 +469,6 @@ function UploadEvidenceTab({ searchParams }) {
       fd.append('fir_id', form.firId);
       fd.append('category', form.category);
       fd.append('description', form.description);
-      // Ensure sourceData is appended BEFORE files
       fd.append('sourceData', JSON.stringify(sourceData));
       
       files.forEach((f) => fd.append('file', f));
@@ -324,22 +506,43 @@ function UploadEvidenceTab({ searchParams }) {
 
       <div className="form-group">
         <label className="form-label" htmlFor="linked-fir">Linked FIR <span style={{ color: 'var(--crimson)' }}>*</span></label>
-        <select id="linked-fir" className="form-select" value={form.firId} onChange={(e) => setForm((f) => ({ ...f, firId: e.target.value }))} required>
-          <option value="">— Select FIR —</option>
-          {firList.map((fir) => <option key={fir.id} value={fir.id}>{fir.firNumber}</option>)}
+        <select
+          id="linked-fir"
+          className="form-select"
+          value={form.firId}
+          onChange={(e) => setForm((f) => ({ ...f, firId: e.target.value }))}
+          required
+        >
+          <option value="">— Select Registered FIR —</option>
+          {firList.map((fir) => (
+            <option key={fir.id} value={fir.id}>
+              {fir.firNumber} {fir.station ? `(${fir.station})` : ''} - {fir.incidentType || 'General'}
+            </option>
+          ))}
         </select>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div className="form-group">
           <label className="form-label" htmlFor="category">Category <span style={{ color: 'var(--crimson)' }}>*</span></label>
-          <select id="category" className="form-select" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
+          <select
+            id="category"
+            className="form-select"
+            value={form.category}
+            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+          >
             {CATEGORIES.map((c) => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
           </select>
         </div>
         <div className="form-group">
           <label className="form-label" htmlFor="description">Description</label>
-          <input id="description" className="form-input" placeholder="Optional description" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
+          <input
+            id="description"
+            className="form-input"
+            placeholder="Optional forensic notes"
+            value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+          />
         </div>
       </div>
 

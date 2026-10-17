@@ -33,12 +33,40 @@ CREATE TABLE IF NOT EXISTS fir (
   case_category     VARCHAR(100) DEFAULT '',
   description       TEXT         DEFAULT '',
   location          VARCHAR(255) DEFAULT '',
+  station           VARCHAR(100) DEFAULT '',
+  applicable_sections TEXT       DEFAULT '',
+  incident_date_time TIMESTAMPTZ,
+  jurisdiction_name VARCHAR(255) DEFAULT '',
   jurisdiction_id   INT          REFERENCES jurisdictions(id),
   reporting_officer TEXT         NOT NULL,
   fir_number        VARCHAR(100) DEFAULT '',
   status            VARCHAR(50)  DEFAULT 'OPEN',
+  filename          VARCHAR(255),
+  bucket_name       VARCHAR(100),
+  object_key        VARCHAR(500),
+  sha256_hash       VARCHAR(64),
+  mime_type         VARCHAR(100),
+  file_size         BIGINT,
+  ledger_tx_id      TEXT,
+  ledger_timestamp  TIMESTAMPTZ,
   registered_at     TIMESTAMPTZ  DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS fir_supplementary_reports (
+  id                 UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  fir_id             UUID         REFERENCES fir(id) ON DELETE CASCADE NOT NULL,
+  report_number      INT          NOT NULL,
+  narrative          TEXT         NOT NULL,
+  discovered_items   TEXT         DEFAULT '',
+  fsl_notified       BOOLEAN      DEFAULT FALSE,
+  reporting_officer  UUID,
+  officer_name       VARCHAR(255),
+  created_at         TIMESTAMPTZ  DEFAULT NOW(),
+  sha256_hash        VARCHAR(64),
+  ledger_tx_id       TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_fir_supp_fir_id ON fir_supplementary_reports(fir_id);
+
 
 CREATE TABLE IF NOT EXISTS evidence_source (
   id SERIAL PRIMARY KEY,

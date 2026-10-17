@@ -210,57 +210,135 @@ Get a single FIR by ID, including its linked evidence.
 
 ---
 
-### `POST /api/firs/upload`
+### `POST /api/fir/create`
 
-Upload a scanned FIR document.
+Upload and register a scanned physical FIR document with cryptographic SHA-256 seal and on-chain anchoring.
 
-**Headers**: `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`
+**Headers**: `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`  
+**Role**: `Police Officer`
 
 #### Form Fields
 
-| Field       | Type   | Description                       |
-| ----------- | ------ | --------------------------------- |
-| `firNumber` | string | Required. E.g. `FIR/2025/MH/0042` |
-| `file`      | File   | Required. PDF, JPG, or PNG scan   |
+| Field                | Type   | Description                                                                  |
+| -------------------- | ------ | ---------------------------------------------------------------------------- |
+| `firNumber`          | string | **Required**. E.g. `FIR/2026/MH/0214`                                        |
+| `incidentDateTime`   | string | **Required**. ISO-8601 or datetime-local string                              |
+| `applicableSections` | string | **Required**. Penal / statutory sections (e.g. `BNS Sec 303, IT Act Sec 66`) |
+| `station`            | string | **Required**. Police station jurisdiction (e.g. `Kothrud PS`)                |
+| `incidentType`       | string | Optional. Crime category (e.g. `Theft`, `Cybercrime`)                        |
+| `location`           | string | Optional. Human-readable scene location or GPS coordinates                   |
+| `description`        | string | Optional. Narrative summary of initial report                                |
+| `file`               | File   | **Required**. Scanned physical FIR document (PDF, JPG, PNG)                  |
 
 **Success `201`**
 
 ```json
 {
   "status": "success",
-  "fir_id": "fir_002",
-  "firNumber": "FIR/2025/MH/0043",
-  "message": "FIR registered successfully"
+  "fir_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "firNumber": "FIR/2026/MH/0214",
+  "station": "Kothrud PS",
+  "applicableSections": "BNS Sec 303, IT Act Sec 66",
+  "sha256Hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "ledgerTxId": "0x4b7c...",
+  "message": "FIR registered and immutably anchored successfully"
 }
-```
-
-> **Note**: FIR files are now stored securely in MinIO, similar to Evidence files. Their hashes and metadata are recorded in the FIR table.
-```
-
-**Error `409`**
-
-```json
-{ "error": "FIR number already exists" }
 ```
 
 ---
 
-### `POST /api/firs/:id/verify`
+### FIR Immutability Freeze: `PUT /api/fir/:id` & `PATCH /api/fir/:id`
 
-Re-run integrity check for a FIR against the ledger hash.
+Core FIR records are legally immutable under Bharatiya Nagarik Suraksha Sanhita (BNSS), 2023. Any attempt to modify or overwrite registered FIR narrative/fields is blocked.
 
-**Headers**: `Authorization: Bearer <token>`
+**Response `405 Method Not Allowed`**
+
+```json
+{
+  "error": "FIR Freeze Violation: Modification of registered FIR narrative or records is strictly prohibited under Bharatiya Nagarik Suraksha Sanhita (BNSS). All subsequent findings must be recorded via Section 193(9) BNSS supplementary reports.",
+  "code": "FIR_IMMUTABILITY_FROZEN"
+}
+```
+
+---
+
+### `POST /api/fir/:id/supplementary`
+
+Append a progressive case diary report to a registered FIR under Section 193(9) of the Bharatiya Nagarik Suraksha Sanhita (BNSS), 2023.
+
+**Headers**: `Authorization: Bearer <token>`, `Content-Type: application/json`  
+**Role**: `Police Officer` (strictly scoped to assigned police station)
+
+#### Request Body
+
+```json
+{
+  "narrative": "Seized external hard drive from crime scene warehouse and forwarded to Regional FSL for extraction.",
+  "discovered_items": "1x WD 2TB HDD (S/N WD-49210), 1x Airtel SIM Card",
+  "fsl_notified": true
+}
+```
+
+**Success `201`**
+
+```json
+{
+  "status": "success",
+  "message": "Supplementary Report #1 recorded under Section 193(9) BNSS",
+  "data": {
+    "id": "c1f7b605-72b2-4d1e-84bf-03fcfbd3ad4e",
+    "firId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+    "reportNumber": 1,
+    "narrative": "Seized external hard drive from crime scene warehouse and forwarded to Regional FSL for extraction.",
+    "discoveredItems": "1x WD 2TB HDD (S/N WD-49210), 1x Airtel SIM Card",
+    "fslNotified": true,
+    "reportingOfficer": "7b822d32-e06e-49b4-b461-8cf9eb8c005b",
+    "officerName": "Inspector Rajesh Kumar",
+    "createdAt": "2026-10-17T14:30:00.000Z",
+    "sha256Hash": "3b4f...a812",
+    "ledgerTxId": "0x9d2a..."
+  }
+}
+```
+
+**Error `403` — Jurisdictional access denied**
+
+```json
+{
+  "error": "Forbidden: Jurisdictional access denied for this police station.",
+  "code": "JURISDICTION_ACCESS_DENIED"
+}
+```
+
+---
+
+### `GET /api/fir/:id/supplementary`
+
+Retrieve the chronological, append-only investigation case diary entries for a specific FIR.
+
+**Headers**: `Authorization: Bearer <token>`  
+**Roles**: `Police Officer`, `Judicial Authority` (`Judicial Magistrate`, `Sessions Judge`), `Forensic Expert`, `Advocate`
 
 **Success `200`**
 
 ```json
 {
-  "id": "fir_001",
-  "status": "verified",
-  "currentHash": "a1b2c3d4...",
-  "ledgerHash": "a1b2c3d4...",
-  "match": true,
-  "verifiedAt": "2025-03-18T14:25:00Z"
+  "data": [
+    {
+      "id": "c1f7b605-72b2-4d1e-84bf-03fcfbd3ad4e",
+      "firId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+      "reportNumber": 1,
+      "narrative": "Initial crime scene inspection and CCTV DVR recovery.",
+      "discoveredItems": "Hikvision CCTV DVR (SN: SN-DVR-2025-001)",
+      "fslNotified": true,
+      "reportingOfficer": "7b822d32-e06e-49b4-b461-8cf9eb8c005b",
+      "officerName": "Inspector Rajesh Kumar",
+      "createdAt": "2026-10-17T14:30:00.000Z",
+      "sha256Hash": "3b4f...a812",
+      "ledgerTxId": "0x9d2a..."
+    }
+  ],
+  "count": 1
 }
 ```
 

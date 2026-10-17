@@ -34,7 +34,7 @@ const internalNetworkGuard = (req, res, next) => {
 // ─────────────────────────────────────────────
 // POST /api/evidence/upload
 // ─────────────────────────────────────────────
-router.post('/upload', requireRoles(['Police Officer']), (req, res) => {
+router.post('/upload', requireRoles(['Police Officer', 'Forensic Expert']), (req, res) => {
     let responseSent = false;
     const send = (status, body) => {
         if (!responseSent) {
