@@ -38,7 +38,7 @@ services:
       start_period: 10s
 
   minio-store:
-    image: elestio/minio:latest
+    image: minio/minio:latest
     container_name: minio-store
     networks:
       - shield-network
@@ -62,15 +62,9 @@ services:
     build: ./shield-gateway
     container_name: shield-gateway
     command: npm run dev
-    develop:
-      watch:
-        - action: sync
-          path: ./shield-gateway
-          target: /usr/src/app
-          ignore:
-            - node_modules/
-        - action: rebuild
-          path: ./shield-gateway/package.json
+    volumes:
+      - ./shield-gateway:/usr/src/app
+      - /usr/src/app/node_modules
     networks:
       - shield-network
     ports:
@@ -80,15 +74,9 @@ services:
     build: ./shield-frontend
     container_name: shield-frontend
     command: npm run dev
-    develop:
-      watch:
-        - action: sync
-          path: ./shield-frontend
-          target: /usr/src/app
-          ignore:
-            - node_modules/
-        - action: rebuild
-          path: ./shield-frontend/package.json
+    volumes:
+      - ./shield-frontend:/usr/src/app
+      - /usr/src/app/node_modules
     networks:
       - shield-network
     environment:
@@ -102,15 +90,9 @@ services:
     build: ./shield-auth
     container_name: shield-auth
     command: npm run dev
-    develop:
-      watch:
-        - action: sync
-          path: ./shield-auth
-          target: /usr/src/app
-          ignore:
-            - node_modules/
-        - action: rebuild
-          path: ./shield-auth/package.json
+    volumes:
+      - ./shield-auth:/usr/src/app
+      - /usr/src/app/node_modules
     networks:
       - shield-network
     expose:
@@ -138,15 +120,9 @@ services:
     build: ./shield-evidence
     container_name: shield-evidence
     command: npm run dev
-    develop:
-      watch:
-        - action: sync
-          path: ./shield-evidence
-          target: /usr/src/app
-          ignore:
-            - node_modules/
-        - action: rebuild
-          path: ./shield-evidence/package.json
+    volumes:
+      - ./shield-evidence:/usr/src/app
+      - /usr/src/app/node_modules
     networks:
       - shield-network
     expose:
@@ -174,15 +150,9 @@ services:
     build: ./shield-ledger
     container_name: shield-ledger
     command: npm run dev
-    develop:
-      watch:
-        - action: sync
-          path: ./shield-ledger
-          target: /usr/src/app
-          ignore:
-            - node_modules/
-        - action: rebuild
-          path: ./shield-ledger/package.json
+    volumes:
+      - ./shield-ledger:/usr/src/app
+      - /usr/src/app/node_modules
     networks:
       - shield-network
     expose:

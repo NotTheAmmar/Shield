@@ -48,6 +48,7 @@ async function http(method, endpoint, { token, body, multipart } = {}) {
         opts.body = JSON.stringify(body);
     }
 
+    opts.redirect = 'manual';
     const res = await fetch(url, opts);
     const text = await res.text();
     let data;
