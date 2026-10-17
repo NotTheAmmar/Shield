@@ -43,10 +43,10 @@ const internalNetworkGuard = (req, res, next) => {
 
 // ─────────────────────────────────────────────
 // POST /api/evidence/upload
-// Person 3: Ingestion exclusively restricted to Forensic Expert
+// Person 2 & 3: Ingestion permitted for Police Officer and Forensic Expert
 // Direct FIR selection without requiring prior police requisition
 // ─────────────────────────────────────────────
-router.post('/upload', requireRoles(['Forensic Expert']), async (req, res) => {
+router.post('/upload', requireRoles(['Police Officer', 'Forensic Expert']), async (req, res) => {
     let responseSent = false;
     const send = (status, body) => {
         if (!responseSent) {
@@ -691,7 +691,8 @@ router.get('/verify/:id', async (req, res) => {
         // 6. Return comprehensive verification badge state
         res.json({
             id: record.id,
-            status: result,
+            status: match ? 'OK' : 'TAMPERED',
+            verificationStatus: match ? 'VERIFIED' : 'TAMPERED',
             ok: match,
             liveHash,
             currentHash: liveHash,

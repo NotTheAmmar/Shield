@@ -8,7 +8,19 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+try {
+    require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+} catch (e) {
+    const envPath = path.resolve(__dirname, '../../.env');
+    if (fs.existsSync(envPath)) {
+        fs.readFileSync(envPath, 'utf8').split('\n').forEach(line => {
+            const m = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+            if (m && !process.env[m[1]]) {
+                process.env[m[1]] = m[2] ? m[2].trim().replace(/^['"]|['"]$/g, '') : '';
+            }
+        });
+    }
+}
 
 const GATEWAY = 'http://localhost:3001';
 const ADMIN_EMAIL = process.env.ADMIN_SEED_EMAIL || 'admin@shield.gov.in';

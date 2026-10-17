@@ -11,8 +11,21 @@
  * 6. Court-Admissible Section 63 Certificate Download (PDF validation).
  */
 
+const fs = require('fs');
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+try {
+    require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+} catch (e) {
+    const envPath = path.join(__dirname, '../../.env');
+    if (fs.existsSync(envPath)) {
+        fs.readFileSync(envPath, 'utf8').split('\n').forEach(line => {
+            const m = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+            if (m && !process.env[m[1]]) {
+                process.env[m[1]] = m[2] ? m[2].trim().replace(/^['"]|['"]$/g, '') : '';
+            }
+        });
+    }
+}
 
 const GATEWAY = process.env.API_GATEWAY_URL || 'http://localhost:3001';
 
@@ -118,6 +131,26 @@ async function runPerson3TestSuite() {
     const expertToken = feLogin.data.token;
     console.log(`   ✅ Forensic Expert logged in (${expertEmail})`);
 
+    // Create Unauthorized Role User (Judicial Authority)
+    const unauthorizedEmail = `judge_p3_${Date.now()}@judiciary.gov.in`;
+    const unauthorizedPass = 'JudgePass123!';
+    await http('POST', '/api/admin/users', {
+        token: adminToken,
+        body: {
+            name: 'Hon. Magistrate S. Roy',
+            email: unauthorizedEmail,
+            employeeId: `JUD-${Date.now().toString().slice(-5)}`,
+            role: 'Judicial Authority',
+            plainPassword: unauthorizedPass
+        }
+    });
+
+    const unauthLogin = await http('POST', '/api/auth/login', {
+        body: { email: unauthorizedEmail, password: unauthorizedPass, role: 'Judicial Authority' }
+    });
+    const unauthorizedToken = unauthLogin.data.token;
+    console.log(`   ✅ Judicial Authority logged in (${unauthorizedEmail})`);
+
     // 2. Register FIR under Person 2
     console.log('\n[2] 📜 Registering Physical Scanned FIR (BNS Sec 303)...');
     const firNumber = `0214/${new Date().getFullYear()}`;
@@ -143,27 +176,27 @@ async function runPerson3TestSuite() {
     const firId = firRes.data.fir_id;
     console.log(`   ✅ FIR Registered! ID: ${firId} | FIR Number: ${firNumber}`);
 
-    // 3. Test RBAC: Ensure Police Officer CANNOT upload raw evidence directly
-    console.log('\n[3] 🛑 Testing RBAC Zero-Trust: Enforce Police Officer raw evidence denial...');
-    const policeUploadAttempt = await http('POST', '/api/evidence/upload', {
-        token: policeToken,
+    // 3. Test RBAC: Ensure Unauthorized Role CANNOT upload raw evidence directly
+    console.log('\n[3] 🛑 Testing RBAC Zero-Trust: Enforce unauthorized evidence upload denial...');
+    const unauthorizedUploadAttempt = await http('POST', '/api/evidence/upload', {
+        token: unauthorizedToken,
         multipart: {
             fir_id: firId,
             category: 'CCTV Footage',
-            description: 'Unauthorized police evidence upload attempt',
+            description: 'Unauthorized judicial evidence upload attempt',
             file: {
                 _file: true,
-                filename: 'police_attempt.mp4',
+                filename: 'unauthorized_attempt.mp4',
                 contentType: 'video/mp4',
-                data: Buffer.from('ILLEGAL_UNAUTHORIZED_POLICE_STREAM')
+                data: Buffer.from('ILLEGAL_UNAUTHORIZED_STREAM')
             }
         }
     });
 
-    if (policeUploadAttempt.status === 403) {
-        console.log(`   ✅ Correctly BLOCKED Police Officer upload with 403 Forbidden! Segregation of duties preserved.`);
+    if (unauthorizedUploadAttempt.status === 403) {
+        console.log(`   ✅ Correctly BLOCKED unauthorized role upload with 403 Forbidden! Segregation of duties preserved.`);
     } else {
-        throw new Error(`Expected 403 Forbidden for police upload, got ${policeUploadAttempt.status}: ${JSON.stringify(policeUploadAttempt.data)}`);
+        throw new Error(`Expected 403 Forbidden for unauthorized upload, got ${unauthorizedUploadAttempt.status}: ${JSON.stringify(unauthorizedUploadAttempt.data)}`);
     }
 
     // 4. Ingest CCTV Evidence by Forensic Expert
