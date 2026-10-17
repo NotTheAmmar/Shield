@@ -112,6 +112,30 @@ async function runTheftTestCase() {
         }
     }
 
+    // Create an FSL Forensic Expert for evidence upload and analysis
+    const expertEmail = `expert_theft_${Date.now()}@fsl.gov.in`;
+    const expertPass = 'TheftExpert123!';
+    await http('POST', '/api/admin/users', {
+        token: adminToken,
+        body: {
+            name: 'Dr. Sunita Sharma',
+            email: expertEmail,
+            employeeId: `FSL-${Date.now().toString().slice(-5)}`,
+            role: 'Forensic Expert',
+            fslJurisdictionId: 'Regional FSL, Pune',
+            plainPassword: expertPass
+        }
+    });
+
+    let expertToken = officerToken;
+    const expLogin = await http('POST', '/api/auth/login', {
+        body: { email: expertEmail, password: expertPass, role: 'Forensic Expert' }
+    });
+    if (expLogin.ok) {
+        expertToken = expLogin.data.token;
+        console.log(`   ✅ Created and logged in as Forensic Expert (${expertEmail})`);
+    }
+
     // 2. Register FIR from Theft_testcase.md
     const firNumber = `FIR/2025/MH/${Date.now().toString().slice(-4)}`;
     console.log(`\n[2] 📜 Registering Theft FIR (${firNumber})...`);

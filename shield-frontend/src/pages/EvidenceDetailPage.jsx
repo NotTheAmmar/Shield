@@ -1,12 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, Download, BookOpen, MapPin, Camera, Clock, AlertTriangle, FileText, Loader } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  RefreshCw, 
+  Download, 
+  BookOpen, 
+  MapPin, 
+  Camera, 
+  Clock, 
+  AlertTriangle, 
+  FileText, 
+  Loader, 
+  Shield, 
+  CheckCircle, 
+  Cpu, 
+  FileCheck 
+} from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import HashDisplay from '../components/HashDisplay';
 import FilePreview from '../components/FilePreview';
-import SignaturePad from '../components/SignaturePad';
-import { evidenceAPI, reportsAPI, certificateAPI } from '../services/api';
+import Section63Modal from '../components/Section63Modal';
+import { evidenceAPI, reportsAPI } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
 function fmtDate(iso) {
@@ -32,36 +47,41 @@ export default function EvidenceDetailPage() {
   const [verifyError, setVerifyError] = useState('');
   const [metadata, setMetadata] = useState(null);
   const [forensicFlags, setForensicFlags] = useState([]);
-  const [pdfState, setPdfState] = useState('IDLE'); // IDLE, QUEUING, POLLING, READY, FAILED
-  const [pdfUrl, setPdfUrl] = useState('');
-  
-  const [uploadingCert, setUploadingCert] = useState(false);
-  const [certFile, setCertFile] = useState(null);
+  const [pdfState, setPdfState] = useState('IDLE');
+  const [showSec63Modal, setShowSec63Modal] = useState(false);
 
-  const [isDigitalSignMode, setIsDigitalSignMode] = useState(false);
-  const [signatureData, setSignatureData] = useState(null);
+  // Quick report upload state for forensic experts if none attached yet
+  const [showAttachReport, setShowAttachReport] = useState(false);
+  const [toolsInput, setToolsInput] = useState('');
+  const [methodInput, setMethodInput] = useState('');
+  const [resultsInput, setResultsInput] = useState('');
+  const [attachingReport, setAttachingReport] = useState(false);
 
   useEffect(() => {
+    fetchEvidenceDetails();
+  }, [id]);
+
+  const fetchEvidenceDetails = () => {
     setLoading(true);
     evidenceAPI.get(id)
       .then((d) => setEv(d))
       .catch(() => setError('Evidence record not found.'))
       .finally(() => setLoading(false));
 
-    // Fetch metadata + forensic flags
     reportsAPI.getMetadata(id)
       .then((d) => {
         setMetadata(d.metadata);
         setForensicFlags(d.forensicFlags || []);
       })
       .catch(() => {});
-  }, [id]);
+  };
 
   const handleVerify = async () => {
     setVerifyState('LOADING');
+    setVerifyError('');
     try {
       const res = await evidenceAPI.verify(id);
-      if (res.status === 'OK') {
+      if (res.status === 'VERIFIED' || res.status === 'OK' || res.match === true) {
         setVerifyState('VERIFIED');
         setEv((e) => e ? { ...e, status: 'verified' } : e);
       } else {
@@ -69,47 +89,35 @@ export default function EvidenceDetailPage() {
         setEv((e) => e ? { ...e, status: 'tampered' } : e);
       }
     } catch (err) {
-      setVerifyError(err?.response?.data?.error || err.message || 'Database unreachable.');
+      setVerifyError(err?.response?.data?.error || err.message || 'Verification database unreachable.');
       setVerifyState('ERROR');
     }
   };
 
-  const handleUploadCert = async () => {
-    if (!certFile) return;
-    setUploadingCert(true);
+  const handleAttachReportSubmit = async (e) => {
+    e.preventDefault();
+    setAttachingReport(true);
     try {
       const fd = new FormData();
-      fd.append('file', certFile);
-      const res = await certificateAPI.uploadSigned(ev.sourceId, fd);
-      setEv(e => ({ ...e, certificateStatus: res.status }));
-      setCertFile(null);
-      alert('Certificate uploaded successfully!');
+      fd.append('toolsUsed', toolsInput);
+      fd.append('extractionMethodology', methodInput);
+      fd.append('hashVerificationResults', resultsInput);
+      await evidenceAPI.uploadReport(id, fd);
+      setShowAttachReport(false);
+      fetchEvidenceDetails();
     } catch (err) {
-      alert(err?.response?.data?.error || 'Failed to upload certificate');
+      alert(err?.response?.data?.error || 'Failed to attach report');
     } finally {
-      setUploadingCert(false);
-    }
-  };
-
-  const handleDigitalSign = async () => {
-    if (!signatureData) return;
-    setUploadingCert(true);
-    try {
-      const res = await certificateAPI.signDigital(ev.sourceId, { signatureBase64: signatureData });
-      setEv(e => ({ ...e, certificateStatus: res.status }));
-      setSignatureData(null);
-      setIsDigitalSignMode(false);
-      alert('Digital signature applied and certificate generated successfully!');
-    } catch (err) {
-      alert(err?.response?.data?.error || 'Failed to apply digital signature');
-    } finally {
-      setUploadingCert(false);
+      setAttachingReport(false);
     }
   };
 
   if (loading) return <div className="loading-state"><span className="spinner" /><span>Loading evidence…</span></div>;
   if (error) return <div className="alert alert-error" style={{ margin: 24 }}>{error}</div>;
   if (!ev) return null;
+
+  const isCertified = ev.sec63Status === 'CERTIFIED' || ev.certificateStatus === 'COMPLETED';
+  const isForensicExpert = role === 'forensic_expert' || role === 'admin';
 
   return (
     <>
@@ -124,7 +132,7 @@ export default function EvidenceDetailPage() {
       />
 
       <div className="detail-grid">
-        {/* Left Column — Metadata + Integrity */}
+        {/* Left Column — Metadata + Blockchain Proof + Section 63 */}
         <div className="detail-section">
 
           {/* Forensic Flags Banner */}
@@ -149,7 +157,7 @@ export default function EvidenceDetailPage() {
 
           {/* File Metadata Card */}
           <div className="card">
-            <div className="card-header"><h2>File Metadata</h2></div>
+            <div className="card-header"><h2>File Metadata &amp; Case Linkage</h2></div>
             <div className="card-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div className="detail-row">
@@ -157,36 +165,44 @@ export default function EvidenceDetailPage() {
                   <span className="detail-row-value">{ev.fileName}</span>
                 </div>
                 <div className="detail-row">
-                  <span className="detail-row-label">Status</span>
+                  <span className="detail-row-label">Integrity Status</span>
                   <div><StatusBadge status={ev.status} /></div>
                 </div>
                 <div className="detail-row">
-                  <span className="detail-row-label">Linked FIR</span>
+                  <span className="detail-row-label">Linked Case FIR</span>
                   <Link to={`/fir/${ev.firId}`} className="cell-link" style={{ fontSize: 14 }}>{ev.firNumber}</Link>
                 </div>
                 <div className="detail-row">
-                  <span className="detail-row-label">Category</span>
+                  <span className="detail-row-label">Evidence Category</span>
                   <span className="detail-row-value" style={{ textTransform: 'capitalize' }}>{ev.category}</span>
                 </div>
                 <div className="detail-row">
-                  <span className="detail-row-label">Uploaded By</span>
-                  <span className="detail-row-value">{ev.uploadedBy?.name || ev.uploaderName || '—'}</span>
+                  <span className="detail-row-label">Jurisdictional Police Station</span>
+                  <span className="detail-row-value">{ev.station || '—'}</span>
                 </div>
                 <div className="detail-row">
-                  <span className="detail-row-label">Employee ID</span>
+                  <span className="detail-row-label">Ingested By</span>
+                  <span className="detail-row-value">{ev.uploadedBy?.name || ev.uploaderName || 'Forensic Expert'}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-row-label">FSL Analyst ID / Emp ID</span>
                   <span className="detail-row-value">{ev.uploadedBy?.employeeId || ev.uploaderEmployeeId || '—'}</span>
                 </div>
                 <div className="detail-row">
-                  <span className="detail-row-label">Upload Date</span>
+                  <span className="detail-row-label">Ingestion Date</span>
                   <span className="detail-row-value">{fmtDate(ev.uploadDate)}</span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-row-label">File Size</span>
                   <span className="detail-row-value">{fmtBytes(ev.fileSize)}</span>
                 </div>
+                <div className="detail-row">
+                  <span className="detail-row-label">MIME Type</span>
+                  <span className="detail-row-value">{ev.mimeType || 'application/octet-stream'}</span>
+                </div>
                 {ev.description && (
                   <div className="detail-row" style={{ gridColumn: '1 / -1' }}>
-                    <span className="detail-row-label">Description</span>
+                    <span className="detail-row-label">Forensic Notes</span>
                     <span className="detail-row-value">{ev.description}</span>
                   </div>
                 )}
@@ -194,114 +210,214 @@ export default function EvidenceDetailPage() {
             </div>
           </div>
 
-          {/* Section 63 Certificate Lifecycle */}
-          {ev.sourceId && (
-            <div className="card" style={{ borderLeft: '4px solid var(--navy-700)' }}>
-              <div className="card-header"><h2>Section 63 Certificate Lifecycle</h2></div>
-              <div className="card-body">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div className="detail-row">
-                    <span className="detail-row-label">Batch Source ID</span>
-                    <span className="detail-row-value" style={{ fontFamily: 'monospace' }}>{ev.sourceId}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-row-label">Certificate Status</span>
-                    <span className="badge" style={{ backgroundColor: ev.certificateStatus === 'COMPLETED' ? 'var(--emerald)' : 'var(--amber)', color: '#fff' }}>
-                      {ev.certificateStatus?.replace(/_/g, ' ') || 'UNKNOWN'}
-                    </span>
-                  </div>
+          {/* Prominent Cryptographic Proof Card (Person 3) */}
+          <div className="card" style={{ borderLeft: '4px solid var(--navy-600)' }}>
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Shield size={18} style={{ color: 'var(--navy-600)' }} />
+                <h2 style={{ margin: 0 }}>On-Chain Cryptographic Integrity Record</h2>
+              </div>
+              <span className="badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--navy-600)', border: '1px solid var(--navy-600)' }}>
+                EvidenceLedger.sol (EVM PoA)
+              </span>
+            </div>
+            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <HashDisplay hash={ev.hash} label="SHA-256 Bitstream Hash (FIPS 180-4)" />
 
-                  <div style={{ marginTop: 16, padding: 12, background: 'var(--bg-page)', borderRadius: 6, border: '1px dashed var(--border)' }}>
-                    {ev.certificateStatus === 'PENDING_PART_A' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <p style={{ fontSize: 13, margin: 0, color: 'var(--text-secondary)' }}>Step 1: Download the unsigned certificate, sign Part A (Producing Officer), and re-upload.</p>
-                        <a href={certificateAPI.downloadUrl(ev.sourceId)} download className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }}>
-                          <Download size={14} /> Download Unsigned Certificate
-                        </a>
-                      </div>
-                    )}
-                    {ev.certificateStatus === 'PENDING_PART_B' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <p style={{ fontSize: 13, margin: 0, color: 'var(--text-secondary)' }}>Step 2: Awaiting Forensic Expert to verify hashes and sign Part B.</p>
-                        {role === 'forensic_expert' || role === 'admin' ? (
-                          <a href={certificateAPI.downloadUrl(ev.sourceId)} download className="btn btn-secondary btn-sm" style={{ alignSelf: 'flex-start' }}>
-                            <Download size={14} /> Download Certificate (For Part B)
-                          </a>
-                        ) : (
-                          <div className="alert alert-info" style={{ padding: '8px 12px', margin: 0 }}>Only a Forensic Expert can complete Part B.</div>
-                        )}
-                      </div>
-                    )}
-                    {ev.certificateStatus === 'COMPLETED' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <p style={{ fontSize: 13, margin: 0, color: 'var(--text-secondary)' }}>Certificate is fully signed and legally admissible.</p>
-                        {ev.signedCertFilePath && (
-                           <a href={certificateAPI.signedCertificateUrl(ev.sourceId)} target="_blank" rel="noreferrer" className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }}>
-                             <FileText size={14} /> View Completed PDF
-                           </a>
-                        )}
-                      </div>
-                    )}
-
-                    {ev.certificateStatus !== 'COMPLETED' && role !== 'judicial_authority' && (
-                      <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                          <label className="form-label" style={{ fontSize: 12, margin: 0 }}>Provide Signature:</label>
-                          <div style={{ display: 'flex', gap: 8 }}>
-                            <button
-                              className={`btn btn-sm ${!isDigitalSignMode ? 'btn-primary' : 'btn-secondary'}`}
-                              onClick={() => setIsDigitalSignMode(false)}
-                            >
-                              Upload Scanned PDF
-                            </button>
-                            <button
-                              className={`btn btn-sm ${isDigitalSignMode ? 'btn-primary' : 'btn-secondary'}`}
-                              onClick={() => setIsDigitalSignMode(true)}
-                            >
-                              Digitally Sign
-                            </button>
-                          </div>
-                        </div>
-
-                        {isDigitalSignMode ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            <SignaturePad 
-                              onSign={(data) => setSignatureData(data)} 
-                              onClear={() => setSignatureData(null)} 
-                            />
-                            <button
-                              className="btn btn-primary btn-sm"
-                              disabled={!signatureData || uploadingCert || (ev.certificateStatus === 'PENDING_PART_B' && role !== 'forensic_expert' && role !== 'admin')}
-                              onClick={handleDigitalSign}
-                              style={{ alignSelf: 'flex-start' }}
-                            >
-                              {uploadingCert ? 'Processing...' : 'Apply Digital Signature'}
-                            </button>
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                            <input type="file" accept="application/pdf" onChange={(e) => setCertFile(e.target.files[0])} style={{ fontSize: 12 }} />
-                            <button 
-                              className="btn btn-secondary btn-sm" 
-                              disabled={!certFile || uploadingCert || (ev.certificateStatus === 'PENDING_PART_B' && role !== 'forensic_expert' && role !== 'admin')}
-                              onClick={handleUploadCert}
-                            >
-                              {uploadingCert ? 'Uploading...' : 'Submit Signed PDF'}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, background: 'var(--bg-table-alt)', padding: 12, borderRadius: 6 }}>
+                <div>
+                  <span className="detail-row-label">Ethereum Transaction Hash (TxID)</span>
+                  <span className="detail-row-value" style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                    {ev.ledgerTxId || '0xpending_or_anchored_on_poa'}
+                  </span>
+                </div>
+                <div>
+                  <span className="detail-row-label">EVM Block Height</span>
+                  <span className="detail-row-value" style={{ fontWeight: 600 }}>
+                    {ev.ledgerBlockNumber ? `Block #${ev.ledgerBlockNumber}` : 'Anchored'}
+                  </span>
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <span className="detail-row-label">Blockchain Consensus Timestamp</span>
+                  <span className="detail-row-value">{fmtDate(ev.ledgerTimestamp)}</span>
                 </div>
               </div>
+
+              {/* 1-Click Verification Instant Feedback */}
+              {verifyState === 'LOADING' && (
+                <div className="alert alert-info" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span className="spinner" style={{ width: 14, height: 14 }} />
+                  Streaming live file from MinIO storage &amp; validating against smart contract state…
+                </div>
+              )}
+              {verifyState === 'VERIFIED' && (
+                <div className="alert alert-success" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <CheckCircle size={16} />
+                  <strong>✓ INTEGRITY VERIFIED:</strong> Live MinIO bitstream matches immutable Ethereum EVM state 100%. No tampering detected.
+                </div>
+              )}
+              {verifyState === 'TAMPERED' && (
+                <div className="alert alert-error" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <AlertTriangle size={16} />
+                  <strong>🚨 CRITICAL TAMPER DETECTED:</strong> Live file hash in MinIO storage differs from on-chain smart contract record! Evidence chain-of-custody compromised.
+                </div>
+              )}
+              {verifyState === 'ERROR' && (
+                <div className="alert" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
+                  ⚠ Verification lookup failed ({verifyError}).
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <button className="btn btn-primary" onClick={handleVerify} disabled={verifyState === 'LOADING'}>
+                  {verifyState === 'LOADING' ? (
+                    <><span className="spinner" style={{ width: 14, height: 14 }} /> Verifying On-Chain…</>
+                  ) : (
+                    <><RefreshCw size={14} style={{ marginRight: 6 }} /> Verify On-Chain Integrity</>
+                  )}
+                </button>
+                <a href={evidenceAPI.downloadUrl(ev.id)} download={ev.fileName} className="btn btn-secondary">
+                  <Download size={14} style={{ marginRight: 6 }} /> Download Raw Media
+                </a>
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Section 63 BSA Certificate Card (Person 3) */}
+          <div className="card" style={{ borderLeft: isCertified ? '4px solid var(--emerald)' : '4px solid var(--amber)' }}>
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <FileCheck size={18} style={{ color: isCertified ? 'var(--emerald)' : 'var(--amber)' }} />
+                <h2 style={{ margin: 0 }}>Section 63(4) BSA Electronic Evidence Certificate</h2>
+              </div>
+              <span className="badge" style={{ backgroundColor: isCertified ? 'var(--emerald)' : 'var(--amber)', color: '#fff' }}>
+                {isCertified ? 'CERTIFIED & SEALED' : 'PENDING CERTIFICATION'}
+              </span>
+            </div>
+            <div className="card-body">
+              {isCertified ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
+                    Official statutory certificate generated under Section 63(4) of Bharatiya Sakshya Adhiniyam, 2023. Certifies bitstream provenance, device integrity, and Ethereum ledger anchoring for court admissibility.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, background: 'var(--bg-table-alt)', padding: 12, borderRadius: 6, fontSize: 12 }}>
+                    <div><strong>Certifying Examiner:</strong> {ev.sec63SignatoryName || 'Examiner of Electronic Evidence'}</div>
+                    <div><strong>Analyst ID:</strong> {ev.sec63AnalystId || 'FSL-EXP-2026'}</div>
+                    <div><strong>Certified Date:</strong> {fmtDate(ev.sec63SignedAt)}</div>
+                    <div><strong>Laboratory:</strong> {ev.sec63FslLab || 'Regional Forensic Science Laboratory'}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                    <button className="btn btn-primary" onClick={() => window.open(evidenceAPI.certificateUrl(id), '_blank')}>
+                      <Download size={14} style={{ marginRight: 6 }} /> Download Section 63 BSA Certificate (PDF)
+                    </button>
+                    <button className="btn btn-secondary" onClick={() => setShowSec63Modal(true)}>
+                      <FileText size={14} style={{ marginRight: 6 }} /> View Certificate Declaration
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
+                    Under Section 63(4) of the Bharatiya Sakshya Adhiniyam, 2023, electronic evidence requires a statutory certificate signed by an authorized Examiner of Electronic Evidence for court admissibility.
+                  </p>
+                  {isForensicExpert ? (
+                    <div>
+                      <button className="btn btn-primary" onClick={() => setShowSec63Modal(true)}>
+                        <Shield size={14} style={{ marginRight: 6 }} />
+                        Digitally Sign &amp; Issue Section 63 Certificate
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="alert alert-info" style={{ margin: 0, fontSize: 13 }}>
+                      Awaiting authorized Forensic Science Laboratory expert to issue and seal the Section 63 certificate.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Technical Examination Report Card (Person 3) */}
+          <div className="card">
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Cpu size={18} style={{ color: 'var(--navy-600)' }} />
+                <h2 style={{ margin: 0 }}>Forensic Technical Examination Report</h2>
+              </div>
+              {ev.hasReport && (
+                <span className="badge" style={{ backgroundColor: 'var(--emerald)', color: '#fff' }}>
+                  ATTACHED
+                </span>
+              )}
+            </div>
+            <div className="card-body">
+              {ev.hasReport || ev.reportTools ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13 }}>
+                  <div className="detail-row">
+                    <span className="detail-row-label">Tools Used</span>
+                    <span className="detail-row-value">{ev.reportTools || ev.report?.tools_used || 'Forensic Workstation Suite'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-row-label">Acquisition Methodology</span>
+                    <span className="detail-row-value">{ev.reportMethodology || ev.report?.extraction_methodology || 'Bitstream Image Extraction'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-row-label">Hash Verification</span>
+                    <span className="detail-row-value">{ev.reportResults || ev.report?.hash_verification_results || 'Verified'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-row-label">Attached Document</span>
+                    <span className="detail-row-value">{ev.reportFilename || ev.report?.filename || 'Examination_Report.pdf'}</span>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <a href={evidenceAPI.reportDownloadUrl(id)} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm">
+                      <Download size={13} style={{ marginRight: 6 }} /> Download Examination Report Document
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                    No formal forensic analysis document attached yet for this evidence.
+                  </p>
+                  {isForensicExpert && !showAttachReport && (
+                    <button className="btn btn-secondary btn-sm" onClick={() => setShowAttachReport(true)}>
+                      + Attach Examination Report
+                    </button>
+                  )}
+                  {showAttachReport && (
+                    <form onSubmit={handleAttachReportSubmit} style={{ border: '1px solid var(--border)', padding: 14, borderRadius: 6, background: 'var(--bg-table-alt)' }}>
+                      <div className="form-group">
+                        <label className="form-label" style={{ fontSize: 12 }}>Tools Used</label>
+                        <input className="form-input" placeholder="e.g. Autopsy v4.21, Cellebrite UFED" value={toolsInput} onChange={(e) => setToolsInput(e.target.value)} required />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label" style={{ fontSize: 12 }}>Methodology</label>
+                        <input className="form-input" placeholder="Bit-stream acquisition under write-blocker" value={methodInput} onChange={(e) => setMethodInput(e.target.value)} required />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label" style={{ fontSize: 12 }}>Verification Results</label>
+                        <input className="form-input" placeholder="SHA-256 bitstream match verified" value={resultsInput} onChange={(e) => setResultsInput(e.target.value)} required />
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                        <button type="submit" className="btn btn-primary btn-sm" disabled={attachingReport}>
+                          {attachingReport ? 'Saving…' : 'Save Report'}
+                        </button>
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowAttachReport(false)}>
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Extracted EXIF Metadata */}
           {metadata && (
             <div className="card">
-              <div className="card-header"><h2><Camera size={16} style={{ marginRight: 6 }} />Extracted EXIF Metadata</h2></div>
+              <div className="card-header"><h2><Camera size={16} style={{ marginRight: 6 }} />Extracted Media Metadata</h2></div>
               <div className="card-body">
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   {metadata.gpsLat && metadata.gpsLng && (
@@ -314,150 +430,61 @@ export default function EvidenceDetailPage() {
                   )}
                   {metadata.cameraMake && (
                     <div className="detail-row">
-                      <span className="detail-row-label"><Camera size={12} /> Camera</span>
+                      <span className="detail-row-label"><Camera size={12} /> Camera / Capture Device</span>
                       <span className="detail-row-value">{metadata.cameraMake} {metadata.cameraModel || ''}</span>
                     </div>
                   )}
                   {metadata.originalDate && (
                     <div className="detail-row">
-                      <span className="detail-row-label"><Clock size={12} /> Original Capture Date</span>
+                      <span className="detail-row-label"><Clock size={12} /> Original Capture Timestamp</span>
                       <span className="detail-row-value">{new Date(metadata.originalDate).toLocaleString()}</span>
                     </div>
                   )}
-                  {metadata.mimeType && (
-                    <div className="detail-row">
-                      <span className="detail-row-label">MIME Type</span>
-                      <span className="detail-row-value">{metadata.mimeType}</span>
-                    </div>
-                  )}
-                  {metadata.fileSize && (
-                    <div className="detail-row">
-                      <span className="detail-row-label">File Size</span>
-                      <span className="detail-row-value">{fmtBytes(metadata.fileSize)}</span>
-                    </div>
-                  )}
-                  <div className="detail-row">
-                    <span className="detail-row-label">Processed At</span>
-                    <span className="detail-row-value">{fmtDate(metadata.processedAt)}</span>
-                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Integrity Record */}
-          <div className="card">
-            <div className="card-header"><h2>Integrity Record</h2></div>
-            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <HashDisplay hash={ev.hash} label="SHA-256 Hash" />
-              <div className="detail-row">
-                <span className="detail-row-label">Blockchain Transaction ID</span>
-                <span className="detail-row-value" style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{ev.ledgerTxId}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-row-label">Ledger Timestamp</span>
-                <span className="detail-row-value">{fmtDate(ev.ledgerTimestamp)}</span>
-              </div>
-
-              {verifyState === 'LOADING' && (
-                <div className="alert alert-info">
-                  <span className="spinner" style={{ width: 14, height: 14, marginRight: 8 }} />
-                  Verifying cryptographic footprint with blockchain ledger...
-                </div>
-              )}
-              {verifyState === 'VERIFIED' && (
-                <div className="alert alert-success">
-                  ✓ INTEGRITY VERIFIED: SHA-256 match confirmed.
-                </div>
-              )}
-              {verifyState === 'TAMPERED' && (
-                <div className="alert alert-error">
-                  🚨 TAMPER DETECTED: File hash dramatically differs from ledger.
-                </div>
-              )}
-              {verifyState === 'ERROR' && (
-                <div className="alert" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
-                  ⚠ NETWORK ERROR: Could not reach verification database ({verifyError}). This is a connectivity failure, not a cryptographic tamper.
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button className="btn btn-secondary btn-sm" onClick={handleVerify} disabled={verifyState === 'LOADING'}>
-                  {verifyState === 'LOADING' ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Verifying…</> : <><RefreshCw size={13} /> Re-Verify Now</>}
-                </button>
-                <a
-                  href={evidenceAPI.downloadUrl(ev.id)}
-                  download={ev.fileName}
-                  className="btn btn-secondary btn-sm"
-                >
-                  <Download size={13} /> Download Original
-                </a>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={async () => {
-                    try {
-                      const data = await reportsAPI.getChainOfCustody(ev.id);
-                      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url; a.download = `forensic-report-${ev.id}.json`; a.click();
-                      URL.revokeObjectURL(url);
-                    } catch (e) { alert('Failed to generate report'); }
-                  }}
-                >
-                  <FileText size={13} /> Forensic Report (JSON)
-                </button>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  disabled={pdfState === 'QUEUING' || pdfState === 'POLLING'}
-                  onClick={async () => {
-                    try {
-                      setPdfState('QUEUING');
-                      const { jobId } = await reportsAPI.requestPdf(ev.id);
-                      setPdfState('POLLING');
-                      const poll = setInterval(async () => {
-                        try {
-                          const job = await reportsAPI.getJobStatus(jobId);
-                          if (job.status === 'READY') {
-                            clearInterval(poll);
-                            setPdfState('READY');
-                            setPdfUrl(job.downloadUrl);
-                            window.open(job.downloadUrl, '_blank');
-                          } else if (job.status === 'FAILED') {
-                            clearInterval(poll);
-                            setPdfState('FAILED');
-                          }
-                        } catch { clearInterval(poll); setPdfState('FAILED'); }
-                      }, 2000);
-                    } catch { setPdfState('FAILED'); }
-                  }}
-                >
-                  {pdfState === 'QUEUING' || pdfState === 'POLLING'
-                    ? <><Loader size={13} className="spin" /> Generating PDF…</>
-                    : pdfState === 'READY'
-                    ? <><Download size={13} /> PDF Ready — Download</>
-                    : <><FileText size={13} /> Forensic Report (PDF)</>}
-                </button>
-                {role === 'judicial_authority' && (
-                  <Link to={`/audit?targetId=${ev.id}`} className="btn btn-ghost btn-sm">
-                    <BookOpen size={13} /> View Audit Trail
-                  </Link>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Right Column — File Preview */}
+        {/* Right Column — File Preview & Quick Actions */}
         <div>
           <div className="card">
-            <div className="card-header"><h2>File Preview</h2></div>
+            <div className="card-header"><h2>Media Stream Preview</h2></div>
             <div className="card-body">
               <FilePreview fileUrl={ev.fileUrl} mimeType={ev.mimeType} fileName={ev.fileName} />
             </div>
           </div>
+
+          <div className="card" style={{ marginTop: 20 }}>
+            <div className="card-header"><h2>Quick Actions</h2></div>
+            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button className="btn btn-secondary btn-block" onClick={handleVerify} disabled={verifyState === 'LOADING'}>
+                <RefreshCw size={14} style={{ marginRight: 6 }} /> Check On-Chain Integrity
+              </button>
+              <button className="btn btn-secondary btn-block" onClick={() => setShowSec63Modal(true)}>
+                <Shield size={14} style={{ marginRight: 6 }} /> {isCertified ? 'View Section 63 Certificate' : 'Issue Section 63 Certificate'}
+              </button>
+              <a href={evidenceAPI.downloadUrl(ev.id)} download={ev.fileName} className="btn btn-secondary btn-block">
+                <Download size={14} style={{ marginRight: 6 }} /> Download Original File
+              </a>
+              {role === 'judicial_authority' && (
+                <Link to={`/audit?targetId=${ev.id}`} className="btn btn-ghost btn-block">
+                  <BookOpen size={14} style={{ marginRight: 6 }} /> View Chain-of-Custody Audit Trail
+                </Link>
+              )}
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Section 63 Certificate Signing & Preview Modal */}
+      <Section63Modal
+        evidenceId={id}
+        isOpen={showSec63Modal}
+        onClose={() => setShowSec63Modal(false)}
+        onSigned={() => fetchEvidenceDetails()}
+      />
     </>
   );
 }

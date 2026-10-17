@@ -5,6 +5,7 @@ import DropZone from '../components/DropZone';
 import { firAPI, evidenceAPI } from '../services/api';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import ForensicUploadPage from './ForensicUploadPage';
 
 const CATEGORIES = ['photo', 'video', 'audio', 'document', 'other'];
 
@@ -47,6 +48,10 @@ export default function UploadPage() {
       setTab('evidence');
     }
   }, [searchParams, isPolice]);
+
+  if (isForensic) {
+    return <ForensicUploadPage />;
+  }
 
   return (
     <>
