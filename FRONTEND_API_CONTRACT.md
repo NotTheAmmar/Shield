@@ -28,7 +28,7 @@ Authenticate a user and receive a JWT.
 {
   "email": "officer@police.gov.in",
   "password": "••••••••",
-  "role": "police_officer"   // "police_officer" | "judicial_authority" | "admin" | "forensic_expert"
+  "role": "police_officer"   // "police_officer" | "forensic_expert" | "judicial_magistrate" | "sessions_judge" | "advocate" | "admin" | "judicial_authority"
 }
 ```
 
@@ -44,7 +44,13 @@ Authenticate a user and receive a JWT.
     "role": "police_officer",
     "employeeId": "MH/INS/2041",
     "designation": "Inspector",
-    "station": "Andheri PS"
+    "station": "Andheri PS",
+    "assignedPoliceStations": [],
+    "fslJurisdictionId": null,
+    "sessionsCourtId": null,
+    "barEnrollmentNo": null,
+    "blockchainAddress": "0x71C...49A",
+    "mustChangePassword": false
   }
 }
 ```
@@ -596,7 +602,7 @@ List all user accounts. Admin role only.
 
 ### `POST /api/admin/users`
 
-Create a new user account. Admin only. No self-registration.
+Create a new user account with cryptographic identity provisioning. Admin only. No self-registration.
 
 **Headers**: `Authorization: Bearer <token>` *(role: `admin`)*
 
@@ -604,12 +610,18 @@ Create a new user account. Admin only. No self-registration.
 
 ```json
 {
-  "name": "Priya Sharma",
-  "email": "priya.sharma@court.gov.in",
-  "role": "judicial_authority",
-  "designation": "Additional Sessions Judge",
-  "station": "Mumbai Sessions Court",
-  "temporaryPassword": "Sh!3ld@2025"
+  "name": "Rajesh Kumar",
+  "parentageName": "S/O Mahesh Kumar",
+  "email": "rajesh@police.gov.in",
+  "employeeId": "POL-84920",
+  "role": "Police Officer",       // "Police Officer" | "Forensic Expert" | "Judicial Magistrate" | "Sessions Judge" | "Advocate" | "Admin"
+  "plainPassword": "Sh!3ld@Pass1",
+  "designation": "Inspector",
+  "station": "Kothrud Police Station",            // For Police Officers
+  "assignedPoliceStations": ["Kothrud PS"],       // For Judicial Magistrates
+  "fslJurisdictionId": "FSL-MH-01",              // For Forensic Experts
+  "sessionsCourtId": "DIST_COURT_01",             // For Sessions Judges
+  "barEnrollmentNo": "MAH/1234/2020"              // For Advocates
 }
 ```
 
@@ -617,29 +629,37 @@ Create a new user account. Admin only. No self-registration.
 
 ```json
 {
-  "id": "usr_def456",
-  "name": "Priya Sharma",
-  "email": "priya.sharma@court.gov.in",
-  "role": "judicial_authority",
-  "designation": "Additional Sessions Judge",
-  "station": "Mumbai Sessions Court",
-  "status": "active",
-  "createdAt": "2025-03-18T14:35:00Z",
-  "mustChangePassword": true
+  "message": "User created successfully",
+  "user": {
+    "id": "usr_def456",
+    "name": "Rajesh Kumar",
+    "email": "rajesh@police.gov.in",
+    "employee_id": "POL-84920",
+    "role": "Police Officer",
+    "designation": "Inspector",
+    "station": "Kothrud Police Station",
+    "assigned_police_stations": [],
+    "fsl_jurisdiction_id": null,
+    "sessions_court_id": null,
+    "bar_enrollment_no": null,
+    "blockchain_address": "0x71C...49A",
+    "status": "active",
+    "created_at": "2026-10-17T14:35:00Z"
+  }
 }
 ```
 
 **Error `409`**
 
 ```json
-{ "error": "Email already registered" }
+{ "error": "User with this email or Employee ID already exists" }
 ```
 
 ---
 
 ### `PATCH /api/admin/users/:id`
 
-Update user details or toggle active/deactivated status.
+Update user details, role assignments, or toggle active/deactivated status.
 
 **Headers**: `Authorization: Bearer <token>` *(role: `admin`)*
 
@@ -647,22 +667,141 @@ Update user details or toggle active/deactivated status.
 
 ```json
 {
-  "name": "Priya Sharma",
-  "designation": "Sessions Judge",
-  "station": "Bombay High Court",
-  "status": "deactivated"
+  "role": "Sessions Judge",
+  "status": "deactivated",
+  "designation": "Principal Sessions Judge",
+  "station": "Pune Sessions Court",
+  "sessionsCourtId": "DIST_COURT_01"
 }
 ```
-> **Note**: No delete endpoint — users are only deactivated to preserve the audit trail integrity.
+> **Note**: Users are never deleted from PostgreSQL to preserve complete chain-of-custody audit logs under BSA 2023.
 
 **Success `200`**
 
 ```json
 {
-  "id": "usr_def456",
-  "name": "Priya Sharma",
-  "status": "deactivated",
-  "updatedAt": "2025-03-18T14:40:00Z"
+  "message": "User updated successfully",
+  "user": {
+    "id": "usr_def456",
+    "name": "Rajesh Kumar",
+    "status": "deactivated"
+  }
+}
+```
+
+---
+
+### `GET /api/admin/system-health`
+
+Inspects real-time container states, RPC latencies, and service metrics across all cluster microservices. Admin only.
+
+**Headers**: `Authorization: Bearer <token>` *(role: `admin`)*
+
+**Success `200`**
+
+```json
+{
+  "overallStatus": "HEALTHY",
+  "timestamp": "2026-10-17T18:00:00.000Z",
+  "metrics": {
+    "totalUsers": 12,
+    "totalAuditEvents": 1420
+  },
+  "services": [
+    { "name": "shield-auth", "role": "Authentication & Identity Microservice", "status": "ONLINE", "latencyMs": 1 },
+    { "name": "db-users", "role": "PostgreSQL Relational & Audit Database", "status": "ONLINE", "latencyMs": 2 },
+    { "name": "shield-evidence", "role": "Evidence Ingestion & MinIO Storage Pipeline", "status": "ONLINE", "latencyMs": 4 },
+    { "name": "shield-ledger", "role": "EVM PoA Blockchain Smart Contract Gateway", "status": "ONLINE", "latencyMs": 3 },
+    { "name": "shield-watchdog", "role": "Automated Background Integrity Scanner", "status": "ONLINE", "latencyMs": 5 }
+  ]
+}
+```
+
+---
+
+### `GET /api/admin/audit-logs`
+
+Query system-level access and audit logs. Admin only.
+
+**Headers**: `Authorization: Bearer <token>` *(role: `admin`)*
+
+#### Query Parameters
+
+| Param | Type | Description |
+| :--- | :--- | :--- |
+| `search` | string | Search actor name, employee ID, or endpoint |
+| `method` | string | Filter event type (`LOGIN`, `USER_CREATED`, `PASSWORD_RESET`, `WATCHDOG_ALERT`) |
+| `page` | number | Page number (default: `1`) |
+| `limit` | number | Records per page (default: `50`, max: `200`) |
+
+**Success `200`**
+
+```json
+{
+  "data": [
+    {
+      "id": 102,
+      "user_name": "System Administrator",
+      "user_role": "Admin",
+      "user_employee_id": "EMP-00000",
+      "method": "USER_CREATED",
+      "endpoint": "/api/admin/users",
+      "ip_address": "127.0.0.1",
+      "status_code": 201,
+      "target_label": "Created user: Rajesh Kumar (POL-84920) [Police Officer]",
+      "accessed_at": "2026-10-17T17:50:00.000Z"
+    }
+  ],
+  "pagination": { "page": 1, "limit": 50, "total": 1, "totalPages": 1 }
+}
+```
+
+---
+
+### `GET /api/admin/watchdog-alerts`
+
+Returns real-time security alerts triggered by the background watchdog daemon or tampering circuit breaker. Admin only.
+
+**Headers**: `Authorization: Bearer <token>` *(role: `admin`)*
+
+**Success `200`**
+
+```json
+{
+  "alerts": [
+    {
+      "id": 84,
+      "user_name": "SYSTEM_WATCHDOG",
+      "method": "WATCHDOG_ALERT",
+      "target_label": "Storage tampering detected: MinIO hash mismatch for evidence UUID",
+      "accessed_at": "2026-10-17T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### Zero-Trust Policy Enforcement (Admin Case Boundary)
+
+To preserve admissibility under the **Bharatiya Sakshya Adhiniyam (BSA), 2023**, the System Administrator has zero access to legal case data:
+
+* **Restricted Routes**:
+  - `GET /api/fir/:id`
+  - `GET /api/fir/:id/download`
+  - `GET /api/evidence/:id`
+  - `GET /api/evidence/download/:id`
+  - `GET /api/evidence-source/:id/certificate`
+  - `GET /api/reports/*`
+
+When an Admin requests any of these endpoints, `shield-gateway` drops the request immediately:
+
+**Error `403 Forbidden`**
+
+```json
+{
+  "error": "Zero-Trust Policy Violation: Administrators are restricted exclusively to infrastructure and user onboarding. Direct access to criminal FIR narratives, evidence files, and certificates is strictly prohibited under legal chain of custody rules (Bharatiya Sakshya Adhiniyam, 2023).",
+  "code": "ZERO_TRUST_RESTRICTION"
 }
 ```
 

@@ -136,11 +136,14 @@ export const auditAPI = {
 // ── Admin ─────────────────────────────────────────────────────────────────
 
 export const adminAPI = {
-  listUsers:  (params) => apiClient.get('/admin/users', { params }),
-  getUser:    (id) => apiClient.get(`/admin/users/${id}`),
-  createUser: (data) => apiClient.post('/admin/users', data),
-  updateUser: (id, data) => apiClient.patch(`/admin/users/${id}`, data),
-  resetPassword: (id, data) => apiClient.post(`/admin/users/${id}/reset-password`, data),
+  listUsers:          (params) => apiClient.get('/admin/users', { params }),
+  getUser:            (id) => apiClient.get(`/admin/users/${id}`),
+  createUser:         (data) => apiClient.post('/admin/users', data),
+  updateUser:         (id, data) => apiClient.patch(`/admin/users/${id}`, data),
+  resetPassword:      (id, data) => apiClient.post(`/admin/users/${id}/reset-password`, data),
+  getSystemHealth:    () => apiClient.get('/admin/system-health'),
+  getAuditLogs:       (params) => apiClient.get('/admin/audit-logs', { params }),
+  getWatchdogAlerts:  () => apiClient.get('/admin/watchdog-alerts'),
 };
 
 export const reportsAPI = {

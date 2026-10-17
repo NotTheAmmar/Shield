@@ -56,6 +56,38 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── ZERO-TRUST SECURITY ENFORCEMENT GUARD ─────────────────────────────────
+// Under BSA 2023 & BNSS 2023, Administrators are strictly isolated from legal case data.
+// They have zero access to FIR narratives, evidence files, or Section 63 certificates.
+app.use((req, res, next) => {
+  if (req.user && req.user.role) {
+    const role = req.user.role.toLowerCase().replace(/[\s_]/g, '');
+    if (role === 'admin') {
+      const path = req.path.toLowerCase();
+      // Internal system watchdog endpoints (/api/evidence/internal/*) are authorized for Admin infrastructure health & integrity monitoring
+      if (path.startsWith('/api/evidence/internal')) {
+        return next();
+      }
+
+      // Drop any legal case viewing / downloading / uploading request initiated by an Admin
+      const isRestrictedCasePath = 
+        path.startsWith('/api/fir') || 
+        path.startsWith('/api/evidence') || 
+        path.startsWith('/api/evidence-source') ||
+        path.startsWith('/api/reports');
+
+      if (isRestrictedCasePath) {
+        console.warn(`[ZERO-TRUST VIOLATION BLOCKED] Admin (${req.user.employeeId || req.user.email}) attempted to access legal case data: ${req.method} ${req.originalUrl}`);
+        return res.status(403).json({
+          error: 'Zero-Trust Policy Violation: Administrators are restricted exclusively to infrastructure and user onboarding. Direct access to criminal FIR narratives, evidence files, and certificates is strictly prohibited under legal chain of custody rules (Bharatiya Sakshya Adhiniyam, 2023).',
+          code: 'ZERO_TRUST_RESTRICTION'
+        });
+      }
+    }
+  }
+  next();
+});
+
 // ── Health / status ───────────────────────────────────────────────────────
 
 app.get('/', (req, res) => {

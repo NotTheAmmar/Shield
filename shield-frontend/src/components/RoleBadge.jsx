@@ -1,11 +1,14 @@
 import React from 'react';
-import { Shield, Scale, Settings, Search } from 'lucide-react';
+import { Shield, Scale, Settings, Search, Briefcase } from 'lucide-react';
 
 const CONFIG = {
-  'police_officer':    { className: 'badge-police',   Icon: Shield, label: 'police_officer'    },
-  'judicial_authority':{ className: 'badge-judicial', Icon: Scale,  label: 'judicial_authority' },
-  'admin':             { className: 'badge-admin',    Icon: Settings,label: 'admin'              },
-  'forensic_expert':   { className: 'badge-forensic', Icon: Search,  label: 'forensic_expert'    },
+  'police_officer':     { className: 'badge-police',   Icon: Shield,    label: 'Police Officer'      },
+  'judicial_authority': { className: 'badge-judicial', Icon: Scale,     label: 'Judicial Authority'  },
+  'judicial_magistrate':{ className: 'badge-judicial', Icon: Scale,     label: 'Judicial Magistrate' },
+  'sessions_judge':     { className: 'badge-judicial', Icon: Scale,     label: 'Sessions Judge'      },
+  'advocate':           { className: 'badge-forensic', Icon: Briefcase, label: 'Advocate'            },
+  'admin':              { className: 'badge-admin',    Icon: Settings,  label: 'Admin'               },
+  'forensic_expert':    { className: 'badge-forensic', Icon: Search,    label: 'Forensic Expert'     },
 };
 
 const ROLE_MAP = {
@@ -13,6 +16,12 @@ const ROLE_MAP = {
   'Police Officer': 'police_officer',
   'judicial_authority': 'judicial_authority',
   'Judicial Authority': 'judicial_authority',
+  'judicial_magistrate': 'judicial_magistrate',
+  'Judicial Magistrate': 'judicial_magistrate',
+  'sessions_judge': 'sessions_judge',
+  'Sessions Judge': 'sessions_judge',
+  'advocate': 'advocate',
+  'Advocate': 'advocate',
   'admin': 'admin',
   'Admin': 'admin',
   'forensic_expert': 'forensic_expert',

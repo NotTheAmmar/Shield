@@ -8,13 +8,19 @@ const ROLE_MAP = {
   'Police Officer': 'police_officer',
   'judicial_authority': 'judicial_authority',
   'Judicial Authority': 'judicial_authority',
+  'judicial_magistrate': 'judicial_magistrate',
+  'Judicial Magistrate': 'judicial_magistrate',
+  'sessions_judge': 'sessions_judge',
+  'Sessions Judge': 'sessions_judge',
+  'advocate': 'advocate',
+  'Advocate': 'advocate',
   'admin': 'admin',
   'Admin': 'admin',
   'forensic_expert': 'forensic_expert',
   'Forensic Expert': 'forensic_expert'
 };
 
-const normalizeRole = (role) => ROLE_MAP[role] || role?.toLowerCase();
+const normalizeRole = (role) => ROLE_MAP[role] || (role ? role.toLowerCase().replace(/[\s_]/g, '') : null);
 
 const requireRoles = (allowedRoles) => {
     // Normalize the allowed roles list
@@ -28,7 +34,10 @@ const requireRoles = (allowedRoles) => {
 
         const userRole = normalizeRole(req.user.role);
 
-        if (!normalizedAllowed.includes(userRole)) {
+        const isAllowed = normalizedAllowed.includes(userRole) ||
+            (normalizedAllowed.includes('judicial_authority') && ['judicial_magistrate', 'sessions_judge'].includes(userRole));
+
+        if (!isAllowed) {
             return res.status(403).json({
                 error: `Forbidden: Requires one of the following roles: [${allowedRoles.join(', ')}]`,
                 currentRole: req.user.role

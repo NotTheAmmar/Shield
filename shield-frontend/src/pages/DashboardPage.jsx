@@ -60,7 +60,7 @@ export default function DashboardPage() {
   const [adminStats, setAdminStats] = useState(null);
 
   useEffect(() => {
-    if (role === 'police_officer' || role === 'judicial_authority' || role === 'forensic_expert') {
+    if (['police_officer', 'judicial_authority', 'forensic_expert', 'judicial_magistrate', 'sessions_judge', 'advocate'].includes(role)) {
       dashboardAPI.getStats().then((data) => {
         if (data) {
           setStats(data.stats);
@@ -102,7 +102,7 @@ export default function DashboardPage() {
       />
 
       <div className="stat-cards-grid">
-        {(role === 'police_officer' || role === 'judicial_authority' || role === 'forensic_expert') && stats && (
+        {['police_officer', 'judicial_authority', 'forensic_expert', 'judicial_magistrate', 'sessions_judge', 'advocate'].includes(role) && stats && (
           <>
             <StatCard label="Total FIRs in System" value={stats.totalFirs} icon={FileText} accent="var(--navy-700)" />
             <StatCard label="Total Evidence Files" value={stats.totalEvidence} icon={Archive} accent="var(--navy-700)" />

@@ -58,7 +58,7 @@ export default function App() {
               <Route
                 path="/"
                 element={
-                  <ProtectedRoute roles={['police_officer', 'judicial_authority', 'admin', 'forensic_expert']}>
+                  <ProtectedRoute roles={['police_officer', 'judicial_authority', 'judicial_magistrate', 'sessions_judge', 'forensic_expert', 'advocate', 'admin']}>
                     <AppLayout><DashboardPage /></AppLayout>
                   </ProtectedRoute>
                 }
@@ -78,7 +78,7 @@ export default function App() {
               <Route
                 path="/fir"
                 element={
-                  <ProtectedRoute roles={['police_officer', 'judicial_authority']}>
+                  <ProtectedRoute roles={['police_officer', 'judicial_authority', 'judicial_magistrate', 'sessions_judge']}>
                     <AppLayout><FirRegistryPage /></AppLayout>
                   </ProtectedRoute>
                 }
@@ -86,7 +86,7 @@ export default function App() {
               <Route
                 path="/fir/:id"
                 element={
-                  <ProtectedRoute roles={['police_officer', 'judicial_authority']}>
+                  <ProtectedRoute roles={['police_officer', 'judicial_authority', 'judicial_magistrate', 'sessions_judge']}>
                     <AppLayout><FirDetailPage /></AppLayout>
                   </ProtectedRoute>
                 }
@@ -94,7 +94,7 @@ export default function App() {
               <Route
                 path="/vault"
                 element={
-                  <ProtectedRoute roles={['police_officer', 'judicial_authority', 'forensic_expert']}>
+                  <ProtectedRoute roles={['police_officer', 'judicial_authority', 'judicial_magistrate', 'sessions_judge', 'forensic_expert']}>
                     <AppLayout><VaultPage /></AppLayout>
                   </ProtectedRoute>
                 }
@@ -102,7 +102,7 @@ export default function App() {
               <Route
                 path="/vault/:id"
                 element={
-                  <ProtectedRoute roles={['police_officer', 'judicial_authority', 'forensic_expert']}>
+                  <ProtectedRoute roles={['police_officer', 'judicial_authority', 'judicial_magistrate', 'sessions_judge', 'forensic_expert']}>
                     <AppLayout><EvidenceDetailPage /></AppLayout>
                   </ProtectedRoute>
                 }
@@ -112,7 +112,7 @@ export default function App() {
               <Route
                 path="/audit"
                 element={
-                  <ProtectedRoute roles={['judicial_authority']}>
+                  <ProtectedRoute roles={['judicial_authority', 'judicial_magistrate', 'sessions_judge']}>
                     <AppLayout><AuditLogPage /></AppLayout>
                   </ProtectedRoute>
                 }
