@@ -55,8 +55,12 @@ router.post('/login', loginLimiter, async (req, res) => {
         const user = rows[0];
 
         const normalizeRole = (r) => r ? r.toLowerCase().replace(/[\s_]/g, '') : '';
+        const userR = normalizeRole(user.role);
+        const reqR = normalizeRole(role);
+        const rolesMatch = (userR === reqR) ||
+            (userR === 'judicialauthority' && (reqR === 'judicialmagistrate' || reqR === 'sessionsjudge' || reqR === 'judicialauthority'));
 
-        if (!user || normalizeRole(user.role) !== normalizeRole(role)) {
+        if (!user || !rolesMatch) {
             return res.status(401).json({ error: 'Invalid credentials or incorrect role selected.' });
         }
 
@@ -84,6 +88,12 @@ router.post('/login', loginLimiter, async (req, res) => {
             role: user.role,
             name: user.name,
             employeeId: user.employee_id,
+            designation: user.designation,
+            station: user.station,
+            assignedPoliceStations: user.assigned_police_stations || [],
+            fslJurisdictionId: user.fsl_jurisdiction_id,
+            sessionsCourtId: user.sessions_court_id,
+            barEnrollmentNo: user.bar_enrollment_no,
             blockchainAddress: user.blockchain_address
         };
 
@@ -124,7 +134,10 @@ router.post('/refresh', refreshLimiter, async (req, res) => {
         
         // Re-fetch full user from DB so any role/name/status changes take effect immediately
         const { rows } = await pool.query(
-            'SELECT id, email, role, name, employee_id, status, blockchain_address FROM users WHERE id = $1',
+            `SELECT id, email, role, name, employee_id, designation, station,
+                    assigned_police_stations, fsl_jurisdiction_id, sessions_court_id,
+                    bar_enrollment_no, status, blockchain_address
+             FROM users WHERE id = $1`,
             [decoded.id]
         );
         if (!rows.length || rows[0].status !== 'active') throw new Error('User inactive or not found');
@@ -136,6 +149,12 @@ router.post('/refresh', refreshLimiter, async (req, res) => {
             role: user.role,
             name: user.name,
             employeeId: user.employee_id,
+            designation: user.designation,
+            station: user.station,
+            assignedPoliceStations: user.assigned_police_stations || [],
+            fslJurisdictionId: user.fsl_jurisdiction_id,
+            sessionsCourtId: user.sessions_court_id,
+            barEnrollmentNo: user.bar_enrollment_no,
             blockchainAddress: user.blockchain_address
         };
         

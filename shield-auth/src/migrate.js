@@ -59,6 +59,18 @@ async function runMigrations() {
             await pool.query(`
                 ALTER TABLE users ADD COLUMN IF NOT EXISTS parentage_name VARCHAR(255);
             `);
+            await pool.query(`
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS assigned_police_stations JSONB DEFAULT '[]'::jsonb;
+            `);
+            await pool.query(`
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS fsl_jurisdiction_id VARCHAR(100);
+            `);
+            await pool.query(`
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS sessions_court_id VARCHAR(100);
+            `);
+            await pool.query(`
+                ALTER TABLE users ADD COLUMN IF NOT EXISTS bar_enrollment_no VARCHAR(100);
+            `);
 
             await pool.query(`
                 CREATE TABLE IF NOT EXISTS api_audit_log (

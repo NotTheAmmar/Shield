@@ -5,9 +5,12 @@ import { useAuth } from "../hooks/useAuth";
 
 const ROLES = [
   { value: "police_officer", label: "Police Officer" },
-  { value: "judicial_authority", label: "Judicial Authority" },
   { value: "forensic_expert", label: "Forensic Expert" },
+  { value: "judicial_magistrate", label: "Judicial Magistrate" },
+  { value: "sessions_judge", label: "Sessions Judge" },
+  { value: "advocate", label: "Advocate" },
   { value: "admin", label: "Administrator" },
+  { value: "judicial_authority", label: "Judicial Authority (Legacy)" },
 ];
 
 export default function LoginPage() {
