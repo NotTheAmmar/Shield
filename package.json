@@ -17,6 +17,9 @@
     "test:blockchain": "bash tests/blockchain/blockchain_network_test.sh",
     "watchdog:local": "node tests/integration/watchdog_local.js",
     "test:manual": "bash tests/integration/run_manual_tests.sh",
+    "test:theft": "node tests/integration/test_theft_cctv_case.js",
+    "test:cyber": "node tests/integration/test_cyber_phishing_case.js",
+    "test:tamper:phishing": "node tests/simulation/tamper_phishing_image.js",
     "metrics:gather": "node tests/metrics_gather.js"
   },
   "devDependencies": {

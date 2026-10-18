@@ -25,7 +25,7 @@ async function storeEvidenceHash(evidenceId, firId, hash, privateKey) {
     if (process.env.MOCK_LEDGER === 'true') {
         await sleep(50);
         console.log(`[MOCK LEDGER] storeEvidenceHash: ${evidenceId} (FIR: ${firId}) → ${hash}`);
-        return { ok: true, mock: true };
+        return { ok: true, mock: true, txId: `0x${require('crypto').randomBytes(32).toString('hex')}`, blockNumber: 1042 };
     }
 
     const res = await fetch(`${process.env.LEDGER_URL}/api/ledger/store/evidence`, {
@@ -68,4 +68,17 @@ async function getEvidenceHash(evidenceId) {
     return data.hash;
 }
 
-module.exports = { storeFIRHash, storeEvidenceHash, getFIRHash, getEvidenceHash };
+async function getEvidenceLedgerRecord(evidenceId) {
+    if (process.env.MOCK_LEDGER === 'true') {
+        console.log(`[MOCK LEDGER] getEvidenceLedgerRecord: ${evidenceId}`);
+        return null;
+    }
+
+    const res = await fetch(`${process.env.LEDGER_URL}/api/ledger/evidence/${encodeURIComponent(evidenceId)}`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Ledger Evidence get failed: ${res.status}`);
+    return res.json();
+}
+
+module.exports = { storeFIRHash, storeEvidenceHash, getFIRHash, getEvidenceHash, getEvidenceLedgerRecord };
+

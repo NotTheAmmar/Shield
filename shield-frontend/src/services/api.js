@@ -110,8 +110,10 @@ export const firAPI = {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
   close:  (id) => apiClient.patch(`/fir/${id}/close`),
-  verify: (id) => apiClient.get(`/evidence/verify/${id}`),
+  verify: (id) => apiClient.get(`/fir/verify/${id}`),
   downloadUrl: (id) => `/api/fir/${id}/download`,
+  getSupplementary: (id) => apiClient.get(`/fir/${id}/supplementary`),
+  addSupplementary: (id, data) => apiClient.post(`/fir/${id}/supplementary`, data),
 };
 
 // ── Evidence ──────────────────────────────────────────────────────────────
@@ -122,6 +124,14 @@ export const evidenceAPI = {
   upload: (formData) => apiClient.post('/evidence/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
+  uploadReport: (id, formData) => apiClient.post(`/evidence/${id}/report`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  getReport: (id) => apiClient.get(`/evidence/${id}/report`),
+  reportDownloadUrl: (id) => `/api/evidence/${id}/report/download`,
+  getCertificateData: (id) => apiClient.get(`/evidence/${id}/certificate-data`),
+  signCertificate: (id, data) => apiClient.post(`/evidence/${id}/sign-certificate`, data),
+  certificateUrl: (id) => `/api/evidence/${id}/certificate`,
   verify: (id) => apiClient.get(`/evidence/verify/${id}`),
   downloadUrl: (id) => `/api/evidence/download/${id}`,
 };

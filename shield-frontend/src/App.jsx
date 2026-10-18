@@ -17,6 +17,7 @@ import EvidenceDetailPage from './pages/EvidenceDetailPage';
 import AuditLogPage from './pages/AuditLogPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import ForcePasswordChangePage from './pages/ForcePasswordChangePage';
+import ForensicUploadPage from './pages/ForensicUploadPage';
 
 function AppLayout({ children }) {
   return (
@@ -70,6 +71,16 @@ export default function App() {
                 element={
                   <ProtectedRoute roles={['police_officer']}>
                     <AppLayout><UploadPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* FSL Forensic Expert Evidence Ingestion */}
+              <Route
+                path="/forensic/upload"
+                element={
+                  <ProtectedRoute roles={['forensic_expert', 'admin']}>
+                    <AppLayout><ForensicUploadPage /></AppLayout>
                   </ProtectedRoute>
                 }
               />

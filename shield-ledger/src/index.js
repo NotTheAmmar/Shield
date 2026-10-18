@@ -82,7 +82,12 @@ app.post('/api/ledger/store/fir', async (req, res) => {
         const tx = await contract.anchorFIR(firId, hash, { gasPrice: 0 });
         const receipt = await tx.wait();
         
-        return res.json({ ok: true, txId: receipt.hash, key: `fir:${firId}` });
+        return res.json({ 
+            ok: true, 
+            txId: receipt.hash, 
+            blockNumber: receipt.blockNumber ? Number(receipt.blockNumber) : null,
+            key: `fir:${firId}` 
+        });
     } catch (err) {
         if (err.message.includes("already anchored")) {
             return res.status(409).json({ error: 'FIR ID already anchored on ledger' });
@@ -106,7 +111,12 @@ app.post('/api/ledger/store/evidence', async (req, res) => {
         const tx = await contract.anchorEvidence(evidenceId, firId, hash, { gasPrice: 0 });
         const receipt = await tx.wait();
         
-        return res.json({ ok: true, txId: receipt.hash, key: `evidence:${evidenceId}` });
+        return res.json({ 
+            ok: true, 
+            txId: receipt.hash, 
+            blockNumber: receipt.blockNumber ? Number(receipt.blockNumber) : null,
+            key: `evidence:${evidenceId}` 
+        });
     } catch (err) {
         if (err.message.includes("already anchored")) {
             return res.status(409).json({ error: 'Evidence ID already anchored on ledger' });
