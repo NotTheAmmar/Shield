@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FileText, Archive, CheckCircle, Clock, AlertTriangle, Users, UserCheck, UserX, Activity, Upload, BookOpen, Settings } from 'lucide-react';
+import { FileText, Archive, CheckCircle, Clock, AlertTriangle, Users, UserCheck, UserX, Activity, Upload, BookOpen, Settings, Scale } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import PageHeader from '../components/PageHeader';
 import StatCard from '../components/StatCard';
@@ -184,7 +184,26 @@ export default function DashboardPage() {
               )}
               {role === 'judicial_authority' && (
                 <>
-                  <Link to="/fir" className="btn btn-primary btn-full">
+                  <Link to="/judicial" className="btn btn-primary btn-full">
+                    <Scale size={14} /> Magistrate 24-Hr Queue
+                  </Link>
+                  <Link to="/judge" className="btn btn-secondary btn-full">
+                    <FileText size={14} /> Sessions Trial Roster
+                  </Link>
+                  <Link to="/vault" className="btn btn-secondary btn-full">
+                    <Archive size={14} /> Evidence Vault
+                  </Link>
+                  <Link to="/audit" className="btn btn-secondary btn-full">
+                    <BookOpen size={14} /> Audit Log
+                  </Link>
+                </>
+              )}
+              {role === 'judicial_magistrate' && (
+                <>
+                  <Link to="/judicial" className="btn btn-primary btn-full">
+                    <Scale size={14} /> Magistrate 24-Hr Queue
+                  </Link>
+                  <Link to="/fir" className="btn btn-secondary btn-full">
                     <FileText size={14} /> Browse FIR Registry
                   </Link>
                   <Link to="/vault" className="btn btn-secondary btn-full">
@@ -195,9 +214,32 @@ export default function DashboardPage() {
                   </Link>
                 </>
               )}
+              {role === 'sessions_judge' && (
+                <>
+                  <Link to="/judge" className="btn btn-primary btn-full">
+                    <FileText size={14} /> Sessions Trial Roster
+                  </Link>
+                  <Link to="/vault" className="btn btn-secondary btn-full">
+                    <Archive size={14} /> Evidence Vault
+                  </Link>
+                  <Link to="/audit" className="btn btn-secondary btn-full">
+                    <BookOpen size={14} /> Audit Log
+                  </Link>
+                </>
+              )}
+              {role === 'advocate' && (
+                <>
+                  <Link to="/advocate" className="btn btn-primary btn-full">
+                    <FileText size={14} /> Advocate Discovery Vault
+                  </Link>
+                </>
+              )}
               {role === 'forensic_expert' && (
                 <>
-                  <Link to="/vault" className="btn btn-primary btn-full">
+                  <Link to="/forensic/upload" className="btn btn-primary btn-full">
+                    <Upload size={14} /> FSL Evidence Ingestion
+                  </Link>
+                  <Link to="/vault" className="btn btn-secondary btn-full">
                     <Archive size={14} /> Evidence Vault
                   </Link>
                   <Link to="/fir" className="btn btn-secondary btn-full">

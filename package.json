@@ -19,7 +19,8 @@
     "test:manual": "bash tests/integration/run_manual_tests.sh",
     "test:theft": "node tests/integration/test_theft_cctv_case.js",
     "test:cyber": "node tests/integration/test_cyber_phishing_case.js",
-    "test:tamper:phishing": "node tests/simulation/tamper_phishing_image.js",
+    "test:person3": "node tests/integration/test_person3_fsl_sec63.js",
+    "test:person4": "node tests/integration/test_person4_judicial_advocate.js",
     "metrics:gather": "node tests/metrics_gather.js"
   },
   "devDependencies": {

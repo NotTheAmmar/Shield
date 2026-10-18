@@ -25,17 +25,35 @@ app.use(audit);
 // Health check (Public/Unauthenticated)
 app.get('/health', (req, res) => res.json({ status: 'OK', timestamp: new Date() }));
 
+// Rate limiter for Evidence, Judicial, Judge, and Advocate endpoints (CodeQL missing-rate-limiting compliance)
+const rateLimit = require('express-rate-limit');
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 1000,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests on evidence API endpoints. Please try again later.' }
+});
+
+app.use('/api', apiLimiter);
+
 // API routes (Protected by JWT)
 const dashboardRoutes = require('./routes/dashboard');
 const auditRoutes = require('./routes/audit');
 const reportRoutes = require('./routes/reports');
+const judicialRoutes = require('./routes/judicial');
+const judgeRoutes = require('./routes/judge');
+const advocateRoutes = require('./routes/advocate');
 
-app.use('/api/evidence', auth, evidenceRoutes);
-app.use('/api/fir', auth, firRoutes);
-app.use('/api/dashboard', auth, dashboardRoutes);
-app.use('/api/audit', auth, auditRoutes);
-app.use('/api/reports', auth, reportRoutes);
-app.use('/api/evidence-source', auth, certificateRoutes);
+app.use('/api/evidence', apiLimiter, auth, evidenceRoutes);
+app.use('/api/fir', apiLimiter, auth, firRoutes);
+app.use('/api/dashboard', apiLimiter, auth, dashboardRoutes);
+app.use('/api/audit', apiLimiter, auth, auditRoutes);
+app.use('/api/reports', apiLimiter, auth, reportRoutes);
+app.use('/api/evidence-source', apiLimiter, auth, certificateRoutes);
+app.use('/api/judicial', apiLimiter, auth, judicialRoutes);
+app.use('/api/judge', apiLimiter, auth, judgeRoutes);
+app.use('/api/advocate', apiLimiter, auth, advocateRoutes);
 
 // Process-level monitors to catch fatal crashes that evade the Express event loop
 process.on('uncaughtException', (err) => {
@@ -284,6 +302,30 @@ async function runMigrations() {
                   signed_at TIMESTAMPTZ DEFAULT NOW()
                 );
                 CREATE INDEX IF NOT EXISTS idx_sec63_evidence_id ON section63_certificates(evidence_id);
+
+                -- Person 4: Judicial Bench, Advocate Vakalatnama Engine & Trial Committal
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS sessions_court_id VARCHAR(100);
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS committal_date TIMESTAMPTZ;
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS committed_by UUID;
+                ALTER TABLE fir ADD COLUMN IF NOT EXISTS trial_status VARCHAR(50);
+
+                CREATE TABLE IF NOT EXISTS vakalatnama_requests (
+                  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                  fir_id UUID REFERENCES fir(id) ON DELETE CASCADE NOT NULL,
+                  advocate_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+                  advocate_name VARCHAR(255) NOT NULL,
+                  bar_enrollment_no VARCHAR(100) NOT NULL,
+                  designation VARCHAR(50) NOT NULL,
+                  vakalatnama_object_key TEXT NOT NULL,
+                  status VARCHAR(20) DEFAULT 'PENDING',
+                  reviewed_by UUID REFERENCES users(id),
+                  reviewer_name VARCHAR(255),
+                  reviewed_at TIMESTAMPTZ,
+                  rejection_reason TEXT,
+                  created_at TIMESTAMPTZ DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS idx_vak_advocate ON vakalatnama_requests(advocate_id);
+                CREATE INDEX IF NOT EXISTS idx_vak_fir ON vakalatnama_requests(fir_id);
             `);
             
             console.log('[Init] Database schemas (FIR, Evidence, Audit) ready.');
