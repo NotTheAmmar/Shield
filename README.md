@@ -99,6 +99,10 @@ Ensure that the Docker stack is running before executing these scripts.
 ```bash
 npm run seed                 # Wipe and populate mock PG & MinIO data
 npm run test:comprehensive   # Primary E2E test suite (69 advanced assertions)
+npm run test:person3         # Person 3: Forensic Extractions, EVM Anchoring & Sec 63 BSA Certificates
+npm run test:person4         # Person 4: Judicial 24-hr Bench, Advocate Vakalatnama & Trial Committal
+npm run test:theft           # Real-world case study: CCTV footage theft investigation
+npm run test:cyber           # Real-world case study: Mobile SMS phishing cybercrime investigation
 npm run test:tamper          # Overwrite MinIO file directly and prove blockchain catches it
 npm run watchdog:local       # Run a local database/ledger integrity cycle
 npm run test:manual          # Run raw shell curl diagnostics

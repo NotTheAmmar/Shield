@@ -228,7 +228,20 @@ docker compose ps
 | http://localhost:3001 | API Gateway |
 | http://localhost:9001 | MinIO console (file storage admin) |
 
-Log in with the `ADMIN_SEED_EMAIL` and `ADMIN_SEED_PASSWORD` you set in `.env`.
+Log in initially with the `ADMIN_SEED_EMAIL` and `ADMIN_SEED_PASSWORD` configured in your `.env`.
+
+### 6b. User Roles & Account Provisioning
+
+S.H.I.E.L.D. enforces a strict 6-role Role-Based Access Control (RBAC) model under the Bharatiya Sakshya Adhiniyam, 2023 (BSA) and Bharatiya Nagarik Suraksha Sanhita, 2023 (BNSS). All accounts are provisioned centrally by the System Administrator via the **Admin Console** (`http://localhost/admin`):
+
+| Role | Responsibility | Jurisdiction Scoping Field | Zero-Trust / Boundary Rule |
+|------|----------------|----------------------------|----------------------------|
+| **System Administrator** (`Admin`) | Infrastructure, microservices health monitoring, user provisioning & watchdog security alerts | System-wide | **Strict Zero-Trust**: Gateway drops all access to FIR narratives, digital evidence files, and Section 63 certificates. |
+| **Police Officer** (`Police Officer`) | Registers scanned FIRs, uploads physical/digital scene evidence, and files Sec 193(9) BNSS supplementary investigation diaries | `station` (e.g. `Kothrud PS`) | Scoped exclusively to FIRs and evidence originating from their assigned police station. |
+| **Forensic Expert** (`Forensic Expert`) | Ingests forensic extractions with hardware/tool metadata, anchors hashes to EVM, and generates Sec 63 BSA Digital Certificates | `fsl_jurisdiction_id` (e.g. `FSL_PUNE_01`) | Authorized to upload digital extractions, attach forensic analysis reports, and digitally sign Section 63 certificates. |
+| **Judicial Magistrate** (`Judicial Magistrate`) | 24-hour pre-trial statutory feed (Sec 176 BNSS), remand review, Vakalatnama approval, and trial committal to Sessions Court | `assigned_police_stations` (e.g. `["Kothrud PS", "Warje PS"]`) | Inspects incoming FIRs from mapped stations within the statutory 24-hr window and commits serious offences to trial. |
+| **Sessions Judge** (`Sessions Judge`) | Trial courtroom roster management, formal trial hearing, and evidence admissibility marking | `sessions_court_id` (e.g. `DIST_COURT_01`) | Accesses cases formally committed for trial; marks evidence as marked/admitted on the judicial record. |
+| **Advocate** (`Advocate`) | Case discovery and evidence inspection on behalf of accused or complainant | `bar_enrollment_no` (e.g. `MAH/1234/2026`) | **Locus Standi**: Zero access until a Vakalatnama is filed and judicially approved by the Magistrate. Evidence downloads include dynamic court discovery watermarks. |
 
 ---
 
@@ -349,11 +362,15 @@ docker compose up -d --build
 
 | Command | Description |
 |---------|-------------|
-| `npm run test:comprehensive` | Full end-to-end integration suite (69 tests) |
+| `npm run test:comprehensive` | Full end-to-end integration suite (69 tests covering RBAC, FIRs, Evidence, PDF generation, Zero-Trust) |
+| `npm run test:person3` | Person 3 test suite: Forensic Science Laboratory extractions, EVM anchoring, and Section 63 BSA Digital Certificate generation |
+| `npm run test:person4` | Person 4 test suite: Judicial Magistrate 24-hr statutory feed, Advocate Vakalatnama engine, Trial Committal, and Sessions Judge roster |
+| `npm run test:theft` | Real-world case study: CCTV footage extraction, police filing, Section 63 certificate & blockchain verification |
+| `npm run test:cyber` | Real-world case study: Mobile SMS phishing extraction, chain of custody anchoring & cryptographic verification |
 | `npm run test:integration` | Alternate integration test set |
-| `npm run test:contract` | Solidity unit tests (Hardhat in-process EVM) |
+| `npm run test:contract` | Solidity unit tests (Hardhat in-process EVM for `FIRLedger` and `EvidenceLedger`) |
 | `npm run test:blockchain` | Blockchain network connectivity tests |
-| `npm run test:tamper` | Evidence tampering simulation |
+| `npm run test:tamper` | Evidence tampering simulation (proves blockchain catches bit-level changes) |
 | `npm run test:manual` | Manual API tests via bash script |
 | `npm run seed` | Seed the database with mock data |
 
